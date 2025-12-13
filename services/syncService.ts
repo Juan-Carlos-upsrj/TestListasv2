@@ -177,8 +177,7 @@ export const syncGradesData = async (state: AppState, dispatch: Dispatch<AppActi
 
     try {
         const recordsToSync: any[] = [];
-        const groupsMap = new Map(groups.map(g => [g.id, g]));
-
+        
         // Iterate through all groups
         for (const group of groups) {
             const groupId = group.id;
