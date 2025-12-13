@@ -6,8 +6,13 @@ import Modal from './common/Modal';
 import Button from './common/Button';
 import Icon from './icons/Icon';
 import { GroupForm } from './GroupManagement';
-import { calculatePartialAverage, getGradeColor, calculateAttendancePercentage } from '../services/gradeCalculation';
+import { calculatePartialAverage, getGradeColor, calculateAttendancePercentage, calculateFinalGradeWithRecovery } from '../services/gradeCalculation';
 import GradeImageModal from './GradeImageModal';
+
+// Special IDs for recovery grades
+const GRADE_REMEDIAL = 'GRADE_REMEDIAL';
+const GRADE_EXTRA = 'GRADE_EXTRA';
+const GRADE_SPECIAL = 'GRADE_SPECIAL';
 
 const EvaluationForm: React.FC<{
     evaluation?: Evaluation;
@@ -143,10 +148,19 @@ const GradesView: React.FC = () => {
         if (selectedGroupId) {
             const scoreValue = score === '' ? null : parseFloat(score);
             const evaluation = groupEvaluations.find(ev => ev.id === evaluationId);
+            
+            // Validation for standard evaluations
             if (evaluation && scoreValue !== null && (scoreValue < 0 || scoreValue > evaluation.maxScore)) {
                 dispatch({ type: 'ADD_TOAST', payload: { message: `La calificación no puede ser mayor a ${evaluation.maxScore}`, type: 'error' } });
                 return;
             }
+            
+            // Validation for special grades (Remedial, Extra, Special usually max 10)
+            if ([GRADE_REMEDIAL, GRADE_EXTRA, GRADE_SPECIAL].includes(evaluationId) && scoreValue !== null && (scoreValue < 0 || scoreValue > 10)) {
+                dispatch({ type: 'ADD_TOAST', payload: { message: `La calificación no puede ser mayor a 10`, type: 'error' } });
+                return;
+            }
+
             dispatch({ type: 'UPDATE_GRADE', payload: { groupId: selectedGroupId, studentId, evaluationId, score: scoreValue } });
         }
     };
@@ -223,23 +237,31 @@ const GradesView: React.FC = () => {
                     <table className="w-full border-collapse">
                         <thead>
                             <tr>
-                                <th rowSpan={2} className="sticky left-0 bg-surface p-2 text-left font-semibold z-10 border-b-2 border-border-color">Alumno</th>
+                                <th rowSpan={2} className="sticky left-0 bg-surface p-2 text-left font-semibold z-10 border-b-2 border-border-color shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">Alumno</th>
                                 {(p1Evaluations.length > 0 || p1AttendanceType) && (
                                     <th colSpan={p1Evaluations.length + (p1AttendanceType ? 1 : 0) + 1} className="p-2 font-semibold text-center text-lg border-b-2 border-border-color">Primer Parcial</th>
                                 )}
                                 {(p2Evaluations.length > 0 || p2AttendanceType) && (
                                     <th colSpan={p2Evaluations.length + (p2AttendanceType ? 1 : 0) + 1} className="p-2 font-semibold text-center text-lg border-b-2 border-border-color">Segundo Parcial</th>
                                 )}
-                                <th rowSpan={2} className="p-2 font-semibold text-center text-sm border-b-2 border-border-color bg-surface-secondary min-w-[100px]">Promedio Final</th>
+                                <th rowSpan={2} className="p-2 font-semibold text-center text-sm border-b-2 border-border-color bg-surface-secondary min-w-[60px]">Ord.</th>
+                                
+                                <th colSpan={3} className="p-2 font-semibold text-center text-sm border-b-2 border-border-color bg-amber-50 dark:bg-amber-900/10 min-w-[150px]">Recuperación</th>
+                                <th rowSpan={2} className="p-2 font-semibold text-center text-sm border-b-2 border-border-color bg-surface-secondary min-w-[80px]">Final</th>
                             </tr>
                             <tr className="border-b border-border-color">
                                 {p1Evaluations.map(ev => <th key={ev.id} className="p-2 font-semibold text-center text-sm min-w-[100px]">{ev.name} <span className="font-normal text-xs">({ev.maxScore}pts)</span></th>)}
-                                {p1AttendanceType && <th className="p-2 font-semibold text-center text-sm min-w-[100px] text-emerald-600">Asistencia <span className="font-normal text-xs">({p1AttendanceType.weight}%)</span></th>}
-                                {(p1Evaluations.length > 0 || p1AttendanceType) && <th className="p-2 font-semibold text-center text-sm bg-surface-secondary/80 min-w-[100px]">Prom. P1</th>}
+                                {p1AttendanceType && <th className="p-2 font-semibold text-center text-sm min-w-[80px] text-emerald-600">Asist.</th>}
+                                {(p1Evaluations.length > 0 || p1AttendanceType) && <th className="p-2 font-semibold text-center text-sm bg-surface-secondary/80 min-w-[60px]">Prom</th>}
 
                                 {p2Evaluations.map(ev => <th key={ev.id} className="p-2 font-semibold text-center text-sm min-w-[100px]">{ev.name} <span className="font-normal text-xs">({ev.maxScore}pts)</span></th>)}
-                                {p2AttendanceType && <th className="p-2 font-semibold text-center text-sm min-w-[100px] text-emerald-600">Asistencia <span className="font-normal text-xs">({p2AttendanceType.weight}%)</span></th>}
-                                {(p2Evaluations.length > 0 || p2AttendanceType) && <th className="p-2 font-semibold text-center text-sm bg-surface-secondary/80 min-w-[100px]">Prom. P2</th>}
+                                {p2AttendanceType && <th className="p-2 font-semibold text-center text-sm min-w-[80px] text-emerald-600">Asist.</th>}
+                                {(p2Evaluations.length > 0 || p2AttendanceType) && <th className="p-2 font-semibold text-center text-sm bg-surface-secondary/80 min-w-[60px]">Prom</th>}
+
+                                {/* Recovery Columns Header */}
+                                <th className="p-2 font-semibold text-center text-xs bg-amber-50 dark:bg-amber-900/10" title="Remedial">Rem</th>
+                                <th className="p-2 font-semibold text-center text-xs bg-amber-50 dark:bg-amber-900/10" title="Extraordinario">Ext</th>
+                                <th className="p-2 font-semibold text-center text-xs bg-amber-50 dark:bg-amber-900/10" title="Especial">Esp</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -252,51 +274,97 @@ const GradesView: React.FC = () => {
                                 const p1AttendancePct = p1AttendanceType ? calculateAttendancePercentage(group, 1, settings, attendance[group.id]?.[student.id] || {}) : 0;
                                 const p2AttendancePct = p2AttendanceType ? calculateAttendancePercentage(group, 2, settings, attendance[group.id]?.[student.id] || {}) : 0;
 
-                                let finalAvg: number | null = null;
+                                let ordinaryAvg: number | null = null;
                                 if (p1Avg !== null && p2Avg !== null) {
-                                    finalAvg = (p1Avg + p2Avg) / 2;
-                                } else if (p1Avg !== null) {
-                                    finalAvg = p1Avg;
-                                } else if (p2Avg !== null) {
-                                    finalAvg = p2Avg;
+                                    ordinaryAvg = (p1Avg + p2Avg) / 2;
                                 }
-                                const finalColor = getGradeColor(finalAvg);
+
+                                const remedial = groupGrades[student.id]?.[GRADE_REMEDIAL] ?? null;
+                                const extra = groupGrades[student.id]?.[GRADE_EXTRA] ?? null;
+                                const special = groupGrades[student.id]?.[GRADE_SPECIAL] ?? null;
+
+                                const { score: finalScore, type: finalType } = calculateFinalGradeWithRecovery(p1Avg, p2Avg, remedial, extra, special);
+                                const finalColor = getGradeColor(finalScore);
+                                
+                                const isFailing = ordinaryAvg !== null && ordinaryAvg < 7;
 
                                 return (
                                     <tr key={student.id} className="border-b border-border-color/70 hover:bg-surface-secondary/40">
-                                        <td className="sticky left-0 bg-surface p-2 font-medium z-10 whitespace-nowrap">{student.name}</td>
+                                        <td className="sticky left-0 bg-surface p-2 font-medium z-10 whitespace-nowrap border-r border-border-color shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">{student.name}</td>
                                         
+                                        {/* P1 Columns */}
                                         {p1Evaluations.map(ev => (
                                             <td key={ev.id} className="p-1 text-center">
                                                 <input type="number" value={groupGrades[student.id]?.[ev.id] ?? ''} onChange={(e) => handleGradeChange(student.id, ev.id, e.target.value)}
-                                                    max={ev.maxScore} min={0} placeholder="-" className="w-20 p-1.5 text-center border border-border-color rounded-md bg-surface focus:ring-2 focus:ring-primary"/>
+                                                    max={ev.maxScore} min={0} placeholder="-" className="w-16 p-1 text-center border border-border-color rounded-md bg-surface focus:ring-2 focus:ring-primary text-sm"/>
                                             </td>
                                         ))}
                                         {p1AttendanceType && (
                                             <td className="p-1 text-center">
-                                                 <span className="inline-block w-20 p-1.5 text-center bg-emerald-50 text-emerald-700 rounded-md font-semibold text-sm border border-emerald-100">
+                                                 <span className="inline-block px-1.5 py-0.5 text-center bg-emerald-50 text-emerald-700 rounded-md font-semibold text-xs border border-emerald-100">
                                                     {p1AttendancePct.toFixed(0)}%
                                                  </span>
                                             </td>
                                         )}
-                                        {(p1Evaluations.length > 0 || p1AttendanceType) && <td className={`p-2 text-center font-bold text-lg bg-surface-secondary/80 ${p1Color}`}>{p1Avg?.toFixed(1) || '-'}</td>}
+                                        {(p1Evaluations.length > 0 || p1AttendanceType) && <td className={`p-2 text-center font-bold text-sm bg-surface-secondary/80 ${p1Color}`}>{p1Avg?.toFixed(1) || '-'}</td>}
 
+                                        {/* P2 Columns */}
                                         {p2Evaluations.map(ev => (
                                             <td key={ev.id} className="p-1 text-center">
                                                 <input type="number" value={groupGrades[student.id]?.[ev.id] ?? ''} onChange={(e) => handleGradeChange(student.id, ev.id, e.target.value)}
-                                                    max={ev.maxScore} min={0} placeholder="-" className="w-20 p-1.5 text-center border border-border-color rounded-md bg-surface focus:ring-2 focus:ring-primary"/>
+                                                    max={ev.maxScore} min={0} placeholder="-" className="w-16 p-1 text-center border border-border-color rounded-md bg-surface focus:ring-2 focus:ring-primary text-sm"/>
                                             </td>
                                         ))}
                                         {p2AttendanceType && (
                                             <td className="p-1 text-center">
-                                                 <span className="inline-block w-20 p-1.5 text-center bg-emerald-50 text-emerald-700 rounded-md font-semibold text-sm border border-emerald-100">
+                                                 <span className="inline-block px-1.5 py-0.5 text-center bg-emerald-50 text-emerald-700 rounded-md font-semibold text-xs border border-emerald-100">
                                                     {p2AttendancePct.toFixed(0)}%
                                                  </span>
                                             </td>
                                         )}
-                                        {(p2Evaluations.length > 0 || p2AttendanceType) && <td className={`p-2 text-center font-bold text-lg bg-surface-secondary/80 ${p2Color}`}>{p2Avg?.toFixed(1) || '-'}</td>}
+                                        {(p2Evaluations.length > 0 || p2AttendanceType) && <td className={`p-2 text-center font-bold text-sm bg-surface-secondary/80 ${p2Color}`}>{p2Avg?.toFixed(1) || '-'}</td>}
 
-                                        <td className={`p-2 text-center font-bold text-xl bg-surface-secondary ${finalColor}`}>{finalAvg?.toFixed(1) || '-'}</td>
+                                        {/* Ordinary Average */}
+                                        <td className={`p-2 text-center font-bold text-base bg-surface-secondary border-r border-border-color ${ordinaryAvg !== null && ordinaryAvg < 7 ? 'text-accent-red' : 'text-accent-green-dark'}`}>
+                                            {ordinaryAvg?.toFixed(1) || '-'}
+                                        </td>
+
+                                        {/* Recovery Columns */}
+                                        <td className="p-1 text-center bg-amber-50/50">
+                                            <input 
+                                                type="number" 
+                                                value={remedial ?? ''} 
+                                                onChange={(e) => handleGradeChange(student.id, GRADE_REMEDIAL, e.target.value)}
+                                                max={10} min={0} 
+                                                disabled={!isFailing}
+                                                className={`w-12 p-1 text-center border rounded-md text-sm ${!isFailing ? 'bg-transparent border-transparent text-transparent' : 'bg-white border-amber-200 focus:ring-2 focus:ring-amber-400'}`}
+                                            />
+                                        </td>
+                                        <td className="p-1 text-center bg-amber-50/50">
+                                            <input 
+                                                type="number" 
+                                                value={extra ?? ''} 
+                                                onChange={(e) => handleGradeChange(student.id, GRADE_EXTRA, e.target.value)}
+                                                max={10} min={0} 
+                                                disabled={!isFailing}
+                                                className={`w-12 p-1 text-center border rounded-md text-sm ${!isFailing ? 'bg-transparent border-transparent text-transparent' : 'bg-white border-amber-200 focus:ring-2 focus:ring-amber-400'}`}
+                                            />
+                                        </td>
+                                        <td className="p-1 text-center bg-amber-50/50 border-r border-border-color">
+                                            <input 
+                                                type="number" 
+                                                value={special ?? ''} 
+                                                onChange={(e) => handleGradeChange(student.id, GRADE_SPECIAL, e.target.value)}
+                                                max={10} min={0} 
+                                                disabled={!isFailing}
+                                                className={`w-12 p-1 text-center border rounded-md text-sm ${!isFailing ? 'bg-transparent border-transparent text-transparent' : 'bg-white border-amber-200 focus:ring-2 focus:ring-amber-400'}`}
+                                            />
+                                        </td>
+
+                                        {/* Final Definitive Score */}
+                                        <td className={`p-2 text-center font-bold text-lg bg-surface-secondary ${finalColor}`}>
+                                            {finalScore?.toFixed(1) || '-'}
+                                        </td>
                                     </tr>
                                 );
                             })}

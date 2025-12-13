@@ -94,3 +94,41 @@ export const calculatePartialAverage = (
     const weightedAverage = (finalPartialScore / totalWeightOfGradedItems) * 10;
     return weightedAverage;
 };
+
+/**
+ * Calculates the definitive final grade considering remedial/extra/special stages.
+ */
+export const calculateFinalGradeWithRecovery = (
+    p1Avg: number | null,
+    p2Avg: number | null,
+    remedial: number | null,
+    extra: number | null,
+    special: number | null
+): { score: number | null; type: 'Ordinario' | 'Remedial' | 'Extra' | 'Especial' | 'N/A' } => {
+    
+    if (p1Avg === null || p2Avg === null) return { score: null, type: 'N/A' };
+    
+    const ordinary = (p1Avg + p2Avg) / 2;
+
+    // If passed ordinary, that's it.
+    if (ordinary >= 7) {
+        return { score: ordinary, type: 'Ordinario' };
+    }
+
+    // Check hierarchy of recoveries (Last passed exam determines the grade, or the last attempted)
+    
+    if (special !== null) {
+        return { score: special, type: 'Especial' };
+    }
+    
+    if (extra !== null) {
+        return { score: extra, type: 'Extra' };
+    }
+
+    if (remedial !== null) {
+        return { score: remedial, type: 'Remedial' };
+    }
+
+    // If failing and no recovery grades yet
+    return { score: ordinary, type: 'Ordinario' };
+};
