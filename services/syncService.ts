@@ -227,12 +227,6 @@ export const syncGradesData = async (state: AppState, dispatch: Dispatch<AppActi
         const syncUrl = getBaseApiUrl(apiUrl);
 
         // Send data to server
-        // Note: The backend script needs to handle a 'grades' type action or infer it from structure
-        // Since we are reusing the endpoint, we might need to wrap it or the backend needs to be smart.
-        // Assuming we send a list and the backend handles upserts.
-        // If your backend specifically looks for 'action', we might need to wrap this.
-        // Current implementation matches the bulk structure of syncAttendanceData which sends a raw array.
-        
         const syncResponse = await fetch(syncUrl.toString(), {
             method: 'POST',
             headers: {
@@ -246,7 +240,6 @@ export const syncGradesData = async (state: AppState, dispatch: Dispatch<AppActi
         });
 
         if (syncResponse.ok) {
-            // responseData was unused, so we just await the json to consume body and verify strict success
             await syncResponse.json();
             dispatch({
                 type: 'ADD_TOAST',
