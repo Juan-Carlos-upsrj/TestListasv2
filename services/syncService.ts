@@ -246,7 +246,8 @@ export const syncGradesData = async (state: AppState, dispatch: Dispatch<AppActi
         });
 
         if (syncResponse.ok) {
-            const responseData = await syncResponse.json();
+            // responseData was unused, so we just await the json to consume body and verify strict success
+            await syncResponse.json();
             dispatch({
                 type: 'ADD_TOAST',
                 payload: { message: `Calificaciones sincronizadas correctamente.`, type: 'success' }

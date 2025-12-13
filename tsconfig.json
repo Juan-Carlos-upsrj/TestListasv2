@@ -17,6 +17,6 @@
     "noFallthroughCasesInSwitch": true
   },
   "include": ["**/*.ts", "**/*.tsx", "preload.d.ts"],
-  "exclude": ["electron", "vite.config.ts"],
+  "exclude": ["electron", "vite.config.ts", "capacitor.config.ts"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }
