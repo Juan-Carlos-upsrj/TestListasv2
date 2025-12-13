@@ -337,7 +337,8 @@ const GradesView: React.FC = () => {
                                                 onChange={(e) => handleGradeChange(student.id, GRADE_REMEDIAL, e.target.value)}
                                                 max={10} min={0} 
                                                 disabled={!isFailing}
-                                                className={`w-12 p-1 text-center border rounded-md text-sm ${!isFailing ? 'bg-transparent border-transparent text-transparent' : 'bg-white border-amber-200 focus:ring-2 focus:ring-amber-400'}`}
+                                                className={`w-12 p-1 text-center border rounded-md text-sm transition-colors ${!isFailing ? 'bg-gray-100 dark:bg-slate-700 border-transparent text-gray-400 cursor-not-allowed' : 'bg-white border-amber-300 focus:ring-2 focus:ring-amber-500 shadow-sm'}`}
+                                                placeholder="-"
                                             />
                                         </td>
                                         <td className="p-1 text-center bg-amber-50/50">
@@ -347,7 +348,8 @@ const GradesView: React.FC = () => {
                                                 onChange={(e) => handleGradeChange(student.id, GRADE_EXTRA, e.target.value)}
                                                 max={10} min={0} 
                                                 disabled={!isFailing}
-                                                className={`w-12 p-1 text-center border rounded-md text-sm ${!isFailing ? 'bg-transparent border-transparent text-transparent' : 'bg-white border-amber-200 focus:ring-2 focus:ring-amber-400'}`}
+                                                className={`w-12 p-1 text-center border rounded-md text-sm transition-colors ${!isFailing ? 'bg-gray-100 dark:bg-slate-700 border-transparent text-gray-400 cursor-not-allowed' : 'bg-white border-amber-300 focus:ring-2 focus:ring-amber-500 shadow-sm'}`}
+                                                placeholder="-"
                                             />
                                         </td>
                                         <td className="p-1 text-center bg-amber-50/50 border-r border-border-color">
@@ -357,7 +359,8 @@ const GradesView: React.FC = () => {
                                                 onChange={(e) => handleGradeChange(student.id, GRADE_SPECIAL, e.target.value)}
                                                 max={10} min={0} 
                                                 disabled={!isFailing}
-                                                className={`w-12 p-1 text-center border rounded-md text-sm ${!isFailing ? 'bg-transparent border-transparent text-transparent' : 'bg-white border-amber-200 focus:ring-2 focus:ring-amber-400'}`}
+                                                className={`w-12 p-1 text-center border rounded-md text-sm transition-colors ${!isFailing ? 'bg-gray-100 dark:bg-slate-700 border-transparent text-gray-400 cursor-not-allowed' : 'bg-white border-amber-300 focus:ring-2 focus:ring-amber-500 shadow-sm'}`}
+                                                placeholder="-"
                                             />
                                         </td>
 
