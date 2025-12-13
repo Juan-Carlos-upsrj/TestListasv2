@@ -3,6 +3,7 @@ import { Dispatch } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { fetchHorarioCompleto } from './horarioService';
 import { GROUP_COLORS } from '../constants';
+import { calculatePartialAverage } from './gradeCalculation';
 
 const checkSettings = (settings: AppState['settings'], dispatch: Dispatch<AppAction>): boolean => {
     const { apiUrl, apiKey, professorName } = settings;
@@ -168,37 +169,38 @@ export const syncAttendanceData = async (state: AppState, dispatch: Dispatch<App
 export const syncGradesData = async (state: AppState, dispatch: Dispatch<AppAction>) => {
     if (!checkSettings(state.settings, dispatch)) return;
 
-    const { settings, grades, evaluations, groups } = state;
+    const { settings, grades, evaluations, groups, attendance } = state;
     const { apiUrl, apiKey, professorName } = settings;
     const trimmedProfessorName = professorName.trim();
 
-    dispatch({ type: 'ADD_TOAST', payload: { message: 'Preparando calificaciones...', type: 'info' } });
+    dispatch({ type: 'ADD_TOAST', payload: { message: 'Calculando promedios para subir...', type: 'info' } });
 
     try {
         const recordsToSync: any[] = [];
         const groupsMap = new Map(groups.map(g => [g.id, g]));
 
-        // Iterate through all groups in the grades object
-        for (const [groupId, studentGrades] of Object.entries(grades)) {
-            const group = groupsMap.get(groupId);
-            if (!group) continue;
-            
+        // Iterate through all groups
+        for (const group of groups) {
+            const groupId = group.id;
             const groupEvaluations = evaluations[groupId] || [];
-            const evalsMap = new Map(groupEvaluations.map(e => [e.id, e]));
-            const studentsMap = new Map(group.students.map(s => [s.id, s]));
+            
+            // Iterate through students in the group
+            for (const student of group.students) {
+                const studentId = student.id;
+                const studentGrades = grades[groupId]?.[studentId] || {};
+                const studentAttendance = attendance[groupId]?.[studentId] || {};
 
-            // Iterate through students
-            for (const [studentId, evalGrades] of Object.entries(studentGrades)) {
-                const student = studentsMap.get(studentId);
-                if (!student) continue;
+                // Calculate Partial 1 Average
+                const p1Avg = calculatePartialAverage(
+                    group,
+                    1,
+                    groupEvaluations,
+                    studentGrades,
+                    settings,
+                    studentAttendance
+                );
 
-                // Iterate through evaluations
-                for (const [evalId, score] of Object.entries(evalGrades)) {
-                    if (score === null || score === undefined) continue;
-
-                    const evaluation = evalsMap.get(evalId);
-                    if (!evaluation) continue;
-
+                if (p1Avg !== null) {
                     recordsToSync.push({
                         profesor_nombre: trimmedProfessorName,
                         grupo_id: groupId,
@@ -207,22 +209,49 @@ export const syncGradesData = async (state: AppState, dispatch: Dispatch<AppActi
                         alumno_id: studentId,
                         alumno_nombre: student.name,
                         alumno_matricula: student.matricula || '',
-                        evaluacion_id: evalId,
-                        evaluacion_nombre: evaluation.name,
-                        parcial: evaluation.partial,
-                        calificacion: score,
-                        max_score: evaluation.maxScore
+                        evaluacion_id: 'PROMEDIO_P1', // ID fijo para el promedio
+                        evaluacion_nombre: 'Promedio Parcial 1',
+                        parcial: 1,
+                        calificacion: Number(p1Avg.toFixed(2)),
+                        max_score: 10
+                    });
+                }
+
+                // Calculate Partial 2 Average
+                const p2Avg = calculatePartialAverage(
+                    group,
+                    2,
+                    groupEvaluations,
+                    studentGrades,
+                    settings,
+                    studentAttendance
+                );
+
+                if (p2Avg !== null) {
+                    recordsToSync.push({
+                        profesor_nombre: trimmedProfessorName,
+                        grupo_id: groupId,
+                        grupo_nombre: group.name,
+                        materia_nombre: group.subject,
+                        alumno_id: studentId,
+                        alumno_nombre: student.name,
+                        alumno_matricula: student.matricula || '',
+                        evaluacion_id: 'PROMEDIO_P2', // ID fijo para el promedio
+                        evaluacion_nombre: 'Promedio Parcial 2',
+                        parcial: 2,
+                        calificacion: Number(p2Avg.toFixed(2)),
+                        max_score: 10
                     });
                 }
             }
         }
 
         if (recordsToSync.length === 0) {
-            dispatch({ type: 'ADD_TOAST', payload: { message: 'No hay calificaciones registradas para subir.', type: 'info' } });
+            dispatch({ type: 'ADD_TOAST', payload: { message: 'No hay promedios calculados para subir.', type: 'info' } });
             return;
         }
 
-        dispatch({ type: 'ADD_TOAST', payload: { message: `Subiendo ${recordsToSync.length} calificaciones...`, type: 'info' } });
+        dispatch({ type: 'ADD_TOAST', payload: { message: `Subiendo ${recordsToSync.length} promedios...`, type: 'info' } });
 
         const syncUrl = getBaseApiUrl(apiUrl);
 
@@ -234,20 +263,31 @@ export const syncGradesData = async (state: AppState, dispatch: Dispatch<AppActi
                 'X-API-KEY': apiKey,
             },
             body: JSON.stringify({
-                action: 'sync-calificaciones', // Explicit action for the backend to distinguish
+                action: 'sync-calificaciones',
                 data: recordsToSync
             }),
         });
 
         if (syncResponse.ok) {
-            await syncResponse.json();
-            dispatch({
-                type: 'ADD_TOAST',
-                payload: { message: `Calificaciones sincronizadas correctamente.`, type: 'success' }
-            });
+            const responseData = await syncResponse.json();
+            const processedCount = responseData.registros_procesados !== undefined ? responseData.registros_procesados : '???';
+            
+            if (processedCount === 0 || processedCount === '0') {
+                 dispatch({
+                    type: 'ADD_TOAST',
+                    payload: { message: `Alerta: El servidor procesó 0 registros. Verifica la estructura SQL.`, type: 'error' }
+                });
+            } else {
+                dispatch({
+                    type: 'ADD_TOAST',
+                    payload: { message: `Éxito: Se actualizaron ${processedCount} promedios en el servidor.`, type: 'success' }
+                });
+            }
         } else {
              const errorText = await syncResponse.text();
-             throw new Error(`Error del servidor: ${syncResponse.statusText} - ${errorText}`);
+             // Clean error message if it is HTML
+             const cleanError = errorText.includes('<!DOCTYPE html>') ? 'Error interno del servidor (PHP)' : errorText;
+             throw new Error(`Error del servidor: ${syncResponse.statusText} - ${cleanError.substring(0, 100)}...`);
         }
 
     } catch (error) {
