@@ -1,0 +1,17 @@
+{
+  "groups": [],
+  "attendance": {},
+  "evaluations": {},
+  "grades": {},
+  "settings": {
+    "semesterStart": "2025-10-29",
+    "firstPartialEnd": "2025-11-29",
+    "semesterEnd": "2026-03-01",
+    "showMatricula": true,
+    "theme": "light",
+    "lowAttendanceThreshold": 80
+  },
+  "activeView": "dashboard",
+  "selectedGroupId": null,
+  "toasts": []
+}

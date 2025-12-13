@@ -1,0 +1,21 @@
+{
+  "short_name": "Gestion Academica",
+  "name": "Gestion Academica IAEV",
+  "description": "Una aplicacion web completa para la gestion de grupos, alumnos y asistencia academica. Incluye generacion de reportes, exportacion de datos y un dashboard personalizable para facilitar el seguimiento del progreso academico.",
+  "icons": [
+    {
+      "src": "public/icon-192.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "public/icon-512.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ],
+  "start_url": ".",
+  "display": "standalone",
+  "theme_color": "#1e293b",
+  "background_color": "#f1f5f9"
+}

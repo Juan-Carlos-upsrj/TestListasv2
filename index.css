@@ -1,0 +1,124 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Tema Claro Base (Slate) */
+    --color-background: #f8fafc;       /* slate-50 */
+    --color-surface: #ffffff;          /* white */
+    --color-surface-secondary: #f1f5f9; /* slate-100 */
+    
+    --color-primary: #3b82f6;          /* blue-500 */
+    --color-primary-hover: #2563eb;    /* blue-600 */
+    --color-primary-text: #ffffff;     /* white */
+    
+    --color-accent: #f59e0b;           /* amber-500 */
+    
+    --color-text-primary: #0f172a;     /* slate-900 */
+    --color-text-secondary: #64748b;   /* slate-500 */
+    --color-border-color: #e2e8f0;     /* slate-200 */
+  }
+
+  .dark {
+    /* Tema Oscuro Base (Slate Profundo) */
+    --color-background: #0f172a;       /* slate-900 */
+    --color-surface: #1e293b;          /* slate-800 */
+    --color-surface-secondary: #334155; /* slate-700 */
+    
+    --color-primary: #60a5fa;          /* blue-400 */
+    --color-primary-hover: #93c5fd;    /* blue-300 */
+    --color-primary-text: #0f172a;     /* slate-900 */
+    
+    --color-accent: #fbbf24;           /* amber-400 */
+    
+    --color-text-primary: #f8fafc;     /* slate-50 */
+    --color-text-secondary: #94a3b8;   /* slate-400 */
+    --color-border-color: #334155;     /* slate-700 */
+  }
+}
+
+/* Custom scrollbar for better aesthetics */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+::-webkit-scrollbar-thumb {
+    background-color: rgba(148, 163, 184, 0.5); /* slate-400 with opacity */
+    border-radius: 4px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+}
+::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(148, 163, 184, 0.8);
+}
+
+/* Base styles for react-grid-layout resizable handle */
+.react-resizable-handle::after {
+  content: "";
+  position: absolute;
+  right: 3px;
+  bottom: 3px;
+  width: 5px;
+  height: 5px;
+  border-right: 2px solid var(--color-text-secondary);
+  border-bottom: 2px solid var(--color-text-secondary);
+  opacity: 0.5;
+}
+
+/* Placeholder style for when dragging widgets */
+.react-grid-placeholder {
+  background: var(--color-primary) !important;
+  opacity: 0.2 !important;
+  border-radius: 0.75rem; /* rounded-xl */
+  z-index: 2;
+}
+
+/* Driver.js Customization */
+.driver-popover.driverjs-theme {
+  background-color: var(--color-surface);
+  color: var(--color-text-primary);
+  border-radius: 12px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.2);
+}
+
+.driver-popover.driverjs-theme .driver-popover-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--color-primary);
+}
+
+.driver-popover.driverjs-theme .driver-popover-description {
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: var(--color-text-secondary);
+}
+
+.driver-popover.driverjs-theme button {
+  background-color: var(--color-surface-secondary);
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-border-color);
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-shadow: none;
+  transition: all 0.2s;
+}
+
+.driver-popover.driverjs-theme button:hover {
+  background-color: var(--color-border-color);
+}
+
+.driver-popover.driverjs-theme button.driver-popover-next-btn {
+  background-color: var(--color-primary);
+  color: var(--color-primary-text);
+  border-color: transparent;
+}
+
+.driver-popover.driverjs-theme button.driver-popover-next-btn:hover {
+  background-color: var(--color-primary-hover);
+}
