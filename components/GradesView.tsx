@@ -283,7 +283,7 @@ const GradesView: React.FC = () => {
                                 const extra = groupGrades[student.id]?.[GRADE_EXTRA] ?? null;
                                 const special = groupGrades[student.id]?.[GRADE_SPECIAL] ?? null;
 
-                                const { score: finalScore, type: finalType } = calculateFinalGradeWithRecovery(p1Avg, p2Avg, remedial, extra, special);
+                                const { score: finalScore } = calculateFinalGradeWithRecovery(p1Avg, p2Avg, remedial, extra, special);
                                 const finalColor = getGradeColor(finalScore);
                                 
                                 const isFailing = ordinaryAvg !== null && ordinaryAvg < 7;
