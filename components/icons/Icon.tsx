@@ -22,6 +22,8 @@ const ICONS: { [key: string]: React.ReactNode } = {
   x: <><path d="M18 6 6 18" /><path d="m6 6 12 12" /></>,
   'arrow-left': <><path d="m12 19-7-7 7-7" /><path d="M19 12H5" /></>,
   'arrow-right': <><path d="M5 12h14" /><path d="m12 5 7 7-7 7" /></>,
+  'chevron-left': <><path d="m15 18-6-6 6-6" /></>,
+  'chevron-right': <><path d="m9 18 6-6-6-6" /></>,
   cake: <><path d="M20 21v-8a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8" /><path d="M4 16c-1.1 0-2-.9-2-2v-4c0-1.1.9-2 2-2" /><path d="M20 16c1.1 0 2-.9 2-2v-4c0-1.1-.9-2-2-2" /><path d="M12 4V2" /><path d="M12 8V6" /><path d="m8 4 1.5 1.5" /><path d="m14.5 5.5 1.5-1.5" /></>,
   google: <>
     <path d="M21.4,12.2c0-0.8-0.1-1.5-0.2-2.2H12v4.2h5.3c-0.2,1.4-1,2.5-2.4,3.3v2.7h3.5C20.4,18.1,21.4,15.4,21.4,12.2z" fill="#4285F4" />
