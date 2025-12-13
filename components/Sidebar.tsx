@@ -2,7 +2,7 @@ import React, { useContext, useState, useEffect, SetStateAction } from 'react';
 import { AppContext } from '../context/AppContext';
 import SettingsModal from './SettingsModal';
 import Icon from './icons/Icon';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { ActiveView } from '../types';
 import { GROUP_COLORS } from '../constants';
 import { startTour } from '../services/tourService';
@@ -87,7 +87,6 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
                 <motion.h1 
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
                     className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-primary to-blue-400 whitespace-nowrap overflow-hidden"
                 >
                     Gestión IAEV
