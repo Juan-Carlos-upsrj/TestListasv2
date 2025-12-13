@@ -97,38 +97,42 @@ export const calculatePartialAverage = (
 
 /**
  * Calculates the definitive final grade considering remedial/extra/special stages.
+ * Now supports Remedial per partial.
  */
 export const calculateFinalGradeWithRecovery = (
     p1Avg: number | null,
     p2Avg: number | null,
-    remedial: number | null,
+    remedialP1: number | null,
+    remedialP2: number | null,
     extra: number | null,
     special: number | null
-): { score: number | null; type: 'Ordinario' | 'Remedial' | 'Extra' | 'Especial' | 'N/A' } => {
+): { score: number | null; type: 'Ordinario' | 'Remedial' | 'Extra' | 'Especial' | 'N/A'; isFailing: boolean } => {
     
-    if (p1Avg === null || p2Avg === null) return { score: null, type: 'N/A' };
+    if (p1Avg === null || p2Avg === null) return { score: null, type: 'N/A', isFailing: false };
     
-    const ordinary = (p1Avg + p2Avg) / 2;
+    // Effective Partials: If Remedial exists, it overrides the partial average (usually).
+    // Assuming logic: Remedial replaces the grade if taken.
+    const effectiveP1 = remedialP1 !== null ? remedialP1 : p1Avg;
+    const effectiveP2 = remedialP2 !== null ? remedialP2 : p2Avg;
 
-    // If passed ordinary, that's it.
-    if (ordinary >= 7) {
-        return { score: ordinary, type: 'Ordinario' };
-    }
+    const ordinaryAvg = (effectiveP1 + effectiveP2) / 2;
 
-    // Check hierarchy of recoveries (Last passed exam determines the grade, or the last attempted)
-    
+    // Hierarchy check
     if (special !== null) {
-        return { score: special, type: 'Especial' };
+        return { score: special, type: 'Especial', isFailing: special < 7 };
     }
     
     if (extra !== null) {
-        return { score: extra, type: 'Extra' };
+        return { score: extra, type: 'Extra', isFailing: extra < 7 };
     }
 
-    if (remedial !== null) {
-        return { score: remedial, type: 'Remedial' };
+    // If Ordinary Avg (potentially improved by remedials) is passing
+    if (ordinaryAvg >= 7) {
+        // Determine type based on whether remedials were used
+        const type = (remedialP1 !== null || remedialP2 !== null) ? 'Remedial' : 'Ordinario';
+        return { score: ordinaryAvg, type, isFailing: false };
     }
 
-    // If failing and no recovery grades yet
-    return { score: ordinary, type: 'Ordinario' };
+    // Still failing after remedials (or didn't take them yet)
+    return { score: ordinaryAvg, type: 'Ordinario', isFailing: true };
 };
