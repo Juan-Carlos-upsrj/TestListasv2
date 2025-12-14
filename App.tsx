@@ -147,7 +147,7 @@ const App: React.FC = () => {
         )}
       </AnimatePresence>
       
-      <main className="flex-1 flex flex-col overflow-hidden z-10">
+      <main className="flex-1 flex flex-col overflow-hidden z-10 relative">
         <header className="flex-shrink-0 relative">
           {showFridayBanner ? (
             <motion.div

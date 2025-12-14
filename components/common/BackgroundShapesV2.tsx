@@ -1,3 +1,4 @@
+
 import React from 'react';
 
 const CurvedLine: React.FC<{ style?: React.CSSProperties, isBlue?: boolean }> = ({ style, isBlue }) => {
@@ -11,7 +12,7 @@ const CurvedLine: React.FC<{ style?: React.CSSProperties, isBlue?: boolean }> = 
 
 const BackgroundShapesV2: React.FC = () => {
   return (
-    <div className="absolute inset-0 z-[1] overflow-hidden motion-reduce:hidden" aria-hidden="true">
+    <div className="absolute inset-0 z-[1] overflow-hidden motion-reduce:hidden pointer-events-none" aria-hidden="true">
       {/* Esquina Superior Izquierda: Forma Roja */}
       <div className="absolute opacity-50 dark:opacity-30 w-[35vw] h-[35vw] min-w-[300px] min-h-[300px] -top-[10vw] -left-[12vw] rounded-[45%_55%_60%_40%_/_50%_40%_60%_50%] bg-accent-red transform -rotate-20" />
       
