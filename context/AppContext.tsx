@@ -32,9 +32,9 @@ const defaultState: AppState = {
     professorName: 'Nombre del Profesor',
     apiUrl: '',
     apiKey: '',
-    // AUTOMATIC UPDATE URL CONFIGURATION
-    // Points to the raw version.json in your GitHub repository
-    mobileUpdateUrl: 'https://raw.githubusercontent.com/Juan-Carlos-upsrj/TestListas/main/version.json', 
+    // AUTOMATIC UPDATE CONFIGURATION
+    // Points to the GitHub Repository URL. The app will check /releases/latest
+    mobileUpdateUrl: 'https://github.com/Juan-Carlos-upsrj/TestListas', 
   },
   activeView: 'dashboard',
   selectedGroupId: null,

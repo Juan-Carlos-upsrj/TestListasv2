@@ -163,18 +163,18 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                          {/* Extra Mobile config if needed */}
                          {!window.electronAPI && (
                              <div className="mt-4 pt-4 border-t border-border-color">
-                                <label htmlFor="mobileUpdateUrl" className="block text-sm font-medium">URL de Actualización (Avanzado)</label>
+                                <label htmlFor="mobileUpdateUrl" className="block text-sm font-medium">Repositorio de GitHub</label>
                                 <input
                                     type="url"
                                     id="mobileUpdateUrl"
                                     name="mobileUpdateUrl"
                                     value={settings.mobileUpdateUrl || ''}
                                     onChange={handleChange}
-                                    placeholder="https://ejemplo.com/version.json"
+                                    placeholder="https://github.com/usuario/repositorio"
                                     className="mt-1 w-full p-2 border border-border-color rounded-md bg-surface focus:ring-2 focus:ring-primary"
                                 />
                                 <p className="text-xs text-text-secondary mt-1">
-                                    Introduce la URL directa al archivo <code>version.json</code> para recibir notificaciones de nuevas versiones APK.
+                                    Introduce la URL principal del repositorio. El sistema buscará automáticamente en la sección de "Releases".
                                 </p>
                              </div>
                          )}
