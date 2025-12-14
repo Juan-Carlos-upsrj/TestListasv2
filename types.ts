@@ -74,6 +74,7 @@ export interface Settings {
   professorName: string;
   apiUrl: string;
   apiKey: string;
+  mobileUpdateUrl: string; // URL for version.json
 }
 
 export type ActiveView = 'dashboard' | 'groups' | 'attendance' | 'grades' | 'reports' | 'calendar';
@@ -204,4 +205,10 @@ export interface GroupEvaluationAverages {
 export interface GroupReportSummary {
     monthlyAttendance: GroupMonthlyAttendance;
     evaluationAverages: GroupEvaluationAverages;
+}
+
+export interface MobileUpdateInfo {
+    version: string;
+    url: string;
+    notes?: string;
 }

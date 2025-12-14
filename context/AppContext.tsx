@@ -32,6 +32,9 @@ const defaultState: AppState = {
     professorName: 'Nombre del Profesor',
     apiUrl: '',
     apiKey: '',
+    // AUTOMATIC UPDATE URL CONFIGURATION
+    // Points to the raw version.json in your GitHub repository
+    mobileUpdateUrl: 'https://raw.githubusercontent.com/Juan-Carlos-upsrj/TestListas/main/version.json', 
   },
   activeView: 'dashboard',
   selectedGroupId: null,
@@ -81,6 +84,10 @@ const appReducer = (state: AppState, action: AppAction): AppState => {
         // Old 'iaev' or 'custom' themes are now 'classic'
         if ((migratedSettings.theme as any) === 'iaev' || (migratedSettings.theme as any) === 'custom') {
             migratedSettings.theme = 'classic';
+        }
+        // Ensure new field exists and is populated if empty
+        if (!migratedSettings.mobileUpdateUrl) {
+            migratedSettings.mobileUpdateUrl = defaultState.settings.mobileUpdateUrl;
         }
 
         // Construct the new state safely

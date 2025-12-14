@@ -1,3 +1,4 @@
+
 import React, { useContext, useEffect, useState } from 'react';
 import { AppContext } from './context/AppContext';
 import Sidebar from './components/Sidebar';
@@ -9,17 +10,26 @@ import GradesView from './components/GradesView';
 import ToastContainer from './components/ToastContainer';
 import CalendarView from './components/CalendarView';
 import UpdateNotification from './components/UpdateNotification';
-import { PROFESSOR_BIRTHDAYS } from './constants';
+import MobileUpdateModal from './components/MobileUpdateModal';
+import { PROFESSOR_BIRTHDAYS, APP_VERSION } from './constants';
 import { motion, AnimatePresence } from 'framer-motion';
 import Icon from './components/icons/Icon';
 import BackgroundShapesV2 from './components/common/BackgroundShapesV2';
+import { checkForMobileUpdate } from './services/mobileUpdateService';
+import { MobileUpdateInfo } from './types';
 
 const App: React.FC = () => {
   const { state } = useContext(AppContext);
   const { settings } = state;
   const [isFriday, setIsFriday] = useState(false);
   const [isBirthday, setIsBirthday] = useState(false);
+  
+  // Desktop Updates
   const [updateAvailable, setUpdateAvailable] = useState(false);
+  
+  // Mobile Updates
+  const [mobileUpdateInfo, setMobileUpdateInfo] = useState<MobileUpdateInfo | null>(null);
+  
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   useEffect(() => {
@@ -49,14 +59,27 @@ const App: React.FC = () => {
     return () => clearInterval(timer);
   }, []);
 
-  // Update listeners
+  // Update listeners (Desktop & Mobile)
   useEffect(() => {
+    // 1. Desktop (Electron) check
     if (window.electronAPI) {
       window.electronAPI.onUpdateDownloaded(() => {
         setUpdateAvailable(true);
       });
+    } 
+    // 2. Mobile (Web/Android) check
+    else if (settings.mobileUpdateUrl) {
+       // Perform check once on mount (or when URL changes)
+       checkForMobileUpdate(settings.mobileUpdateUrl, APP_VERSION)
+         .then(info => {
+             if (info) setMobileUpdateInfo(info);
+         })
+         .catch(err => {
+             // Silently fail on auto-check to avoid annoying the user on startup
+             console.warn("Auto-update check failed:", err);
+         });
     }
-  }, []);
+  }, [settings.mobileUpdateUrl]);
 
   const handleUpdate = () => {
     if (window.electronAPI) {
@@ -99,7 +122,15 @@ const App: React.FC = () => {
     <div className="flex h-screen bg-background text-text-primary font-sans relative">
       <BackgroundShapesV2 />
       
+      {/* Desktop Notification */}
       {updateAvailable && <UpdateNotification onUpdate={handleUpdate} />}
+      
+      {/* Mobile/Manual Modal */}
+      <MobileUpdateModal 
+         isOpen={!!mobileUpdateInfo} 
+         onClose={() => setMobileUpdateInfo(null)} 
+         updateInfo={mobileUpdateInfo}
+      />
       
       <Sidebar isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />
 
@@ -131,7 +162,7 @@ const App: React.FC = () => {
                 >
                     <Icon name="align-justify" className="w-6 h-6"/>
                 </button>
-              <Icon name="cake" className="w-8 h-8 mr-4 animate-pulse" />
+              <Icon name="cake" className="w-8 h-8 animate-pulse" />
               <div>
                 <p className="font-bold text-lg">¡Es viernes!</p>
                 <p>¡Ya casi es momento de descansar, suerte en el día!</p>

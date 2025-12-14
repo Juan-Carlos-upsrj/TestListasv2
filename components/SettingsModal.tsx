@@ -1,13 +1,15 @@
+
 import React, { useContext, useState, useEffect, useRef } from 'react';
 import { AppContext } from '../context/AppContext';
 import { Settings } from '../types';
 import Modal from './common/Modal';
 import Button from './common/Button';
-import { GROUP_COLORS } from '../constants';
+import { GROUP_COLORS, APP_VERSION } from '../constants';
 import { exportBackup, importBackup } from '../services/backupService';
 import Icon from './icons/Icon';
 import { syncAttendanceData, syncScheduleData, syncGradesData } from '../services/syncService';
 import SemesterTransitionModal from './SemesterTransitionModal';
+import { checkForMobileUpdate } from '../services/mobileUpdateService';
 
 interface SettingsModalProps {
     isOpen: boolean;
@@ -75,13 +77,30 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
         fileInputRef.current?.click();
     };
     
-    const handleCheckForUpdates = () => {
+    const handleCheckForUpdates = async () => {
+        setIsChecking(true);
+        setUpdateStatus('Buscando actualizaciones...');
+        
         if (window.electronAPI) {
-            setIsChecking(true);
-            setUpdateStatus('Buscando actualizaciones...');
             window.electronAPI.checkForUpdates();
+        } else if (settings.mobileUpdateUrl) {
+            // Logic for Web/Mobile
+            try {
+                const updateInfo = await checkForMobileUpdate(settings.mobileUpdateUrl, APP_VERSION);
+                if (updateInfo) {
+                    setUpdateStatus(`¡Nueva versión ${updateInfo.version} disponible!`);
+                } else {
+                    setUpdateStatus('Tienes la última versión.');
+                }
+            } catch (e) {
+                const msg = e instanceof Error ? e.message : 'Error desconocido';
+                // Show a shortened error message
+                setUpdateStatus(`Error: ${msg.substring(0, 30)}...`);
+            }
+            setIsChecking(false);
         } else {
-            setUpdateStatus('No disponible en modo web.');
+            setUpdateStatus('Configura la URL de actualización primero.');
+            setIsChecking(false);
         }
     };
 
@@ -122,20 +141,43 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
 
     return (
         <>
-            <Modal isOpen={isOpen} onClose={onClose} title="Configuración" size="lg">
+            <Modal isOpen={isOpen} onClose={onClose} title={`Configuración (v${APP_VERSION})`} size="lg">
                 <div className="space-y-6">
                     
                     <fieldset className="border p-4 rounded-lg border-border-color">
                          <legend className="px-2 font-semibold">Sistema</legend>
-                         <div className="flex items-center justify-between">
-                             <div>
-                                 <p className="text-sm font-medium">Actualizaciones Automáticas</p>
-                                 <p className="text-xs text-text-secondary">{updateStatus || 'Versión actual instalada.'}</p>
+                         
+                         {/* Unified Update UI */}
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-sm font-medium">Actualizaciones Automáticas {window.electronAPI ? '(PC)' : '(Móvil/Web)'}</p>
+                                <p className="text-xs text-text-secondary truncate max-w-[200px]" title={updateStatus}>
+                                    {updateStatus || 'Versión actual instalada.'}
+                                </p>
+                            </div>
+                            <Button size="sm" variant="secondary" onClick={handleCheckForUpdates} disabled={isChecking}>
+                                {isChecking ? 'Buscando...' : 'Buscar Actualizaciones'}
+                            </Button>
+                        </div>
+                        
+                         {/* Extra Mobile config if needed */}
+                         {!window.electronAPI && (
+                             <div className="mt-4 pt-4 border-t border-border-color">
+                                <label htmlFor="mobileUpdateUrl" className="block text-sm font-medium">URL de Actualización (Avanzado)</label>
+                                <input
+                                    type="url"
+                                    id="mobileUpdateUrl"
+                                    name="mobileUpdateUrl"
+                                    value={settings.mobileUpdateUrl || ''}
+                                    onChange={handleChange}
+                                    placeholder="https://ejemplo.com/version.json"
+                                    className="mt-1 w-full p-2 border border-border-color rounded-md bg-surface focus:ring-2 focus:ring-primary"
+                                />
+                                <p className="text-xs text-text-secondary mt-1">
+                                    Introduce la URL directa al archivo <code>version.json</code> para recibir notificaciones de nuevas versiones APK.
+                                </p>
                              </div>
-                             <Button size="sm" variant="secondary" onClick={handleCheckForUpdates} disabled={isChecking}>
-                                 {isChecking ? 'Buscando...' : 'Buscar Actualizaciones'}
-                             </Button>
-                         </div>
+                         )}
                     </fieldset>
 
                     <fieldset className="border p-4 rounded-lg border-border-color">
