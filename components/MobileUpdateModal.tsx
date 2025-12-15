@@ -1,3 +1,4 @@
+
 import React from 'react';
 import Modal from './common/Modal';
 import Button from './common/Button';
@@ -14,7 +15,9 @@ const MobileUpdateModal: React.FC<MobileUpdateModalProps> = ({ isOpen, onClose, 
     if (!updateInfo) return null;
 
     const handleDownload = () => {
-        window.open(updateInfo.url, '_blank');
+        // Use '_system' to force opening in the external browser (Chrome/Safari)
+        // This is crucial for Android to handle the download correctly without freezing the WebView.
+        window.open(updateInfo.url, '_system');
         onClose();
     };
 
@@ -42,7 +45,7 @@ const MobileUpdateModal: React.FC<MobileUpdateModalProps> = ({ isOpen, onClose, 
                 </div>
                 
                 <p className="text-xs text-text-secondary mt-4">
-                    Nota: Se descargará un archivo APK. Deberás permitir la instalación desde fuentes desconocidas si se te solicita.
+                    Nota: Se abrirá el navegador para descargar el APK. Deberás permitir la instalación desde fuentes desconocidas si se te solicita.
                 </p>
             </div>
         </Modal>
