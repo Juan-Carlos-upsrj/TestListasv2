@@ -1,32 +1,85 @@
-name: Build macOS App
+name: "Fábrica de Aplicaciones (Win, Mac, Android)"
 
 on:
   push:
     branches: [ main ]
 
 jobs:
-  build:
-    runs-on: macos-latest
+  # TRABAJO 1: Construir versión de Escritorio (Windows y Mac)
+  build-desktop:
+    name: Build Desktop (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [macos-latest, windows-latest] # Aquí pedimos los dos sistemas
 
     steps:
-      - name: Check out Git repository
-        uses: actions/checkout@v4 # Actualizado a v4
+      - name: Clonar repositorio
+        uses: actions/checkout@v4
 
-      - name: Install Node.js
-        uses: actions/setup-node@v4 # Actualizado a v4
+      - name: Instalar Node.js
+        uses: actions/setup-node@v4
         with:
-          node-version: 20 # Actualizado a una versión de Node más reciente
+          node-version: 20
 
-      - name: Install Dependencies
+      - name: Instalar dependencias
         run: npm install
 
-      - name: Build App for Mac
+      - name: Generar Instalable (Electron)
         run: npm run dist
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Upload Artifacts
-        uses: actions/upload-artifact@v4 # ¡Esta es la corrección importante!
+      # Subir el instalable correcto según el sistema
+      - name: Subir Instalable Windows
+        if: matrix.os == 'windows-latest'
+        uses: actions/upload-artifact@v4
         with:
-          name: Mac-Installer
+          name: Instalador-Windows
+          path: release/*.exe
+
+      - name: Subir Instalable Mac
+        if: matrix.os == 'macos-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: Instalador-Mac
           path: release/*.dmg
+
+  # TRABAJO 2: Construir versión Móvil (Android)
+  build-android:
+    name: Build Android (APK)
+    runs-on: ubuntu-latest # Linux es el mejor para compilar Android
+    needs: build-desktop # (Opcional) Esto hace que corra paralelo si lo quitas, o después si lo dejas. Mejor quitarlo para velocidad.
+
+    steps:
+      - name: Clonar repositorio
+        uses: actions/checkout@v4
+
+      - name: Instalar Java (Necesario para Android)
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Instalar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Instalar dependencias
+        run: npm install
+
+      - name: Construir la Web (Vite Build)
+        run: npm run build
+
+      - name: Sincronizar con Capacitor
+        run: npx cap sync android
+
+      - name: Generar APK (Debug)
+        run: cd android && ./gradlew assembleDebug
+
+      - name: Subir APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Instalador-Android
+          path: android/app/build/outputs/apk/debug/app-debug.apk
