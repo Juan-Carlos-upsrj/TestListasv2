@@ -1,0 +1,39 @@
+
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*' # Se activa cuando empujas un tag como v1.0.0
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      matrix:
+        os: [macos-latest, windows-latest, ubuntu-latest]
+
+    steps:
+      - name: Check out Git repository
+        uses: actions/checkout@v4
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm install
+
+      # Construcción y Publicación
+      # electron-builder detectará la config en package.json y usará el GITHUB_TOKEN
+      # para subir los artefactos a la sección Releases de tu repo.
+      - name: Build & Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npm run dist
