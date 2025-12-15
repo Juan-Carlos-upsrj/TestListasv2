@@ -6,27 +6,27 @@ on:
 
 jobs:
   build:
-    runs-on: macos-latest # GitHub te presta una Mac virtual gratis
+    runs-on: macos-latest
 
     steps:
       - name: Check out Git repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4 # Actualizado a v4
 
       - name: Install Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4 # Actualizado a v4
         with:
-          node-version: 18
+          node-version: 20 # Actualizado a una versión de Node más reciente
 
       - name: Install Dependencies
         run: npm install
 
       - name: Build App for Mac
-        run: npm run dist # Esto ejecuta tu script "dist" del package.json
+        run: npm run dist
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload Artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4 # ¡Esta es la corrección importante!
         with:
           name: Mac-Installer
-          path: release/*.dmg # La carpeta donde electron-builder deja el archivo
+          path: release/*.dmg
