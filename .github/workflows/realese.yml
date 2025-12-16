@@ -1,39 +1,50 @@
-
-name: Build and Release
-
-on:
-  push:
-    tags:
-      - 'v*' # Se activa cuando empujas un tag como v1.0.0
-
-permissions:
-  contents: write
-
-jobs:
-  release:
-    runs-on: ${{ matrix.os }}
-
-    strategy:
-      matrix:
-        os: [macos-latest, windows-latest, ubuntu-latest]
+# TRABAJO 3: ANDROID (Firmado y Optimizado)
+  build-android:
+    name: 3. Build Android
+    needs: bump-version
+    runs-on: ubuntu-latest
 
     steps:
-      - name: Check out Git repository
+      - name: Clonar repositorio
         uses: actions/checkout@v4
+        with:
+          ref: main
 
-      - name: Install Node.js
+      - name: Instalar Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Instalar Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: 'npm'
 
-      - name: Install Dependencies
+      - name: Instalar dependencias
         run: npm install
 
-      # Construcción y Publicación
-      # electron-builder detectará la config en package.json y usará el GITHUB_TOKEN
-      # para subir los artefactos a la sección Releases de tu repo.
-      - name: Build & Release
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: npm run dist
+      - name: Construir Web
+        run: npm run build
+
+      - name: Sincronizar Capacitor
+        run: npx cap sync android
+
+      # Restaurar la llave desde los secretos de GitHub
+      - name: Restaurar Keystore
+        run: |
+          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > android/release.keystore
+
+      - name: Dar permisos a Gradlew
+        run: chmod +x android/gradlew
+
+      # Construir versión RELEASE firmada
+      - name: Generar APK Firmado
+        run: cd android && ./gradlew assembleRelease -Pandroid.injected.signing.store.file=$(pwd)/release.keystore -Pandroid.injected.signing.store.password=${{ secrets.ANDROID_KEYSTORE_PASSWORD }} -Pandroid.injected.signing.key.alias=${{ secrets.ANDROID_KEY_ALIAS }} -Pandroid.injected.signing.key.password=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+
+      - name: Subir APK Final
+        uses: actions/upload-artifact@v4
+        with:
+          name: Instalador-Android
+          # Nota: Ahora la ruta es 'release' en lugar de 'debug'
+          path: android/app/build/outputs/apk/release/app-release.apk
