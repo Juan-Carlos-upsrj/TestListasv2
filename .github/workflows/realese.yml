@@ -1,4 +1,84 @@
-# TRABAJO 3: ANDROID (Firmado y Optimizado)
+name: "Fábrica Sincronizada (Win, Mac, Android)"
+
+on:
+  push:
+    branches: [ main ]
+    paths-ignore:
+      - 'package.json'
+      - 'package-lock.json'
+
+permissions:
+  contents: write
+
+jobs:
+  # TRABAJO 1: EL COORDINADOR (Sube la versión para todos)
+  bump-version:
+    name: 1. Subir Versión
+    runs-on: ubuntu-latest
+    steps:
+      - name: Clonar repositorio
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configurar Git
+        run: |
+          git config --global user.name "GitHub Actions Bot"
+          git config --global user.email "actions@github.com"
+
+      - name: Incrementar Versión (Patch)
+        id: version
+        run: |
+          npm version patch -m "Auto-update version to %s [skip ci]"
+          git push
+
+  # TRABAJO 2: ESCRITORIO (Windows y Mac)
+  build-desktop:
+    name: 2. Build Desktop (${{ matrix.os }})
+    needs: bump-version
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [windows-latest, macos-latest]
+
+    steps:
+      - name: Clonar repositorio
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Instalar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Instalar dependencias
+        run: npm install
+
+      - name: Generar Instalables
+        run: npm run dist
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Subir Windows
+        if: matrix.os == 'windows-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: Instalador-Windows
+          path: |
+            release/*.exe
+            release/latest.yml
+
+      - name: Subir Mac
+        if: matrix.os == 'macos-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: Instalador-Mac
+          path: |
+            release/*.dmg
+            release/latest-mac.yml
+
+  # TRABAJO 3: ANDROID (Firmado y Optimizado)
   build-android:
     name: 3. Build Android
     needs: bump-version
@@ -30,7 +110,7 @@
       - name: Sincronizar Capacitor
         run: npx cap sync android
 
-      # Restaurar la llave desde los secretos de GitHub
+      # Restaurar la llave secreta
       - name: Restaurar Keystore
         run: |
           echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > android/release.keystore
@@ -38,7 +118,7 @@
       - name: Dar permisos a Gradlew
         run: chmod +x android/gradlew
 
-      # Construir versión RELEASE firmada
+      # Generar APK RELEASE (Firmado)
       - name: Generar APK Firmado
         run: cd android && ./gradlew assembleRelease -Pandroid.injected.signing.store.file=$(pwd)/release.keystore -Pandroid.injected.signing.store.password=${{ secrets.ANDROID_KEYSTORE_PASSWORD }} -Pandroid.injected.signing.key.alias=${{ secrets.ANDROID_KEY_ALIAS }} -Pandroid.injected.signing.key.password=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
 
@@ -46,5 +126,4 @@
         uses: actions/upload-artifact@v4
         with:
           name: Instalador-Android
-          # Nota: Ahora la ruta es 'release' en lugar de 'debug'
           path: android/app/build/outputs/apk/release/app-release.apk
