@@ -1,3 +1,4 @@
+
 import { Group, Settings, AttendanceStatus, Evaluation, EvaluationType } from '../types';
 import { getClassDates } from './dateUtils';
 
@@ -97,7 +98,7 @@ export const calculatePartialAverage = (
 
 /**
  * Calculates the definitive final grade considering remedial/extra/special stages.
- * Now supports Remedial per partial.
+ * Updated Logic: Fails if ANY remedial is failed (<7) OR if overall average is < 7.
  */
 export const calculateFinalGradeWithRecovery = (
     p1Avg: number | null,
@@ -110,14 +111,13 @@ export const calculateFinalGradeWithRecovery = (
     
     if (p1Avg === null || p2Avg === null) return { score: null, type: 'N/A', isFailing: false };
     
-    // Effective Partials: If Remedial exists, it overrides the partial average (usually).
-    // Assuming logic: Remedial replaces the grade if taken.
+    // Effective Partials: If Remedial exists, it overrides the partial average.
     const effectiveP1 = remedialP1 !== null ? remedialP1 : p1Avg;
     const effectiveP2 = remedialP2 !== null ? remedialP2 : p2Avg;
 
     const ordinaryAvg = (effectiveP1 + effectiveP2) / 2;
 
-    // Hierarchy check
+    // Hierarchy check: Special > Extra > Ordinary
     if (special !== null) {
         return { score: special, type: 'Especial', isFailing: special < 7 };
     }
@@ -126,13 +126,23 @@ export const calculateFinalGradeWithRecovery = (
         return { score: extra, type: 'Extra', isFailing: extra < 7 };
     }
 
-    // If Ordinary Avg (potentially improved by remedials) is passing
-    if (ordinaryAvg >= 7) {
-        // Determine type based on whether remedials were used
-        const type = (remedialP1 !== null || remedialP2 !== null) ? 'Remedial' : 'Ordinario';
-        return { score: ordinaryAvg, type, isFailing: false };
+    // CHECK FAIL CONDITIONS FOR ORDINARY PHASE
+    
+    // 1. Failed a Remedial explicitly (Instant Extra)
+    const failedRemedialP1 = remedialP1 !== null && remedialP1 < 7;
+    const failedRemedialP2 = remedialP2 !== null && remedialP2 < 7;
+    
+    if (failedRemedialP1 || failedRemedialP2) {
+        // Even if average > 7, if you failed a remedial, you failed the ordinary phase.
+        return { score: ordinaryAvg, type: 'Ordinario', isFailing: true }; 
     }
 
-    // Still failing after remedials (or didn't take them yet)
-    return { score: ordinaryAvg, type: 'Ordinario', isFailing: true };
+    // 2. Failed by Average
+    if (ordinaryAvg < 7) {
+        return { score: ordinaryAvg, type: 'Ordinario', isFailing: true };
+    }
+
+    // If passed average and didn't fail any TAKEN remedial
+    const type = (remedialP1 !== null || remedialP2 !== null) ? 'Remedial' : 'Ordinario';
+    return { score: ordinaryAvg, type, isFailing: false };
 };

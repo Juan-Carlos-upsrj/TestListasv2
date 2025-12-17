@@ -1,3 +1,4 @@
+
 import React, { useContext, useState, useMemo, useEffect, useCallback } from 'react';
 import { AppContext } from '../context/AppContext';
 import { Evaluation, Group } from '../types';
@@ -398,7 +399,7 @@ const GradesView: React.FC = () => {
                                         const { score: finalScore } = calculateFinalGradeWithRecovery(p1Avg, p2Avg, remedialP1, remedialP2, extra, special);
                                         const finalColor = getGradeColor(finalScore);
 
-                                        // Enables
+                                        // 1. Enable Remedial if partial is failed (<7)
                                         const needsRemP1 = p1Avg !== null && p1Avg < 7;
                                         const needsRemP2 = p2Avg !== null && p2Avg < 7;
                                         
@@ -406,13 +407,27 @@ const GradesView: React.FC = () => {
                                         const effP1 = remedialP1 !== null ? remedialP1 : p1Avg;
                                         const effP2 = remedialP2 !== null ? remedialP2 : p2Avg;
                                         
-                                        // Ordinary Avg using effective grades
+                                        // Ordinary Avg
                                         let ordinaryAvg: number | null = null;
                                         if (effP1 !== null && effP2 !== null) {
                                             ordinaryAvg = (effP1 + effP2) / 2;
                                         }
                                         
-                                        const needsExtra = ordinaryAvg !== null && ordinaryAvg < 7;
+                                        // 2. Enable Extra if ANY remedial was failed (<7) OR if Ordinary Avg is insufficient (<7)
+                                        // IMPORTANT: Only trigger if the remedial was actually taken (not null). If null, they are waiting for remedial, not extra.
+                                        const failedRemedialP1 = remedialP1 !== null && remedialP1 < 7;
+                                        const failedRemedialP2 = remedialP2 !== null && remedialP2 < 7;
+                                        const failedAverage = ordinaryAvg !== null && ordinaryAvg < 7;
+                                        
+                                        // Logic: 
+                                        // - You go to Extra if you failed a remedial you took.
+                                        // - OR if you passed remedials/partials but your average is still failing (e.g. 6 and 6 -> 6).
+                                        // - We ensure both "legs" (partials) are resolved (either passed initially or remedial taken) before failing by average.
+                                        const p1Resolved = (p1Avg !== null && p1Avg >= 7) || remedialP1 !== null;
+                                        const p2Resolved = (p2Avg !== null && p2Avg >= 7) || remedialP2 !== null;
+
+                                        const needsExtra = failedRemedialP1 || failedRemedialP2 || (failedAverage && p1Resolved && p2Resolved);
+                                        
                                         const needsSpecial = needsExtra && extra !== null && extra < 7;
 
                                         return (

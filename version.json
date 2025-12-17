@@ -1,5 +1,5 @@
 {
-  "version": "1.1.0",
-  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v1.1.0/app-debug.apk",
-  "notes": "¡Versión 1.1.0! Incluye sincronización de exámenes de recuperación (Remediales, Extras y Especiales) con el servidor y mejoras en la interfaz."
+  "version": "1.1.1",
+  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v1.1.1/app-debug.apk",
+  "notes": "¡Versión 1.1.1! Corrección crítica: Reprobar un examen remedial ahora envía automáticamente al alumno a Extraordinario, independientemente del promedio."
 }
