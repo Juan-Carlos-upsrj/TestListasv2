@@ -110,8 +110,8 @@ export const GroupForm: React.FC<{
     const [quarter, setQuarter] = useState(group?.quarter || '');
     const [classDays, setClassDays] = useState<DayOfWeek[]>(group?.classDays || []);
     const [color, setColor] = useState(group?.color || GROUP_COLORS[0].name);
-    const [p1Types, setP1Types] = useState(group?.evaluationTypes?.partial1 || [{ id: uuidv4(), name: 'General', weight: 100 }]);
-    const [p2Types, setP2Types] = useState(group?.evaluationTypes?.partial2 || [{ id: uuidv4(), name: 'General', weight: 100 }]);
+    const [p1Types, setP1Types] = useState<EvaluationType[]>(group?.evaluationTypes?.partial1 || [{ id: uuidv4(), name: 'General', weight: 100 }]);
+    const [p2Types, setP2Types] = useState<EvaluationType[]>(group?.evaluationTypes?.partial2 || [{ id: uuidv4(), name: 'General', weight: 100 }]);
 
     const handleDayToggle = (day: DayOfWeek) => {
         setClassDays(prev =>
@@ -133,8 +133,8 @@ export const GroupForm: React.FC<{
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        const p1Weight = p1Types.reduce((sum, t) => sum + t.weight, 0);
-        const p2Weight = p2Types.reduce((sum, t) => sum + t.weight, 0);
+        const p1Weight = p1Types.reduce((sum: number, t) => sum + Number(t.weight), 0);
+        const p2Weight = p2Types.reduce((sum: number, t) => sum + Number(t.weight), 0);
 
         if (!name || !subject) {
             alert('Por favor, completa el nombre y la materia del grupo.');

@@ -1,3 +1,4 @@
+
 import { AppState, AppAction, Group, DayOfWeek, AttendanceStatus } from '../types';
 import { Dispatch } from 'react';
 import { v4 as uuidv4 } from 'uuid';
@@ -242,6 +243,85 @@ export const syncGradesData = async (state: AppState, dispatch: Dispatch<AppActi
                         max_score: 10
                     });
                 }
+
+                // --- INICIO CÓDIGO NUEVO PARA RECUPERACIÓN ---
+
+                // 1. Remedial Parcial 1
+                const remedialP1 = studentGrades['GRADE_REMEDIAL_P1'];
+                if (remedialP1 !== undefined && remedialP1 !== null) {
+                    recordsToSync.push({
+                        profesor_nombre: trimmedProfessorName,
+                        grupo_id: groupId,
+                        grupo_nombre: group.name,
+                        materia_nombre: group.subject,
+                        alumno_id: studentId,
+                        alumno_nombre: student.name,
+                        alumno_matricula: student.matricula || '',
+                        evaluacion_id: 'REMEDIAL_P1',
+                        evaluacion_nombre: 'Remedial Parcial 1',
+                        parcial: 1,
+                        calificacion: Number(remedialP1),
+                        max_score: 10
+                    });
+                }
+
+                // 2. Remedial Parcial 2
+                const remedialP2 = studentGrades['GRADE_REMEDIAL_P2'];
+                if (remedialP2 !== undefined && remedialP2 !== null) {
+                    recordsToSync.push({
+                        profesor_nombre: trimmedProfessorName,
+                        grupo_id: groupId,
+                        grupo_nombre: group.name,
+                        materia_nombre: group.subject,
+                        alumno_id: studentId,
+                        alumno_nombre: student.name,
+                        alumno_matricula: student.matricula || '',
+                        evaluacion_id: 'REMEDIAL_P2',
+                        evaluacion_nombre: 'Remedial Parcial 2',
+                        parcial: 2,
+                        calificacion: Number(remedialP2),
+                        max_score: 10
+                    });
+                }
+
+                // 3. Extraordinario
+                const gradeExtra = studentGrades['GRADE_EXTRA'];
+                if (gradeExtra !== undefined && gradeExtra !== null) {
+                    recordsToSync.push({
+                        profesor_nombre: trimmedProfessorName,
+                        grupo_id: groupId,
+                        grupo_nombre: group.name,
+                        materia_nombre: group.subject,
+                        alumno_id: studentId,
+                        alumno_nombre: student.name,
+                        alumno_matricula: student.matricula || '',
+                        evaluacion_id: 'EXTRA_ORDINARIO',
+                        evaluacion_nombre: 'Examen Extra',
+                        parcial: 3,
+                        calificacion: Number(gradeExtra),
+                        max_score: 10
+                    });
+                }
+
+                // 4. Especial
+                const gradeSpecial = studentGrades['GRADE_SPECIAL'];
+                if (gradeSpecial !== undefined && gradeSpecial !== null) {
+                    recordsToSync.push({
+                        profesor_nombre: trimmedProfessorName,
+                        grupo_id: groupId,
+                        grupo_nombre: group.name,
+                        materia_nombre: group.subject,
+                        alumno_id: studentId,
+                        alumno_nombre: student.name,
+                        alumno_matricula: student.matricula || '',
+                        evaluacion_id: 'ESPECIAL',
+                        evaluacion_nombre: 'Examen Especial',
+                        parcial: 4,
+                        calificacion: Number(gradeSpecial),
+                        max_score: 10
+                    });
+                }
+                // --- FIN CÓDIGO NUEVO ---
             }
         }
 
