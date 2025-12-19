@@ -1,4 +1,3 @@
-
 import React, { useContext, useState, useMemo, useEffect, useCallback } from 'react';
 import { AppContext } from '../context/AppContext';
 import { Evaluation, Group } from '../types';
@@ -284,6 +283,12 @@ const GradesView: React.FC = () => {
                                     const special = groupGrades[student.id]?.[GRADE_SPECIAL] ?? null;
 
                                     const { score: finalScore, isFailing } = calculateFinalGradeWithRecovery(p1Avg, p2Avg, r1, r2, extra, special);
+                                    
+                                    // REFINED LOGIC: Extra is enabled if ANY effective partial is < 7
+                                    const effectiveP1 = r1 !== null ? r1 : p1Avg;
+                                    const effectiveP2 = r2 !== null ? r2 : p2Avg;
+                                    const hasFailedPartial = (effectiveP1 !== null && effectiveP1 < 7) || (effectiveP2 !== null && effectiveP2 < 7);
+                                    const canTakeExtra = hasFailedPartial || isFailing;
 
                                     return (
                                         <tr key={student.id} className="border-b border-border-color/70 hover:bg-surface-secondary/40">
@@ -306,9 +311,9 @@ const GradesView: React.FC = () => {
                                                     type="number" 
                                                     value={extra ?? ''} 
                                                     onChange={(e) => handleGradeChange(student.id, GRADE_EXTRA, e.target.value)}
-                                                    disabled={!isFailing}
-                                                    title={!isFailing ? "Alumno ya acreditó el ciclo" : "Examen extraordinario"}
-                                                    className={`w-12 p-1 text-center border border-amber-400 rounded-md bg-surface text-xs ${!isFailing ? 'opacity-40 cursor-not-allowed bg-slate-50' : ''}`}
+                                                    disabled={!canTakeExtra}
+                                                    title={!canTakeExtra ? "Alumno ya acreditó todos los parciales" : "Habilitado por calificación menor a 7 en parciales o promedio"}
+                                                    className={`w-12 p-1 text-center border border-amber-400 rounded-md bg-surface text-xs ${!canTakeExtra ? 'opacity-40 cursor-not-allowed bg-slate-50' : ''}`}
                                                 />
                                             </td>
                                             <td className="p-1 text-center">

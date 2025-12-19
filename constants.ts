@@ -1,8 +1,7 @@
-
 import { AttendanceStatus, DayOfWeek, MotivationalQuote, Professor } from './types';
 
 // Manual version control for the web/mobile app
-export const APP_VERSION = '1.1.6'; 
+export const APP_VERSION = '1.1.7'; 
 
 export const DAYS_OF_WEEK: DayOfWeek[] = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
 
@@ -83,7 +82,7 @@ export const GROUP_COLORS = [
     { name: 'emerald', hex: '#059669', bg: 'bg-emerald-600', text: 'text-white', ring: 'ring-emerald-600', calendar: 'bg-emerald-100 dark:bg-emerald-900/50 text-emerald-800 dark:text-emerald-200' },
     { name: 'green', hex: '#16a34a', bg: 'bg-green-600', text: 'text-white', ring: 'ring-green-600', calendar: 'bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-200' },
     { name: 'lime', hex: '#65a30d', bg: 'bg-lime-600', text: 'text-white', ring: 'ring-lime-600', calendar: 'bg-lime-100 dark:bg-lime-900/50 text-lime-800 dark:text-lime-200' },
-    { name: 'yellow', hex: '#ca8a04', bg: 'bg-yellow-600', text: 'text-white', ring: 'ring-yellow-600', calendar: 'bg-yellow-100 dark:bg-yellow-900/50 text-yellow-800 dark:text-yellow-200' },
+    { name: 'yellow', hex: '#ca8a04', bg: 'bg-yellow-600', text: 'text-white', ring: 'ring-yellow-600', calendar: 'bg-yellow-100 dark:bg-yellow-900/50 text-yellow-800 dark:text-blue-200' },
     { name: 'amber', hex: '#d97706', bg: 'bg-amber-600', text: 'text-white', ring: 'ring-amber-600', calendar: 'bg-amber-100 dark:bg-amber-900/50 text-amber-800 dark:text-amber-200' },
     { name: 'orange', hex: '#ea580c', bg: 'bg-orange-600', text: 'text-white', ring: 'ring-orange-600', calendar: 'bg-orange-100 dark:bg-orange-900/50 text-orange-800 dark:text-orange-200' },
     { name: 'red', hex: '#dc2626', bg: 'bg-red-600', text: 'text-white', ring: 'ring-red-600', calendar: 'bg-red-100 dark:bg-red-900/50 text-red-800 dark:text-red-200' },
