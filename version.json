@@ -1,5 +1,5 @@
 {
-  "version": "1.1.2",
-  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v1.1.2/app-debug.apk",
-  "notes": "¡Versión 1.1.2! Añadida marca de Recursamiento para alumnos y sistema de Equipos con calificaciones compartidas en tareas grupales."
+  "version": "1.1.4",
+  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v1.1.4/app-debug.apk",
+  "notes": "¡Versión 1.1.4! Parche de estabilidad para la compilación de distribución."
 }

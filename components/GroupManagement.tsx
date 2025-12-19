@@ -1,4 +1,3 @@
-
 import React, { useContext, useState, useMemo } from 'react';
 import { AppContext } from '../context/AppContext';
 import { Group, Student, DayOfWeek, EvaluationType } from '../types';
@@ -7,7 +6,6 @@ import Modal from './common/Modal';
 import Button from './common/Button';
 import Icon from './icons/Icon';
 import { DAYS_OF_WEEK, GROUP_COLORS } from '../constants';
-import { motion } from 'framer-motion';
 
 export const EvaluationTypesEditor: React.FC<{
     types: EvaluationType[];
