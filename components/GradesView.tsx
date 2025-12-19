@@ -7,7 +7,7 @@ import Modal from './common/Modal';
 import Button from './common/Button';
 import Icon from './icons/Icon';
 import { GroupForm } from './GroupManagement';
-import { calculatePartialAverage, getGradeColor, calculateAttendancePercentage, calculateFinalGradeWithRecovery } from '../services/gradeCalculation';
+import { calculatePartialAverage, getGradeColor, calculateFinalGradeWithRecovery } from '../services/gradeCalculation';
 import GradeImageModal from './GradeImageModal';
 
 // Special IDs for recovery grades
@@ -123,10 +123,10 @@ const GradesView: React.FC = () => {
     }, [groups, selectedGroupId, setSelectedGroupId]);
     
     const studentsForRecovery = useMemo(() => {
-        if (!group || viewMode === 'ordinary') return group?.students || [];
+        if (!group) return [];
         return group.students.filter(student => {
-            const p1Avg = calculatePartialAverage(group, 1, evaluations[group.id] || [], groupGrades[student.id] || {}, settings, attendance[group.id]?.[student.id] || {});
-            const p2Avg = calculatePartialAverage(group, 2, evaluations[group.id] || [], groupGrades[student.id] || {}, settings, attendance[group.id]?.[student.id] || {});
+            const p1Avg = calculatePartialAverage(group, 1, groupEvaluations, groupGrades[student.id] || {}, settings, attendance[group.id]?.[student.id] || {});
+            const p2Avg = calculatePartialAverage(group, 2, groupEvaluations, groupGrades[student.id] || {}, settings, attendance[group.id]?.[student.id] || {});
             const r1 = groupGrades[student.id]?.[GRADE_REMEDIAL_P1] ?? null;
             const r2 = groupGrades[student.id]?.[GRADE_REMEDIAL_P2] ?? null;
             const extra = groupGrades[student.id]?.[GRADE_EXTRA] ?? null;
@@ -134,7 +134,7 @@ const GradesView: React.FC = () => {
             const { isFailing } = calculateFinalGradeWithRecovery(p1Avg, p2Avg, r1, r2, extra, special);
             return isFailing || (p1Avg !== null && p1Avg < 7) || (p2Avg !== null && p2Avg < 7);
         });
-    }, [group, viewMode, groupGrades, evaluations, settings, attendance]);
+    }, [group, groupEvaluations, groupGrades, settings, attendance]);
 
     const handleGradeChange = (studentId: string, evaluationId: string, score: string) => {
         if (selectedGroupId) {
@@ -159,20 +159,28 @@ const GradesView: React.FC = () => {
                         <h2 className="text-xl font-bold flex items-center gap-2">
                             {viewMode === 'recovery' ? <span className="text-amber-600 flex items-center gap-2"><Icon name="users" /> Recuperación</span> : "Calificaciones"}
                         </h2>
-                        <div className="flex gap-3">
+                        <div className="flex flex-wrap gap-3">
                             <div className="bg-surface-secondary p-1 rounded-lg flex border border-border-color">
                                 <button onClick={() => setViewMode('ordinary')} className={`px-3 py-1.5 rounded-md text-sm font-semibold ${viewMode === 'ordinary' ? 'bg-white shadow text-primary' : 'text-text-secondary'}`}>Ordinario</button>
                                 <button onClick={() => setViewMode('recovery')} className={`px-3 py-1.5 rounded-md text-sm font-semibold ${viewMode === 'recovery' ? 'bg-amber-100 shadow text-amber-800' : 'text-text-secondary'}`}>Recuperación</button>
                             </div>
                             {viewMode === 'ordinary' && (
-                                <Button onClick={() => { setEditingEvaluation(undefined); setEvalModalOpen(true); }}><Icon name="plus" className="w-4 h-4"/> Nueva</Button>
+                                <>
+                                    <Button variant="secondary" onClick={() => setImageModalOpen(true)} title="Captura de Calificaciones">
+                                        <Icon name="camera" className="w-4 h-4"/>
+                                    </Button>
+                                    <Button variant="secondary" onClick={() => setGroupConfigOpen(true)}>
+                                        <Icon name="settings" className="w-4 h-4"/>
+                                    </Button>
+                                    <Button onClick={() => { setEditingEvaluation(undefined); setEvalModalOpen(true); }}><Icon name="plus" className="w-4 h-4"/> Nueva</Button>
+                                </>
                             )}
                         </div>
                     </div>
                 </div>
 
                 <div className="bg-surface p-4 rounded-xl shadow-sm border border-border-color overflow-x-auto">
-                    {viewMode === 'ordinary' && (
+                    {viewMode === 'ordinary' ? (
                         <table className="w-full border-collapse">
                             <thead>
                                 <tr>
@@ -184,6 +192,7 @@ const GradesView: React.FC = () => {
                                             <span className="truncate max-w-[80px]">{ev.name}</span>
                                         </div>
                                     </th>)}
+                                    {p1AttendanceType && <th className="p-2 font-semibold text-center border-b-2 border-border-color text-xs text-emerald-600">Asist.</th>}
                                     <th className="p-2 font-semibold text-center border-b-2 border-border-color bg-surface-secondary text-xs">P1</th>
                                     {p2Evaluations.map(ev => <th key={ev.id} className="p-2 font-semibold text-center text-xs border-b-2 border-border-color">
                                         <div className="flex flex-col items-center">
@@ -191,6 +200,7 @@ const GradesView: React.FC = () => {
                                             <span className="truncate max-w-[80px]">{ev.name}</span>
                                         </div>
                                     </th>)}
+                                    {p2AttendanceType && <th className="p-2 font-semibold text-center border-b-2 border-border-color text-xs text-emerald-600">Asist.</th>}
                                     <th className="p-2 font-semibold text-center border-b-2 border-border-color bg-surface-secondary text-xs">P2</th>
                                 </tr>
                             </thead>
@@ -213,6 +223,7 @@ const GradesView: React.FC = () => {
                                                         className={`w-12 p-1 text-center border border-border-color rounded-md bg-surface text-xs ${ev.isTeamBased ? 'border-indigo-300 ring-1 ring-indigo-100' : ''}`}/>
                                                 </td>
                                             ))}
+                                            {p1AttendanceType && <td className="p-1 text-center text-[10px] text-emerald-600">✔</td>}
                                             <td className={`p-2 text-center font-bold text-xs bg-surface-secondary ${getGradeColor(p1Avg)}`}>{p1Avg?.toFixed(1) || '-'}</td>
                                             {p2Evaluations.map(ev => (
                                                 <td key={ev.id} className="p-1 text-center">
@@ -220,21 +231,90 @@ const GradesView: React.FC = () => {
                                                         className={`w-12 p-1 text-center border border-border-color rounded-md bg-surface text-xs ${ev.isTeamBased ? 'border-indigo-300 ring-1 ring-indigo-100' : ''}`}/>
                                                 </td>
                                             ))}
+                                            {p2AttendanceType && <td className="p-1 text-center text-[10px] text-emerald-600">✔</td>}
                                             <td className={`p-2 text-center font-bold text-xs bg-surface-secondary ${getGradeColor(p2Avg)}`}>{p2Avg?.toFixed(1) || '-'}</td>
                                         </tr>
                                     );
                                 })}
                             </tbody>
                         </table>
+                    ) : (
+                        <table className="w-full border-collapse">
+                            <thead>
+                                <tr className="bg-amber-50 dark:bg-amber-900/20 text-amber-900 dark:text-amber-100">
+                                    <th className="p-2 text-left font-semibold border-b border-amber-200">Alumno</th>
+                                    <th className="p-2 text-center border-b border-amber-200">Rem P1</th>
+                                    <th className="p-2 text-center border-b border-amber-200">Rem P2</th>
+                                    <th className="p-2 text-center border-b border-amber-200">Extra</th>
+                                    <th className="p-2 text-center border-b border-amber-200">Especial</th>
+                                    <th className="p-2 text-center border-b border-amber-200 font-bold">Final</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {studentsForRecovery.map(student => {
+                                    const p1Avg = calculatePartialAverage(group, 1, groupEvaluations, groupGrades[student.id] || {}, settings, attendance[group.id]?.[student.id] || {});
+                                    const p2Avg = calculatePartialAverage(group, 2, groupEvaluations, groupGrades[student.id] || {}, settings, attendance[group.id]?.[student.id] || {});
+                                    
+                                    const r1 = groupGrades[student.id]?.[GRADE_REMEDIAL_P1] ?? null;
+                                    const r2 = groupGrades[student.id]?.[GRADE_REMEDIAL_P2] ?? null;
+                                    const extra = groupGrades[student.id]?.[GRADE_EXTRA] ?? null;
+                                    const special = groupGrades[student.id]?.[GRADE_SPECIAL] ?? null;
+
+                                    const { score: finalScore } = calculateFinalGradeWithRecovery(p1Avg, p2Avg, r1, r2, extra, special);
+
+                                    return (
+                                        <tr key={student.id} className="border-b border-border-color/70 hover:bg-surface-secondary/40">
+                                            <td className="p-2 font-medium">
+                                                {student.name}
+                                            </td>
+                                            <td className="p-1 text-center">
+                                                <input type="number" value={r1 ?? ''} onChange={(e) => handleGradeChange(student.id, GRADE_REMEDIAL_P1, e.target.value)}
+                                                    className="w-12 p-1 text-center border border-amber-300 rounded-md bg-surface text-xs"/>
+                                            </td>
+                                            <td className="p-1 text-center">
+                                                <input type="number" value={r2 ?? ''} onChange={(e) => handleGradeChange(student.id, GRADE_REMEDIAL_P2, e.target.value)}
+                                                    className="w-12 p-1 text-center border border-amber-300 rounded-md bg-surface text-xs"/>
+                                            </td>
+                                            <td className="p-1 text-center">
+                                                <input type="number" value={extra ?? ''} onChange={(e) => handleGradeChange(student.id, GRADE_EXTRA, e.target.value)}
+                                                    className="w-12 p-1 text-center border border-amber-400 rounded-md bg-surface text-xs"/>
+                                            </td>
+                                            <td className="p-1 text-center">
+                                                <input type="number" value={special ?? ''} onChange={(e) => handleGradeChange(student.id, GRADE_SPECIAL, e.target.value)}
+                                                    className="w-12 p-1 text-center border border-amber-500 rounded-md bg-surface text-xs"/>
+                                            </td>
+                                            <td className={`p-2 text-center font-bold text-sm bg-surface-secondary ${getGradeColor(finalScore)}`}>
+                                                {finalScore?.toFixed(1) || '-'}
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
                     )}
-                    {/* RECOVERY Logic skipped for brevity but would follow same student mapping */}
                 </div>
                 </>
             ) : <div className="text-center py-20">Selecciona un grupo.</div>}
             
-            {group && <Modal isOpen={isEvalModalOpen} onClose={() => setEvalModalOpen(false)} title="Nueva Evaluación">
-                <EvaluationForm group={group} onSave={(evaluation) => { dispatch({ type: 'SAVE_EVALUATION', payload: { groupId: group.id, evaluation } }); setEvalModalOpen(false); }} onCancel={() => setEvalModalOpen(false)} />
-            </Modal>}
+            {group && (
+                <>
+                    <Modal isOpen={isEvalModalOpen} onClose={() => setEvalModalOpen(false)} title={editingEvaluation ? 'Editar Evaluación' : 'Nueva Evaluación'}>
+                        <EvaluationForm evaluation={editingEvaluation} group={group} onSave={(evaluation) => { dispatch({ type: 'SAVE_EVALUATION', payload: { groupId: group.id, evaluation } }); setEvalModalOpen(false); }} onCancel={() => setEvalModalOpen(false)} />
+                    </Modal>
+                    <Modal isOpen={isGroupConfigOpen} onClose={() => setGroupConfigOpen(false)} title="Configuración del Grupo" size="xl">
+                        <GroupForm group={group} existingGroups={groups} onSave={(updatedGroup) => { dispatch({ type: 'SAVE_GROUP', payload: updatedGroup }); setGroupConfigOpen(false); }} onCancel={() => setGroupConfigOpen(false)} />
+                    </Modal>
+                    <GradeImageModal 
+                        isOpen={isImageModalOpen} 
+                        onClose={() => setImageModalOpen(false)} 
+                        group={group}
+                        evaluations={groupEvaluations}
+                        grades={groupGrades}
+                        attendance={attendance[group.id] || {}}
+                        settings={settings}
+                    />
+                </>
+            )}
         </div>
     );
 };

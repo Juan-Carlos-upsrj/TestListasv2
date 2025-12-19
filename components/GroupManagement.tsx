@@ -7,7 +7,7 @@ import Modal from './common/Modal';
 import Button from './common/Button';
 import Icon from './icons/Icon';
 import { DAYS_OF_WEEK, GROUP_COLORS } from '../constants';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 
 export const EvaluationTypesEditor: React.FC<{
     types: EvaluationType[];
@@ -451,6 +451,9 @@ const GroupManagement: React.FC = () => {
                                 <h2 className="text-2xl font-bold">{selectedGroup.name}</h2>
                                 <div className="flex gap-2">
                                     <input type="text" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} placeholder="Buscar alumno..." className="px-3 py-2 border border-border-color rounded-md bg-surface text-sm" />
+                                    <Button size="sm" variant="secondary" onClick={() => setBulkModalOpen(true)}>
+                                        <Icon name="list-plus" className="w-4 h-4"/> Varios
+                                    </Button>
                                     <Button size="sm" onClick={() => { setEditingStudent(undefined); setStudentModalOpen(true); }}>
                                         <Icon name="user-plus" className="w-4 h-4"/> Nuevo
                                     </Button>
@@ -461,7 +464,6 @@ const GroupManagement: React.FC = () => {
                                     <thead>
                                         <tr className="border-b border-border-color text-sm text-text-secondary">
                                             <th className="p-2">#</th>
-                                            {/* FIXED: Removed double closing tag </th> */}
                                             {settings.showMatricula && <th className="p-2">Matrícula</th>}
                                             <th className="p-2">Nombre</th>
                                             <th className="p-2">Equipo</th>
@@ -506,6 +508,18 @@ const GroupManagement: React.FC = () => {
             </Modal>
             <Modal isOpen={isStudentModalOpen} onClose={() => setStudentModalOpen(false)} title={editingStudent ? 'Editar Alumno' : 'Nuevo Alumno'}>
                 <StudentForm student={editingStudent} onSave={handleSaveStudent} onCancel={() => setStudentModalOpen(false)} />
+            </Modal>
+            <Modal isOpen={isBulkModalOpen} onClose={() => setBulkModalOpen(false)} title="Importar Varios Alumnos" size="lg">
+                <BulkStudentForm 
+                    onSave={(students) => {
+                        if (selectedGroupId) {
+                            dispatch({ type: 'BULK_ADD_STUDENTS', payload: { groupId: selectedGroupId, students } });
+                            setBulkModalOpen(false);
+                            dispatch({ type: 'ADD_TOAST', payload: { message: `${students.length} alumnos agregados.`, type: 'success' } });
+                        }
+                    }} 
+                    onCancel={() => setBulkModalOpen(false)} 
+                />
             </Modal>
         </div>
     );
