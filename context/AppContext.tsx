@@ -25,15 +25,13 @@ const defaultState: AppState = {
     firstPartialEnd: nextMonth.toISOString().split('T')[0],
     semesterEnd: fourMonthsLater.toISOString().split('T')[0],
     showMatricula: true,
-    theme: 'classic', // Default theme
+    theme: 'classic', 
     lowAttendanceThreshold: 80,
     googleCalendarUrl: '',
     googleCalendarColor: 'blue',
     professorName: 'Nombre del Profesor',
     apiUrl: '',
     apiKey: '',
-    // AUTOMATIC UPDATE CONFIGURATION
-    // Points to the GitHub Repository URL. The app will check /releases/latest
     mobileUpdateUrl: 'https://github.com/Juan-Carlos-upsrj/TestListas', 
   },
   activeView: 'dashboard',
@@ -46,7 +44,6 @@ const appReducer = (state: AppState, action: AppAction): AppState => {
   switch (action.type) {
     case 'SET_INITIAL_STATE': {
         const loadedState = action.payload || {};
-        
         const loadedGroups: Group[] = (Array.isArray(loadedState.groups) ? loadedState.groups : []).filter(g => g && g.id);
         const migratedGroups = loadedGroups.map((group, index) => {
             const hasEvalTypes = group.evaluationTypes && group.evaluationTypes.partial1 && group.evaluationTypes.partial2;
@@ -54,8 +51,7 @@ const appReducer = (state: AppState, action: AppAction): AppState => {
                 ...group,
                 classDays: group.classDays || [],
                 color: group.color || GROUP_COLORS[index % GROUP_COLORS.length].name,
-                quarter: group.quarter || '', // Migrate quarter field
-                // Migration logic for evaluation types
+                quarter: group.quarter || '', 
                 evaluationTypes: hasEvalTypes ? group.evaluationTypes : {
                     partial1: [{ id: uuidv4(), name: 'General', weight: 100 }],
                     partial2: [{ id: uuidv4(), name: 'General', weight: 100 }]
@@ -68,30 +64,24 @@ const appReducer = (state: AppState, action: AppAction): AppState => {
         Object.keys(loadedEvaluations).forEach(groupId => {
             const group = migratedGroups.find(g => g.id === groupId);
             if (!group) return;
-
             const evaluationsForGroup = (Array.isArray(loadedEvaluations[groupId]) ? loadedEvaluations[groupId] : []).filter(Boolean);
             migratedEvaluations[groupId] = evaluationsForGroup.map((ev: Evaluation) => ({
                 ...ev,
                 partial: ev.partial || 1,
-                // Migration logic for evaluation typeId
                 typeId: ev.typeId || (ev.partial === 2 ? group.evaluationTypes.partial2[0]?.id : group.evaluationTypes.partial1[0]?.id)
             }));
         });
 
-        // Migration logic for settings
         const loadedSettings = loadedState.settings;
         const migratedSettings = { ...defaultState.settings, ...loadedSettings };
-        // Old 'iaev' or 'custom' themes are now 'classic'
         if ((migratedSettings.theme as any) === 'iaev' || (migratedSettings.theme as any) === 'custom') {
             migratedSettings.theme = 'classic';
         }
-        // Ensure new field exists and is populated if empty
         if (!migratedSettings.mobileUpdateUrl) {
             migratedSettings.mobileUpdateUrl = defaultState.settings.mobileUpdateUrl;
         }
 
-        // Construct the new state safely
-        const newState: AppState = {
+        return {
             groups: migratedGroups,
             attendance: loadedState.attendance ?? defaultState.attendance,
             evaluations: migratedEvaluations,
@@ -104,7 +94,6 @@ const appReducer = (state: AppState, action: AppAction): AppState => {
             toasts: [],
             archives: Array.isArray(loadedState.archives) ? loadedState.archives : [],
         };
-        return newState;
     }
     case 'SET_VIEW':
       return { ...state, activeView: action.payload };
@@ -118,20 +107,16 @@ const appReducer = (state: AppState, action: AppAction): AppState => {
           groups: state.groups.map(g => g.id === action.payload.id ? action.payload : g),
         };
       }
-      const newGroup = {
-        ...action.payload,
-        color: action.payload.color || GROUP_COLORS[state.groups.length % GROUP_COLORS.length].name,
+      return { 
+        ...state, 
+        groups: [...state.groups, { ...action.payload, color: action.payload.color || GROUP_COLORS[state.groups.length % GROUP_COLORS.length].name }] 
       };
-      return { ...state, groups: [...state.groups, newGroup] };
     }
     case 'DELETE_GROUP': {
         const newGroups = state.groups.filter(g => g.id !== action.payload);
-        const newAttendance = {...state.attendance};
-        delete newAttendance[action.payload];
-        const newEvaluations = {...state.evaluations};
-        delete newEvaluations[action.payload];
-        const newGrades = {...state.grades};
-        delete newGrades[action.payload];
+        const newAttendance = {...state.attendance}; delete newAttendance[action.payload];
+        const newEvaluations = {...state.evaluations}; delete newEvaluations[action.payload];
+        const newGrades = {...state.grades}; delete newGrades[action.payload];
         return {
             ...state,
             groups: newGroups,
@@ -148,9 +133,7 @@ const appReducer = (state: AppState, action: AppAction): AppState => {
         groups: state.groups.map(g => {
           if (g.id === groupId) {
             const studentExists = g.students.some(s => s.id === student.id);
-            if (studentExists) {
-              return { ...g, students: g.students.map(s => s.id === student.id ? student : s) };
-            }
+            if (studentExists) return { ...g, students: g.students.map(s => s.id === student.id ? student : s) };
             return { ...g, students: [...g.students, student] };
           }
           return g;
@@ -161,29 +144,17 @@ const appReducer = (state: AppState, action: AppAction): AppState => {
         const { groupId, students } = action.payload;
         return {
             ...state,
-            groups: state.groups.map(g => {
-                if (g.id === groupId) {
-                    return { ...g, students: [...g.students, ...students] };
-                }
-                return g;
-            }),
+            groups: state.groups.map(g => (g.id === groupId ? { ...g, students: [...g.students, ...students] } : g)),
         };
     }
     case 'DELETE_STUDENT': {
         const { groupId, studentId } = action.payload;
         const newGrades = {...state.grades};
-        if(newGrades[groupId]) {
-            delete newGrades[groupId][studentId];
-        }
+        if(newGrades[groupId]) delete newGrades[groupId][studentId];
         return {
             ...state,
             grades: newGrades,
-            groups: state.groups.map(g => {
-                if (g.id === groupId) {
-                    return { ...g, students: g.students.filter(s => s.id !== studentId) };
-                }
-                return g;
-            }),
+            groups: state.groups.map(g => (g.id === groupId ? { ...g, students: g.students.filter(s => s.id !== studentId) } : g)),
         };
     }
     case 'UPDATE_ATTENDANCE': {
@@ -192,80 +163,48 @@ const appReducer = (state: AppState, action: AppAction): AppState => {
         const studentAttendance = groupAttendance[studentId] || {};
         return {
             ...state,
-            attendance: {
-                ...state.attendance,
-                [groupId]: {
-                    ...groupAttendance,
-                    [studentId]: {
-                        ...studentAttendance,
-                        [date]: status,
-                    },
-                },
-            },
+            attendance: { ...state.attendance, [groupId]: { ...groupAttendance, [studentId]: { ...studentAttendance, [date]: status } } },
         };
     }
     case 'QUICK_ATTENDANCE': {
         const { groupId, date } = action.payload;
         const group = state.groups.find(g => g.id === groupId);
         if (!group) return state;
-
         const updatedAttendance = { ...state.attendance[groupId] };
         group.students.forEach(student => {
             const currentStatus = updatedAttendance[student.id]?.[date];
             if (!currentStatus || currentStatus === AttendanceStatus.Pending) {
-                if (!updatedAttendance[student.id]) {
-                    updatedAttendance[student.id] = {};
-                }
+                if (!updatedAttendance[student.id]) updatedAttendance[student.id] = {};
                 updatedAttendance[student.id][date] = AttendanceStatus.Present;
             }
         });
-
-        return {
-            ...state,
-            attendance: {
-                ...state.attendance,
-                [groupId]: updatedAttendance
-            }
-        };
+        return { ...state, attendance: { ...state.attendance, [groupId]: updatedAttendance } };
     }
     case 'BULK_UPDATE_ATTENDANCE': {
         const { groupId, startDate, endDate, status, overwrite } = action.payload;
         const group = state.groups.find(g => g.id === groupId);
         if (!group) return state;
-
         const datesToUpdate = getClassDates(startDate, endDate, group.classDays);
         const newAttendance = JSON.parse(JSON.stringify(state.attendance));
-
-        if (!newAttendance[groupId]) {
-            newAttendance[groupId] = {};
-        }
-
+        if (!newAttendance[groupId]) newAttendance[groupId] = {};
         group.students.forEach(student => {
-            if (!newAttendance[groupId][student.id]) {
-                newAttendance[groupId][student.id] = {};
-            }
+            if (!newAttendance[groupId][student.id]) newAttendance[groupId][student.id] = {};
             datesToUpdate.forEach(date => {
                 const currentStatus = newAttendance[groupId][student.id][date];
-                if (overwrite || !currentStatus || currentStatus === AttendanceStatus.Pending) {
-                    newAttendance[groupId][student.id][date] = status;
-                }
+                if (overwrite || !currentStatus || currentStatus === AttendanceStatus.Pending) newAttendance[groupId][student.id][date] = status;
             });
         });
-
         return { ...state, attendance: newAttendance };
     }
     case 'BULK_SET_ATTENDANCE': {
         const { groupId, records } = action.payload;
-        
         const updatedAttendance = { ...state.attendance };
         const updatedGroupAttendance = { ...(updatedAttendance[groupId] || {}) };
-
         records.forEach(record => {
             const updatedStudentAttendance = { ...(updatedGroupAttendance[record.studentId] || {}) };
             updatedStudentAttendance[record.date] = record.status;
             updatedGroupAttendance[record.studentId] = updatedStudentAttendance;
         });
-
         updatedAttendance[groupId] = updatedGroupAttendance;
         return { ...state, attendance: updatedAttendance };
     }
@@ -273,78 +212,68 @@ const appReducer = (state: AppState, action: AppAction): AppState => {
         const { groupId, evaluation } = action.payload;
         const groupEvaluations = state.evaluations[groupId] || [];
         const evalExists = groupEvaluations.some(e => e.id === evaluation.id);
-        if (evalExists) {
-            return {
-                ...state,
-                evaluations: {
-                    ...state.evaluations,
-                    [groupId]: groupEvaluations.map(e => e.id === evaluation.id ? evaluation : e),
-                },
-            };
-        }
         return {
             ...state,
             evaluations: {
                 ...state.evaluations,
-                [groupId]: [...groupEvaluations, evaluation],
+                [groupId]: evalExists ? groupEvaluations.map(e => e.id === evaluation.id ? evaluation : e) : [...groupEvaluations, evaluation],
             },
         };
     }
     case 'DELETE_EVALUATION': {
         const { groupId, evaluationId } = action.payload;
         const newGrades = {...state.grades};
-        if(newGrades[groupId]) {
-            Object.keys(newGrades[groupId]).forEach(studentId => {
-                 delete newGrades[groupId][studentId][evaluationId];
-            });
-        }
+        if(newGrades[groupId]) Object.keys(newGrades[groupId]).forEach(sid => { delete newGrades[groupId][sid][evaluationId]; });
         return {
             ...state,
             grades: newGrades,
-            evaluations: {
-                ...state.evaluations,
-                [groupId]: (state.evaluations[groupId] || []).filter(e => e.id !== evaluationId),
-            },
+            evaluations: { ...state.evaluations, [groupId]: (state.evaluations[groupId] || []).filter(e => e.id !== evaluationId) },
         };
     }
     case 'UPDATE_GRADE': {
         const { groupId, studentId, evaluationId, score } = action.payload;
-        const groupGrades = state.grades[groupId] || {};
-        const studentGrades = groupGrades[studentId] || {};
-        return {
-            ...state,
-            grades: {
-                ...state.grades,
-                [groupId]: {
-                    ...groupGrades,
-                    [studentId]: {
-                        ...studentGrades,
-                        [evaluationId]: score,
-                    },
-                },
-            },
-        };
+        const group = state.groups.find(g => g.id === groupId);
+        const groupEvaluations = state.evaluations[groupId] || [];
+        const evaluation = groupEvaluations.find(e => e.id === evaluationId);
+        
+        const updatedGrades = { ...state.grades };
+        const updatedGroupGrades = { ...(updatedGrades[groupId] || {}) };
+
+        // 1. Base update for the specific student
+        const studentGrades = { ...(updatedGroupGrades[studentId] || {}) };
+        studentGrades[evaluationId] = score;
+        updatedGroupGrades[studentId] = studentGrades;
+
+        // 2. Team Logic: If evaluation is team-based and student has a team
+        if (evaluation?.isTeamBased && group) {
+            const currentStudent = group.students.find(s => s.id === studentId);
+            const teamName = currentStudent?.team;
+            
+            if (teamName) {
+                // Find all group students in the same team
+                group.students.forEach(s => {
+                    if (s.team === teamName && s.id !== studentId) {
+                        const otherStudentGrades = { ...(updatedGroupGrades[s.id] || {}) };
+                        otherStudentGrades[evaluationId] = score;
+                        updatedGroupGrades[s.id] = otherStudentGrades;
+                    }
+                });
+            }
+        }
+
+        updatedGrades[groupId] = updatedGroupGrades;
+        return { ...state, grades: updatedGrades };
     }
     case 'UPDATE_SETTINGS': {
-        const newSettings = { ...state.settings, ...action.payload };
-        return { ...state, settings: newSettings };
+        return { ...state, settings: { ...state.settings, ...action.payload } };
     }
     case 'ADD_TOAST':
-      return {
-        ...state,
-        toasts: [...state.toasts, { ...action.payload, id: Date.now() }],
-      };
+      return { ...state, toasts: [...state.toasts, { ...action.payload, id: Date.now() }] };
     case 'REMOVE_TOAST':
-      return {
-        ...state,
-        toasts: state.toasts.filter(t => t.id !== action.payload),
-      };
+      return { ...state, toasts: state.toasts.filter(t => t.id !== action.payload) };
     case 'SAVE_EVENT': {
         const eventExists = state.calendarEvents.some(e => e.id === action.payload.id);
-        if (eventExists) {
-            return { ...state, calendarEvents: state.calendarEvents.map(e => e.id === action.payload.id ? action.payload : e) };
-        }
-        return { ...state, calendarEvents: [...state.calendarEvents, action.payload] };
+        return { ...state, calendarEvents: eventExists ? state.calendarEvents.map(e => e.id === action.payload.id ? action.payload : e) : [...state.calendarEvents, action.payload] };
     }
     case 'DELETE_EVENT':
         return { ...state, calendarEvents: state.calendarEvents.filter(e => e.id !== action.payload) };
@@ -355,22 +284,14 @@ const appReducer = (state: AppState, action: AppAction): AppState => {
             id: uuidv4(),
             name: action.payload,
             dateArchived: new Date().toISOString(),
-            data: JSON.parse(JSON.stringify(state)) // Deep copy current state
+            data: JSON.parse(JSON.stringify(state))
         };
         return { ...state, archives: [...state.archives, newArchive] };
     }
     case 'RESTORE_ARCHIVE': {
         const archive = state.archives.find(a => a.id === action.payload);
         if (!archive) return state;
-        // Restore state but keep current settings like theme if desired,
-        // or just full restore. Let's do full restore but keep the archives list itself.
-        // Also preserve current theme preference from current settings maybe?
-        // For simplicity: restore everything except the archives list (so we don't lose other backups)
-        return {
-            ...archive.data,
-            archives: state.archives, // Keep current archives list
-            toasts: [], // Clear toasts
-        };
+        return { ...archive.data, archives: state.archives, toasts: [] };
     }
     case 'DELETE_ARCHIVE':
         return { ...state, archives: state.archives.filter(a => a.id !== action.payload) };
@@ -380,10 +301,8 @@ const appReducer = (state: AppState, action: AppAction): AppState => {
             ...state,
             groups: newGroups,
             settings: { ...state.settings, ...newSettings },
-            attendance: {}, // Wipe attendance
-            grades: {}, // Wipe grades
-            evaluations: {}, // Wipe evaluations (specific assignments), keep types in groups
-            calendarEvents: state.calendarEvents.filter(e => e.type !== 'class' && e.type !== 'evaluation'), // Keep custom/gcal, remove class specific
+            attendance: {}, grades: {}, evaluations: {},
+            calendarEvents: state.calendarEvents.filter(e => e.type !== 'class' && e.type !== 'evaluation'),
             selectedGroupId: null,
         };
     }
@@ -404,14 +323,11 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [state, dispatch] = useReducer(appReducer, defaultState);
   const [isInitialized, setIsInitialized] = useState(false);
 
-  // Load state from DB on initial mount
   useEffect(() => {
     const loadState = async () => {
       try {
         const savedState = await getState();
-        if (savedState) {
-          dispatch({ type: 'SET_INITIAL_STATE', payload: savedState });
-        }
+        if (savedState) dispatch({ type: 'SET_INITIAL_STATE', payload: savedState });
       } catch (error) {
         console.error("Failed to load state from DB:", error);
       } finally {
@@ -421,42 +337,28 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     loadState();
   }, []);
   
-   // Save state to DB whenever it changes, after initialization
-   // Debounced save to improve performance
   useEffect(() => {
     if (!isInitialized) return;
-
-    const timeoutId = setTimeout(() => {
-      saveState(state);
-    }, 1000);
-
+    const timeoutId = setTimeout(() => { saveState(state); }, 1000);
     return () => clearTimeout(timeoutId);
   }, [state, isInitialized]);
   
-  // Fetch Google Calendar events when URL or color changes
   useEffect(() => {
     if (isInitialized && state.settings.googleCalendarUrl) {
       const gcalColor = GROUP_COLORS.find(c => c.name === state.settings.googleCalendarColor)?.calendar || GROUP_COLORS[0].calendar;
       fetchGoogleCalendarEvents(state.settings.googleCalendarUrl, gcalColor)
-        .then(events => {
-            dispatch({ type: 'SET_GCAL_EVENTS', payload: events });
-        })
+        .then(events => { dispatch({ type: 'SET_GCAL_EVENTS', payload: events }); })
         .catch(error => {
             console.error("Failed to fetch GCal events:", error);
             dispatch({ type: 'ADD_TOAST', payload: { message: error.message, type: 'error' } });
             dispatch({ type: 'SET_GCAL_EVENTS', payload: [] });
         });
     } else if (isInitialized) {
-        // Clear events if URL is removed
         dispatch({ type: 'SET_GCAL_EVENTS', payload: [] });
     }
   }, [isInitialized, state.settings.googleCalendarUrl, state.settings.googleCalendarColor]);
 
-
-  if (!isInitialized) {
-    // You can return a loading spinner or a blank screen here
-    return null; 
-  }
+  if (!isInitialized) return null; 
 
   return (
     <AppContext.Provider value={{ state, dispatch }}>

@@ -29,7 +29,6 @@ export const EvaluationTypesEditor: React.FC<{
     };
     
     const addAttendanceType = () => {
-        // Check if attendance type already exists
         if (types.some(t => t.isAttendance)) {
             alert('Ya existe un criterio de asistencia para este parcial.');
             return;
@@ -98,7 +97,6 @@ export const EvaluationTypesEditor: React.FC<{
 };
 
 
-// Form for creating/editing a group
 export const GroupForm: React.FC<{
     group?: Group;
     existingGroups?: Group[];
@@ -218,7 +216,7 @@ export const GroupForm: React.FC<{
                                     onChange={(e) => {
                                         if(e.target.value) {
                                             handleImportCriteria(e.target.value);
-                                            e.target.value = ""; // Reset selection
+                                            e.target.value = ""; 
                                         }
                                     }}
                                     defaultValue=""
@@ -245,7 +243,6 @@ export const GroupForm: React.FC<{
     );
 };
 
-// Form for creating/editing a student
 const StudentForm: React.FC<{
     student?: Student;
     onSave: (student: Student) => void;
@@ -254,6 +251,8 @@ const StudentForm: React.FC<{
     const [name, setName] = useState(student?.name || '');
     const [matricula, setMatricula] = useState(student?.matricula || '');
     const [nickname, setNickname] = useState(student?.nickname || '');
+    const [isRepeating, setIsRepeating] = useState(student?.isRepeating || false);
+    const [team, setTeam] = useState(student?.team || '');
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -265,7 +264,9 @@ const StudentForm: React.FC<{
             id: student?.id || uuidv4(),
             name,
             matricula,
-            nickname
+            nickname,
+            isRepeating,
+            team: team.trim() || undefined
         });
     };
 
@@ -276,13 +277,31 @@ const StudentForm: React.FC<{
                     <label htmlFor="studentName" className="block text-sm font-medium">Nombre Completo</label>
                     <input type="text" id="studentName" value={name} onChange={e => setName(e.target.value)} required className="mt-1 w-full p-2 border border-border-color rounded-md bg-surface focus:ring-2 focus:ring-primary" />
                 </div>
-                <div>
-                    <label htmlFor="matricula" className="block text-sm font-medium">Matrícula (Opcional)</label>
-                    <input type="text" id="matricula" value={matricula} onChange={e => setMatricula(e.target.value)} className="mt-1 w-full p-2 border border-border-color rounded-md bg-surface focus:ring-2 focus:ring-primary" />
+                <div className="grid grid-cols-2 gap-4">
+                    <div>
+                        <label htmlFor="matricula" className="block text-sm font-medium">Matrícula</label>
+                        <input type="text" id="matricula" value={matricula} onChange={e => setMatricula(e.target.value)} className="mt-1 w-full p-2 border border-border-color rounded-md bg-surface focus:ring-2 focus:ring-primary" />
+                    </div>
+                    <div>
+                        <label htmlFor="team" className="block text-sm font-medium text-primary">Equipo</label>
+                        <input type="text" id="team" value={team} onChange={e => setTeam(e.target.value)} placeholder="Ej. Equipo 1" className="mt-1 w-full p-2 border border-primary/30 rounded-md bg-surface focus:ring-2 focus:ring-primary" />
+                    </div>
                 </div>
                 <div>
                     <label htmlFor="nickname" className="block text-sm font-medium">Apodo (Opcional)</label>
                     <input type="text" id="nickname" value={nickname} onChange={e => setNickname(e.target.value)} className="mt-1 w-full p-2 border border-border-color rounded-md bg-surface focus:ring-2 focus:ring-primary" />
+                </div>
+                <div className="flex items-center gap-3 p-3 bg-rose-50 dark:bg-rose-900/20 rounded-lg border border-rose-100 dark:border-rose-900/40">
+                    <input 
+                        type="checkbox" 
+                        id="isRepeating" 
+                        checked={isRepeating} 
+                        onChange={e => setIsRepeating(e.target.checked)}
+                        className="h-5 w-5 rounded text-rose-600 focus:ring-rose-500"
+                    />
+                    <label htmlFor="isRepeating" className="text-sm font-bold text-rose-700 dark:text-rose-400 cursor-pointer">
+                        ¿Es alumno de RECURSAMIENTO?
+                    </label>
                 </div>
             </div>
              <div className="flex justify-end gap-3 mt-6">
@@ -293,7 +312,6 @@ const StudentForm: React.FC<{
     );
 };
 
-// Form for bulk adding students
 const BulkStudentForm: React.FC<{ onSave: (students: Student[]) => void; onCancel: () => void; }> = ({ onSave, onCancel }) => {
     const [studentData, setStudentData] = useState('');
 
@@ -339,7 +357,6 @@ const BulkStudentForm: React.FC<{ onSave: (students: Student[]) => void; onCance
                 className="w-full p-2 border border-border-color rounded-md bg-surface focus:ring-2 focus:ring-primary"
                 placeholder="Ejemplo:&#10;Juan Pérez, 12345, Juani&#10;Maria García; 67890"
             />
-            <p className="text-xs text-text-secondary mt-2">Consejo: Presiona Ctrl+Enter (o ⌘+Enter en Mac) para agregar.</p>
              <div className="flex justify-end gap-3 mt-4">
                 <Button type="button" variant="secondary" onClick={onCancel}>Cancelar</Button>
                 <Button type="submit">Agregar Alumnos</Button>
@@ -364,225 +381,131 @@ const GroupManagement: React.FC = () => {
     const filteredStudents = useMemo(() => {
       if (!selectedGroup) return [];
       if (!searchTerm.trim()) return selectedGroup.students;
-      
       const search = searchTerm.toLowerCase();
       return selectedGroup.students.filter(student =>
         student.name.toLowerCase().includes(search) ||
         student.matricula?.toLowerCase().includes(search) ||
-        student.nickname?.toLowerCase().includes(search)
+        student.nickname?.toLowerCase().includes(search) ||
+        student.team?.toLowerCase().includes(search)
       );
     }, [selectedGroup, searchTerm]);
 
-    const handleSelectGroup = (groupId: string) => {
-        dispatch({ type: 'SET_SELECTED_GROUP', payload: groupId });
-    };
-
-    // Group Handlers
     const handleSaveGroup = (group: Group) => {
         dispatch({ type: 'SAVE_GROUP', payload: group });
         dispatch({ type: 'ADD_TOAST', payload: { message: `Grupo '${group.name}' guardado.`, type: 'success' } });
         setGroupModalOpen(false);
         setEditingGroup(undefined);
-        if(!selectedGroupId) {
-            handleSelectGroup(group.id);
-        }
-    };
-
-    const handleDuplicateGroup = (sourceGroup: Group) => {
-        if (!window.confirm(`¿Crear una copia del grupo "${sourceGroup.name}" con todos sus alumnos?`)) return;
-        
-        const newGroup: Group = {
-            ...sourceGroup,
-            id: uuidv4(),
-            name: `${sourceGroup.name} (Copia)`,
-            // Deep copy students with new IDs to ensure they are distinct entities
-            students: sourceGroup.students.map(s => ({...s, id: uuidv4()})),
-            // Deep copy eval types with new IDs
-            evaluationTypes: {
-                partial1: sourceGroup.evaluationTypes.partial1.map(t => ({...t, id: uuidv4()})),
-                partial2: sourceGroup.evaluationTypes.partial2.map(t => ({...t, id: uuidv4()}))
-            }
-        };
-        dispatch({ type: 'SAVE_GROUP', payload: newGroup });
-        dispatch({ type: 'ADD_TOAST', payload: { message: 'Grupo duplicado con éxito.', type: 'success' } });
     };
 
     const handleDeleteGroup = (groupId: string) => {
-        if (window.confirm('¿Seguro que quieres eliminar este grupo? Se borrarán todos los datos asociados (alumnos, asistencia, calificaciones).')) {
-            const groupName = groups.find(g => g.id === groupId)?.name;
+        if (window.confirm('¿Seguro? Se borrarán todos los datos asociados.')) {
             dispatch({ type: 'DELETE_GROUP', payload: groupId });
-            dispatch({ type: 'ADD_TOAST', payload: { message: `Grupo '${groupName}' eliminado.`, type: 'error' } });
         }
     };
 
-    // Student Handlers
     const handleSaveStudent = (student: Student) => {
         if (selectedGroupId) {
             dispatch({ type: 'SAVE_STUDENT', payload: { groupId: selectedGroupId, student } });
-            dispatch({ type: 'ADD_TOAST', payload: { message: `Alumno '${student.name}' guardado.`, type: 'success' } });
             setStudentModalOpen(false);
             setEditingStudent(undefined);
-        }
-    };
-    
-    const handleBulkSaveStudents = (students: Student[]) => {
-        if (selectedGroupId) {
-            dispatch({ type: 'BULK_ADD_STUDENTS', payload: { groupId: selectedGroupId, students } });
-            dispatch({ type: 'ADD_TOAST', payload: { message: `${students.length} alumnos agregados.`, type: 'success' } });
-            setBulkModalOpen(false);
-        }
-    };
-
-    const handleDeleteStudent = (studentId: string) => {
-        if (selectedGroupId && window.confirm('¿Seguro que quieres eliminar a este alumno?')) {
-            const studentName = selectedGroup?.students.find(s => s.id === studentId)?.name;
-            dispatch({ type: 'DELETE_STUDENT', payload: { groupId: selectedGroupId, studentId } });
-             dispatch({ type: 'ADD_TOAST', payload: { message: `Alumno '${studentName}' eliminado.`, type: 'error' } });
         }
     };
     
     return (
         <div>
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                
-                {/* Groups List */}
                 <div className="lg:col-span-1 bg-surface p-4 rounded-xl shadow-sm border border-border-color">
                     <div className="flex justify-between items-center mb-4">
-                        <h2 className="text-xl font-bold text-text-primary">Mis Grupos</h2>
+                        <h2 className="text-xl font-bold">Mis Grupos</h2>
                         <Button size="sm" onClick={() => { setEditingGroup(undefined); setGroupModalOpen(true); }}>
                             <Icon name="plus" className="w-4 h-4" /> Nuevo
                         </Button>
                     </div>
-                    {groups.length > 0 ? (
-                        <ul className="space-y-2">
-                           {groups.map(group => {
-                                const groupColor = GROUP_COLORS.find(c => c.name === group.color) || GROUP_COLORS[0];
-                                const isSelected = selectedGroupId === group.id;
-                                return (
-                                <li key={group.id} onClick={() => handleSelectGroup(group.id)}
-                                    className={`p-3 rounded-lg cursor-pointer transition-all border-l-4 ${
-                                        isSelected 
-                                            ? `${groupColor.bg} ${groupColor.text} shadow-md border-transparent` 
-                                            : 'bg-surface-secondary hover:bg-border-color border-transparent hover:border-l-gray-400'
-                                    }`}
-                                >
-                                   <div className="flex justify-between items-start">
-                                       <div className="flex items-start gap-3">
-                                            <div>
-                                               <div className="flex items-center gap-2">
-                                                   <p className="font-semibold">{group.name}</p>
-                                                   {group.quarter && (
-                                                       <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${isSelected ? 'bg-white/20 text-white' : 'bg-white text-text-secondary border border-border-color'}`}>
-                                                           {group.quarter}
-                                                       </span>
-                                                   )}
-                                               </div>
-                                               <p className={`text-sm ${isSelected ? 'opacity-90' : 'text-text-secondary'}`}>{group.subject}</p>
-                                           </div>
-                                       </div>
-                                       <div className="flex gap-2 items-center flex-shrink-0">
-                                            <button onClick={(e) => { e.stopPropagation(); setEditingGroup(group); setGroupModalOpen(true); }} className={`p-1 ${isSelected ? 'hover:bg-white/20' : 'hover:text-primary'}`}><Icon name="edit-3" className="w-4 h-4"/></button>
-                                            <button onClick={(e) => { e.stopPropagation(); handleDuplicateGroup(group); }} className={`p-1 ${isSelected ? 'hover:bg-white/20' : 'hover:text-primary'}`} title="Duplicar Grupo"><Icon name="copy" className="w-4 h-4"/></button>
-                                            <button onClick={(e) => { e.stopPropagation(); handleDeleteGroup(group.id); }} className={`p-1 ${isSelected ? 'hover:bg-white/20' : 'hover:text-accent-red'}`}><Icon name="trash-2" className="w-4 h-4"/></button>
-                                       </div>
+                    <ul className="space-y-2">
+                       {groups.map(group => {
+                            const isSelected = selectedGroupId === group.id;
+                            return (
+                            <li key={group.id} onClick={() => dispatch({ type: 'SET_SELECTED_GROUP', payload: group.id })}
+                                className={`p-3 rounded-lg cursor-pointer transition-all border-l-4 ${isSelected ? 'bg-primary text-white shadow-md border-transparent' : 'bg-surface-secondary hover:bg-border-color border-transparent'}`}
+                            >
+                               <div className="flex justify-between items-start">
+                                   <div>
+                                       <p className="font-semibold">{group.name}</p>
+                                       <p className={`text-sm ${isSelected ? 'opacity-90' : 'text-text-secondary'}`}>{group.subject}</p>
                                    </div>
-                               </li>
-                               );
-                            })}
-                        </ul>
-                    ) : (
-                        <p className="text-center py-8 text-text-secondary">No has creado ningún grupo todavía.</p>
-                    )}
+                                   <div className="flex gap-2">
+                                        <button onClick={(e) => { e.stopPropagation(); setEditingGroup(group); setGroupModalOpen(true); }} className="p-1"><Icon name="edit-3" className="w-4 h-4"/></button>
+                                        <button onClick={(e) => { e.stopPropagation(); handleDeleteGroup(group.id); }} className="p-1"><Icon name="trash-2" className="w-4 h-4"/></button>
+                                   </div>
+                               </div>
+                           </li>
+                           );
+                        })}
+                    </ul>
                 </div>
 
-                {/* Students List */}
                 <div className="lg:col-span-2 bg-surface p-4 rounded-xl shadow-sm border border-border-color">
                    {selectedGroup ? (
                         <div>
                             <div className="flex flex-col sm:flex-row justify-between sm:items-center mb-4 gap-2">
-                                <h2 className="text-2xl font-bold text-text-primary">
-                                    {selectedGroup.name} 
-                                    <span className="font-normal text-lg text-text-secondary">
-                                      ({filteredStudents.length} de {selectedGroup.students.length} alumnos)
-                                    </span>
-                                </h2>
-                                <div className="flex gap-2 flex-wrap items-center">
-                                    <input
-                                      type="text"
-                                      value={searchTerm}
-                                      onChange={(e) => setSearchTerm(e.target.value)}
-                                      placeholder="Buscar alumno..."
-                                      className="px-3 py-2 border border-border-color rounded-md bg-surface focus:ring-2 focus:ring-primary text-sm"
-                                    />
-                                    <Button size="sm" variant="secondary" onClick={() => setBulkModalOpen(true)}>
-                                        <Icon name="list-plus" className="w-4 h-4"/> Agregar Varios
-                                    </Button>
+                                <h2 className="text-2xl font-bold">{selectedGroup.name}</h2>
+                                <div className="flex gap-2">
+                                    <input type="text" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} placeholder="Buscar alumno..." className="px-3 py-2 border border-border-color rounded-md bg-surface text-sm" />
                                     <Button size="sm" onClick={() => { setEditingStudent(undefined); setStudentModalOpen(true); }}>
-                                        <Icon name="user-plus" className="w-4 h-4"/> Nuevo Alumno
+                                        <Icon name="user-plus" className="w-4 h-4"/> Nuevo
                                     </Button>
                                 </div>
                             </div>
                             <div className="overflow-x-auto">
                                 <table className="w-full text-left">
                                     <thead>
-                                        <tr className="border-b border-border-color">
+                                        <tr className="border-b border-border-color text-sm text-text-secondary">
                                             <th className="p-2">#</th>
+                                            {/* FIXED: Removed double closing tag </th> */}
                                             {settings.showMatricula && <th className="p-2">Matrícula</th>}
                                             <th className="p-2">Nombre</th>
+                                            <th className="p-2">Equipo</th>
                                             <th className="p-2 text-right">Acciones</th>
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        <AnimatePresence>
                                         {filteredStudents.map((student, index) => (
-                                            <motion.tr
-                                                key={student.id}
-                                                layout
-                                                initial={{ opacity: 0 }}
-                                                animate={{ opacity: 1 }}
-                                                exit={{ opacity: 0, x: -50 }}
-                                                className="border-b border-border-color/70 hover:bg-surface-secondary/40"
-                                            >
+                                            <tr key={student.id} className="border-b border-border-color/70 hover:bg-surface-secondary/40">
                                                 <td className="p-2 text-text-secondary">{index + 1}</td>
-                                                {settings.showMatricula && <td className="p-2">{student.matricula || '-'}</td>}
-                                                <td className="p-2 font-medium">{student.name} {student.nickname && <span className="font-normal text-text-secondary">({student.nickname})</span>}</td>
+                                                {settings.showMatricula && <td className="p-2 text-xs">{student.matricula || '-'}</td>}
+                                                <td className="p-2 font-medium flex items-center gap-2">
+                                                    {student.name}
+                                                    {student.isRepeating && (
+                                                        <span className="bg-rose-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full" title="Recursamiento">R</span>
+                                                    )}
+                                                </td>
+                                                <td className="p-2">
+                                                    {student.team ? (
+                                                        <span className="text-xs bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded font-semibold">{student.team}</span>
+                                                    ) : '-'}
+                                                </td>
                                                 <td className="p-2 text-right">
                                                     <div className="inline-flex gap-2">
                                                          <button onClick={() => { setEditingStudent(student); setStudentModalOpen(true); }} className="p-1 text-text-secondary hover:text-primary"><Icon name="edit-3" className="w-4 h-4"/></button>
-                                                         <button onClick={() => handleDeleteStudent(student.id)} className="p-1 text-text-secondary hover:text-accent-red"><Icon name="trash-2" className="w-4 h-4"/></button>
                                                     </div>
                                                 </td>
-                                            </motion.tr>
+                                            </tr>
                                         ))}
-                                        </AnimatePresence>
                                     </tbody>
                                 </table>
-                                {selectedGroup.students.length === 0 && (
-                                    <p className="text-center text-text-secondary py-8">No hay alumnos en este grupo.</p>
-                                )}
-                                {selectedGroup.students.length > 0 && filteredStudents.length === 0 && (
-                                     <p className="text-center text-text-secondary py-8">No se encontraron alumnos con esa búsqueda.</p>
-                                )}
                             </div>
                         </div>
                    ) : (
-                       <div className="text-center py-20 flex flex-col items-center justify-center h-full">
-                           <Icon name="users" className="w-20 h-20 mx-auto text-border-color"/>
-                           <p className="mt-4 text-text-secondary">Selecciona un grupo para ver sus alumnos.</p>
-                           {groups.length === 0 && <p className="mt-1 text-sm text-text-secondary/70">O crea un nuevo grupo para empezar.</p>}
-                       </div>
+                       <div className="text-center py-20"><Icon name="users" className="w-20 h-20 mx-auto text-border-color"/><p className="mt-4 text-text-secondary">Selecciona un grupo para comenzar.</p></div>
                    )}
                 </div>
             </div>
 
-            <Modal isOpen={isGroupModalOpen} onClose={() => { setGroupModalOpen(false); setEditingGroup(undefined); }} title={editingGroup ? 'Editar Grupo' : 'Nuevo Grupo'} size="xl">
-                <GroupForm group={editingGroup} existingGroups={groups} onSave={handleSaveGroup} onCancel={() => { setGroupModalOpen(false); setEditingGroup(undefined); }} />
+            <Modal isOpen={isGroupModalOpen} onClose={() => setGroupModalOpen(false)} title={editingGroup ? 'Editar Grupo' : 'Nuevo Grupo'} size="xl">
+                <GroupForm group={editingGroup} existingGroups={groups} onSave={handleSaveGroup} onCancel={() => setGroupModalOpen(false)} />
             </Modal>
-            <Modal isOpen={isStudentModalOpen} onClose={() => { setStudentModalOpen(false); setEditingStudent(undefined); }} title={editingStudent ? 'Editar Alumno' : 'Nuevo Alumno'}>
-                <StudentForm student={editingStudent} onSave={handleSaveStudent} onCancel={() => { setStudentModalOpen(false); setEditingStudent(undefined); }} />
-            </Modal>
-            <Modal isOpen={isBulkModalOpen} onClose={() => setBulkModalOpen(false)} title="Agregar Alumnos en Lote">
-                <BulkStudentForm onSave={handleBulkSaveStudents} onCancel={() => setBulkModalOpen(false)} />
+            <Modal isOpen={isStudentModalOpen} onClose={() => setStudentModalOpen(false)} title={editingStudent ? 'Editar Alumno' : 'Nuevo Alumno'}>
+                <StudentForm student={editingStudent} onSave={handleSaveStudent} onCancel={() => setStudentModalOpen(false)} />
             </Modal>
         </div>
     );

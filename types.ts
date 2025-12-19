@@ -2,10 +2,6 @@
 // FIX: Define DayOfWeek here to break circular dependency with constants.ts
 export type DayOfWeek = 'Lunes' | 'Martes' | 'Miércoles' | 'Jueves' | 'Viernes' | 'Sábado';
 
-// FIX: The self-import of types from this file was removed to fix circular dependency errors.
-
-// FIX: The original file had a circular dependency by importing from itself, causing numerous type errors.
-// All type definitions have been consolidated here and a single source of truth for application types has been created.
 export type { Layouts, Layout } from 'react-grid-layout';
 
 export interface CalendarEvent {
@@ -22,6 +18,8 @@ export interface Student {
   name: string;
   matricula: string;
   nickname?: string;
+  isRepeating?: boolean; // True if repeating the subject (Recursamiento)
+  team?: string;        // Name or ID of the team they belong to
 }
 
 export interface EvaluationType {
@@ -60,6 +58,7 @@ export interface Evaluation {
   maxScore: number;
   partial: 1 | 2;
   typeId: string; // Links to EvaluationType id
+  isTeamBased?: boolean; // If true, grades are shared across team members
 }
 
 export interface Settings {
@@ -121,8 +120,6 @@ export interface AppState {
 }
 
 export type AppAction =
-  // The payload for SET_INITIAL_STATE is Partial because data loaded
-  // from storage might be from an older version of the app.
   | { type: 'SET_INITIAL_STATE'; payload: Partial<AppState> }
   | { type: 'SET_VIEW'; payload: ActiveView }
   | { type: 'SET_SELECTED_GROUP'; payload: string | null }
@@ -144,9 +141,9 @@ export type AppAction =
   | { type: 'SAVE_EVENT'; payload: CalendarEvent }
   | { type: 'DELETE_EVENT'; payload: string }
   | { type: 'SET_GCAL_EVENTS'; payload: CalendarEvent[] }
-  | { type: 'ARCHIVE_CURRENT_STATE'; payload: string } // payload: name of archive
-  | { type: 'RESTORE_ARCHIVE'; payload: string } // payload: archiveId
-  | { type: 'DELETE_ARCHIVE'; payload: string } // payload: archiveId
+  | { type: 'ARCHIVE_CURRENT_STATE'; payload: string } 
+  | { type: 'RESTORE_ARCHIVE'; payload: string } 
+  | { type: 'DELETE_ARCHIVE'; payload: string } 
   | { type: 'TRANSITION_SEMESTER'; payload: { newGroups: Group[]; newSettings: Partial<Settings> } };
 
 export interface Professor {
@@ -164,7 +161,7 @@ export interface MotivationalQuote {
 export type StudentStatus = 'Destacado' | 'Regular' | 'En Riesgo';
 
 export interface ReportMonthlyAttendance {
-    [monthYear: string]: { // e.g., "Enero 2024"
+    [monthYear: string]: { 
         percentage: number;
         present: number;
         totalClasses: number;
@@ -174,24 +171,18 @@ export interface ReportMonthlyAttendance {
 export interface ReportData {
   student: Student;
   status: StudentStatus;
-  // Averages
   totalAttendancePercentage: number;
   totalGradeAverage: string | number;
-  // Partial 1
   p1AttendancePercentage: number;
   p1GradeAverage: string | number;
-  // Partial 2
   p2AttendancePercentage: number;
   p2GradeAverage: string | number;
-  // Monthly Breakdown
   monthlyAttendance: ReportMonthlyAttendance;
-  // Individual grades
   grades: { [evaluationId: string]: number | null };
 }
 
-
 export interface GroupMonthlyAttendance {
-    [monthYear: string]: number; // month: percentage
+    [monthYear: string]: number; 
 }
 
 export interface GroupEvaluationAverages {

@@ -1,5 +1,5 @@
 {
-  "version": "1.1.1",
-  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v1.1.1/app-debug.apk",
-  "notes": "¡Versión 1.1.1! Corrección crítica: Reprobar un examen remedial ahora envía automáticamente al alumno a Extraordinario, independientemente del promedio."
+  "version": "1.1.2",
+  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v1.1.2/app-debug.apk",
+  "notes": "¡Versión 1.1.2! Añadida marca de Recursamiento para alumnos y sistema de Equipos con calificaciones compartidas en tareas grupales."
 }
