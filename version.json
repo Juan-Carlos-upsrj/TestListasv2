@@ -1,5 +1,5 @@
 {
-  "version": "1.1.4",
-  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v1.1.4/app-debug.apk",
-  "notes": "¡Versión 1.1.4! Parche de estabilidad para la compilación de distribución."
+  "version": "1.1.5",
+  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v1.1.5/app-debug.apk",
+  "notes": "¡Versión 1.1.5! Restaurada la eliminación de tareas en calificaciones y lista de equipos sugeridos por cuatrimestre."
 }

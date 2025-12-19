@@ -143,6 +143,15 @@ const GradesView: React.FC = () => {
         }
     };
 
+    const handleDeleteEvaluation = (id: string, name: string) => {
+        if (window.confirm(`¿Seguro que deseas eliminar la evaluación "${name}"? Esta acción no se puede deshacer.`)) {
+            if (selectedGroupId) {
+                dispatch({ type: 'DELETE_EVALUATION', payload: { groupId: selectedGroupId, evaluationId: id } });
+                dispatch({ type: 'ADD_TOAST', payload: { message: `Evaluación "${name}" eliminada.`, type: 'success' } });
+            }
+        }
+    };
+
     return (
         <div>
             <div className="flex justify-end mb-6">
@@ -186,18 +195,32 @@ const GradesView: React.FC = () => {
                                 <tr>
                                     <th rowSpan={2} className="sticky left-0 bg-surface p-2 text-left font-semibold z-10 border-b-2 border-border-color">Alumno</th>
                                     <th rowSpan={2} className="p-2 font-semibold text-center border-b-2 border-border-color text-xs text-text-secondary">Eq.</th>
-                                    {p1Evaluations.map(ev => <th key={ev.id} className="p-2 font-semibold text-center text-xs border-b-2 border-border-color">
+                                    {p1Evaluations.map(ev => <th key={ev.id} className="group relative p-2 font-semibold text-center text-xs border-b-2 border-border-color min-w-[80px]">
                                         <div className="flex flex-col items-center">
                                             {ev.isTeamBased && <Icon name="users" className="w-3 h-3 text-indigo-500 mb-1" />}
                                             <span className="truncate max-w-[80px]">{ev.name}</span>
+                                            <button 
+                                                onClick={() => handleDeleteEvaluation(ev.id, ev.name)}
+                                                className="absolute -top-1 -right-1 p-1 bg-red-100 text-red-600 rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-200"
+                                                title="Eliminar tarea"
+                                            >
+                                                <Icon name="trash-2" className="w-3 h-3" />
+                                            </button>
                                         </div>
                                     </th>)}
                                     {p1AttendanceType && <th className="p-2 font-semibold text-center border-b-2 border-border-color text-xs text-emerald-600">Asist.</th>}
                                     <th className="p-2 font-semibold text-center border-b-2 border-border-color bg-surface-secondary text-xs">P1</th>
-                                    {p2Evaluations.map(ev => <th key={ev.id} className="p-2 font-semibold text-center text-xs border-b-2 border-border-color">
+                                    {p2Evaluations.map(ev => <th key={ev.id} className="group relative p-2 font-semibold text-center text-xs border-b-2 border-border-color min-w-[80px]">
                                         <div className="flex flex-col items-center">
                                             {ev.isTeamBased && <Icon name="users" className="w-3 h-3 text-indigo-500 mb-1" />}
                                             <span className="truncate max-w-[80px]">{ev.name}</span>
+                                            <button 
+                                                onClick={() => handleDeleteEvaluation(ev.id, ev.name)}
+                                                className="absolute -top-1 -right-1 p-1 bg-red-100 text-red-600 rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-200"
+                                                title="Eliminar tarea"
+                                            >
+                                                <Icon name="trash-2" className="w-3 h-3" />
+                                            </button>
                                         </div>
                                     </th>)}
                                     {p2AttendanceType && <th className="p-2 font-semibold text-center border-b-2 border-border-color text-xs text-emerald-600">Asist.</th>}

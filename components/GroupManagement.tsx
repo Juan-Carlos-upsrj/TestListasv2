@@ -1,3 +1,4 @@
+
 import React, { useContext, useState, useMemo } from 'react';
 import { AppContext } from '../context/AppContext';
 import { Group, Student, DayOfWeek, EvaluationType } from '../types';
@@ -243,14 +244,33 @@ export const GroupForm: React.FC<{
 
 const StudentForm: React.FC<{
     student?: Student;
+    currentGroup?: Group;
+    allGroups?: Group[];
     onSave: (student: Student) => void;
     onCancel: () => void;
-}> = ({ student, onSave, onCancel }) => {
+}> = ({ student, currentGroup, allGroups = [], onSave, onCancel }) => {
     const [name, setName] = useState(student?.name || '');
     const [matricula, setMatricula] = useState(student?.matricula || '');
     const [nickname, setNickname] = useState(student?.nickname || '');
     const [isRepeating, setIsRepeating] = useState(student?.isRepeating || false);
     const [team, setTeam] = useState(student?.team || '');
+
+    // Get all unique teams in the current group's quarter
+    const suggestedTeams = useMemo(() => {
+        if (!currentGroup || !currentGroup.quarter) return [];
+        const quarter = currentGroup.quarter;
+        const teams = new Set<string>();
+        
+        allGroups.forEach(g => {
+            if (g.quarter === quarter) {
+                g.students.forEach(s => {
+                    if (s.team) teams.add(s.team);
+                });
+            }
+        });
+        
+        return Array.from(teams).sort();
+    }, [allGroups, currentGroup]);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -282,7 +302,18 @@ const StudentForm: React.FC<{
                     </div>
                     <div>
                         <label htmlFor="team" className="block text-sm font-medium text-primary">Equipo</label>
-                        <input type="text" id="team" value={team} onChange={e => setTeam(e.target.value)} placeholder="Ej. Equipo 1" className="mt-1 w-full p-2 border border-primary/30 rounded-md bg-surface focus:ring-2 focus:ring-primary" />
+                        <input 
+                            list="quarter-teams"
+                            type="text" 
+                            id="team" 
+                            value={team} 
+                            onChange={e => setTeam(e.target.value)} 
+                            placeholder="Ej. Equipo 1" 
+                            className="mt-1 w-full p-2 border border-primary/30 rounded-md bg-surface focus:ring-2 focus:ring-primary" 
+                        />
+                        <datalist id="quarter-teams">
+                            {suggestedTeams.map(t => <option key={t} value={t} />)}
+                        </datalist>
                     </div>
                 </div>
                 <div>
@@ -505,7 +536,7 @@ const GroupManagement: React.FC = () => {
                 <GroupForm group={editingGroup} existingGroups={groups} onSave={handleSaveGroup} onCancel={() => setGroupModalOpen(false)} />
             </Modal>
             <Modal isOpen={isStudentModalOpen} onClose={() => setStudentModalOpen(false)} title={editingStudent ? 'Editar Alumno' : 'Nuevo Alumno'}>
-                <StudentForm student={editingStudent} onSave={handleSaveStudent} onCancel={() => setStudentModalOpen(false)} />
+                <StudentForm student={editingStudent} currentGroup={selectedGroup} allGroups={groups} onSave={handleSaveStudent} onCancel={() => setStudentModalOpen(false)} />
             </Modal>
             <Modal isOpen={isBulkModalOpen} onClose={() => setBulkModalOpen(false)} title="Importar Varios Alumnos" size="lg">
                 <BulkStudentForm 
