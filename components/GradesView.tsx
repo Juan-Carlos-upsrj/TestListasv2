@@ -283,12 +283,15 @@ const GradesView: React.FC = () => {
                                     const extra = groupGrades[student.id]?.[GRADE_EXTRA] ?? null;
                                     const special = groupGrades[student.id]?.[GRADE_SPECIAL] ?? null;
 
-                                    const { score: finalScore } = calculateFinalGradeWithRecovery(p1Avg, p2Avg, r1, r2, extra, special);
+                                    const { score: finalScore, isFailing } = calculateFinalGradeWithRecovery(p1Avg, p2Avg, r1, r2, extra, special);
 
                                     return (
                                         <tr key={student.id} className="border-b border-border-color/70 hover:bg-surface-secondary/40">
                                             <td className="p-2 font-medium">
-                                                {student.name}
+                                                <div className="flex items-center gap-2">
+                                                    {student.name}
+                                                    {student.isRepeating && <span className="bg-rose-600 text-white text-[9px] font-bold px-1 rounded-full">R</span>}
+                                                </div>
                                             </td>
                                             <td className="p-1 text-center">
                                                 <input type="number" value={r1 ?? ''} onChange={(e) => handleGradeChange(student.id, GRADE_REMEDIAL_P1, e.target.value)}
@@ -299,12 +302,24 @@ const GradesView: React.FC = () => {
                                                     className="w-12 p-1 text-center border border-amber-300 rounded-md bg-surface text-xs"/>
                                             </td>
                                             <td className="p-1 text-center">
-                                                <input type="number" value={extra ?? ''} onChange={(e) => handleGradeChange(student.id, GRADE_EXTRA, e.target.value)}
-                                                    className="w-12 p-1 text-center border border-amber-400 rounded-md bg-surface text-xs"/>
+                                                <input 
+                                                    type="number" 
+                                                    value={extra ?? ''} 
+                                                    onChange={(e) => handleGradeChange(student.id, GRADE_EXTRA, e.target.value)}
+                                                    disabled={!isFailing}
+                                                    title={!isFailing ? "Alumno ya acreditó el ciclo" : "Examen extraordinario"}
+                                                    className={`w-12 p-1 text-center border border-amber-400 rounded-md bg-surface text-xs ${!isFailing ? 'opacity-40 cursor-not-allowed bg-slate-50' : ''}`}
+                                                />
                                             </td>
                                             <td className="p-1 text-center">
-                                                <input type="number" value={special ?? ''} onChange={(e) => handleGradeChange(student.id, GRADE_SPECIAL, e.target.value)}
-                                                    className="w-12 p-1 text-center border border-amber-500 rounded-md bg-surface text-xs"/>
+                                                <input 
+                                                    type="number" 
+                                                    value={special ?? ''} 
+                                                    onChange={(e) => handleGradeChange(student.id, GRADE_SPECIAL, e.target.value)}
+                                                    disabled={!student.isRepeating}
+                                                    title={!student.isRepeating ? "Solo disponible para alumnos de recursamiento" : "Examen especial"}
+                                                    className={`w-12 p-1 text-center border border-amber-500 rounded-md bg-surface text-xs ${!student.isRepeating ? 'opacity-40 cursor-not-allowed bg-slate-50' : ''}`}
+                                                />
                                             </td>
                                             <td className={`p-2 text-center font-bold text-sm bg-surface-secondary ${getGradeColor(finalScore)}`}>
                                                 {finalScore?.toFixed(1) || '-'}
