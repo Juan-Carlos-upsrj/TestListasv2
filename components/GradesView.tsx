@@ -151,6 +151,11 @@ const GradesView: React.FC = () => {
         }
     };
 
+    const handleEditEvaluation = (evaluation: Evaluation) => {
+        setEditingEvaluation(evaluation);
+        setEvalModalOpen(true);
+    };
+
     return (
         <div>
             <div className="flex justify-end mb-6">
@@ -198,13 +203,22 @@ const GradesView: React.FC = () => {
                                         <div className="flex flex-col items-center">
                                             {ev.isTeamBased && <Icon name="users" className="w-3 h-3 text-indigo-500 mb-1" />}
                                             <span className="truncate max-w-[80px]">{ev.name}</span>
-                                            <button 
-                                                onClick={() => handleDeleteEvaluation(ev.id, ev.name)}
-                                                className="absolute -top-1 -right-1 p-1 bg-red-100 text-red-600 rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-200"
-                                                title="Eliminar tarea"
-                                            >
-                                                <Icon name="trash-2" className="w-3 h-3" />
-                                            </button>
+                                            <div className="absolute -top-1 right-0 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <button 
+                                                    onClick={() => handleEditEvaluation(ev)}
+                                                    className="p-1 bg-blue-100 text-blue-600 rounded-full hover:bg-blue-200"
+                                                    title="Editar tarea"
+                                                >
+                                                    <Icon name="edit-3" className="w-3 h-3" />
+                                                </button>
+                                                <button 
+                                                    onClick={() => handleDeleteEvaluation(ev.id, ev.name)}
+                                                    className="p-1 bg-red-100 text-red-600 rounded-full hover:bg-red-200"
+                                                    title="Eliminar tarea"
+                                                >
+                                                    <Icon name="trash-2" className="w-3 h-3" />
+                                                </button>
+                                            </div>
                                         </div>
                                     </th>)}
                                     {p1AttendanceType && <th className="p-2 font-semibold text-center border-b-2 border-border-color text-xs text-emerald-600">Asist.</th>}
@@ -213,13 +227,22 @@ const GradesView: React.FC = () => {
                                         <div className="flex flex-col items-center">
                                             {ev.isTeamBased && <Icon name="users" className="w-3 h-3 text-indigo-500 mb-1" />}
                                             <span className="truncate max-w-[80px]">{ev.name}</span>
-                                            <button 
-                                                onClick={() => handleDeleteEvaluation(ev.id, ev.name)}
-                                                className="absolute -top-1 -right-1 p-1 bg-red-100 text-red-600 rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-200"
-                                                title="Eliminar tarea"
-                                            >
-                                                <Icon name="trash-2" className="w-3 h-3" />
-                                            </button>
+                                            <div className="absolute -top-1 right-0 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <button 
+                                                    onClick={() => handleEditEvaluation(ev)}
+                                                    className="p-1 bg-blue-100 text-blue-600 rounded-full hover:bg-blue-200"
+                                                    title="Editar tarea"
+                                                >
+                                                    <Icon name="edit-3" className="w-3 h-3" />
+                                                </button>
+                                                <button 
+                                                    onClick={() => handleDeleteEvaluation(ev.id, ev.name)}
+                                                    className="p-1 bg-red-100 text-red-600 rounded-full hover:bg-red-200"
+                                                    title="Eliminar tarea"
+                                                >
+                                                    <Icon name="trash-2" className="w-3 h-3" />
+                                                </button>
+                                            </div>
                                         </div>
                                     </th>)}
                                     {p2AttendanceType && <th className="p-2 font-semibold text-center border-b-2 border-border-color text-xs text-emerald-600">Asist.</th>}

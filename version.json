@@ -1,5 +1,5 @@
 {
-  "version": "1.1.7",
-  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v1.1.7/app-debug.apk",
-  "notes": "¡Versión 1.1.7! Activación de examen extraordinario basada en reprobación individual de parciales (calificación < 7)."
+  "version": "1.1.8",
+  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v1.1.8/app-debug.apk",
+  "notes": "¡Versión 1.1.8! Se ha añadido el botón de edición para tareas en la vista de calificaciones."
 }
