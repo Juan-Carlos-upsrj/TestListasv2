@@ -33,6 +33,7 @@ export interface Group {
   id: string;
   name: string;
   subject: string;
+  subjectShortName?: string; // Short version of subject for UI elements (e.g., "MAT", "FÍS")
   quarter?: string; // New field for Cuatrimestre (e.g., "1º", "5º")
   classDays: DayOfWeek[];
   students: Student[];

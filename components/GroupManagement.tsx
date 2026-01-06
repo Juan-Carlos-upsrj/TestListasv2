@@ -104,6 +104,7 @@ export const GroupForm: React.FC<{
 }> = ({ group, existingGroups = [], onSave, onCancel }) => {
     const [name, setName] = useState(group?.name || '');
     const [subject, setSubject] = useState(group?.subject || '');
+    const [subjectShortName, setSubjectShortName] = useState(group?.subjectShortName || '');
     const [quarter, setQuarter] = useState(group?.quarter || '');
     const [classDays, setClassDays] = useState<DayOfWeek[]>(group?.classDays || []);
     const [color, setColor] = useState(group?.color || GROUP_COLORS[0].name);
@@ -146,6 +147,7 @@ export const GroupForm: React.FC<{
             id: group?.id || uuidv4(),
             name,
             subject,
+            subjectShortName: subjectShortName.trim() || undefined,
             quarter,
             classDays,
             students: group?.students || [],
@@ -167,9 +169,24 @@ export const GroupForm: React.FC<{
                         <input type="text" id="quarter" placeholder="Ej. 5º, 10" value={quarter} onChange={e => setQuarter(e.target.value)} className="mt-1 w-full p-2 border border-border-color rounded-md bg-surface focus:ring-2 focus:ring-primary" />
                     </div>
                 </div>
-                <div>
-                    <label htmlFor="subject" className="block text-sm font-medium">Materia</label>
-                    <input type="text" id="subject" value={subject} onChange={e => setSubject(e.target.value)} required className="mt-1 w-full p-2 border border-border-color rounded-md bg-surface focus:ring-2 focus:ring-primary" />
+                <div className="grid grid-cols-2 gap-4">
+                    <div className="col-span-2 sm:col-span-1">
+                        <label htmlFor="subject" className="block text-sm font-medium">Materia (Completo)</label>
+                        <input type="text" id="subject" value={subject} onChange={e => setSubject(e.target.value)} required className="mt-1 w-full p-2 border border-border-color rounded-md bg-surface focus:ring-2 focus:ring-primary" />
+                    </div>
+                    <div className="col-span-2 sm:col-span-1">
+                        <label htmlFor="subjectShortName" className="block text-sm font-medium text-primary">Abreviatura / Nombre Corto</label>
+                        <input 
+                            type="text" 
+                            id="subjectShortName" 
+                            value={subjectShortName} 
+                            onChange={e => setSubjectShortName(e.target.value.toUpperCase())} 
+                            placeholder="Ej. MAT, PROG" 
+                            maxLength={8}
+                            className="mt-1 w-full p-2 border border-primary/30 rounded-md bg-surface focus:ring-2 focus:ring-primary font-bold" 
+                        />
+                        <p className="text-[10px] text-text-secondary mt-1">Se usará en los botones de acceso rápido.</p>
+                    </div>
                 </div>
                 <div>
                     <label className="block text-sm font-medium mb-2">Días de Clase</label>

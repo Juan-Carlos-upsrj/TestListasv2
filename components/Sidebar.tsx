@@ -1,3 +1,4 @@
+
 import React, { useContext, useState, useEffect, SetStateAction } from 'react';
 import { AppContext } from '../context/AppContext';
 import SettingsModal from './SettingsModal';
@@ -107,6 +108,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
                         const activeClass = `${colorObj.bg} !text-white shadow-md ring-2 ring-offset-1 ring-offset-surface ${colorObj.ring || 'ring-primary'}`;
                         const inactiveClass = `bg-surface-secondary text-text-secondary hover:bg-border-color hover:text-text-primary`;
 
+                        const shortName = g.subjectShortName ? ` (${g.subjectShortName})` : '';
+
                         if (isCollapsed) {
                             // Collapsed view: Color dots with first letter
                             return (
@@ -115,7 +118,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
                                     onClick={() => handleGroupClick(g.id)}
                                     whileHover={{ scale: 1.1 }}
                                     whileTap={{ scale: 0.95 }}
-                                    title={g.name}
+                                    title={`${g.name} - ${g.subject}`}
                                     className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-200 border border-transparent mx-auto ${
                                         isActive ? activeClass : inactiveClass
                                     }`}
@@ -131,11 +134,12 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
                                 onClick={() => handleGroupClick(g.id)}
                                 whileHover={{ scale: 1.05 }}
                                 whileTap={{ scale: 0.95 }}
-                                className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all duration-200 border border-transparent ${
+                                title={`${g.name} - ${g.subject}`}
+                                className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all duration-200 border border-transparent whitespace-nowrap overflow-hidden text-ellipsis max-w-full ${
                                     isActive ? activeClass : inactiveClass
                                 }`}
                             >
-                                {g.name}
+                                {g.name}{shortName}
                             </motion.button>
                         );
                     })}

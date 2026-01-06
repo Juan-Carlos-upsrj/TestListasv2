@@ -1,5 +1,6 @@
+
 {
-  "version": "1.1.9",
-  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v1.1.9/app-debug.apk",
-  "notes": "¡Versión 1.1.9! Restauradas las funciones de duplicar grupos, borrar grupos y borrar alumnos."
+  "version": "1.2.0",
+  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v1.2.0/app-debug.apk",
+  "notes": "¡Versión 1.2.0! Ahora puedes añadir una abreviatura a la materia para diferenciar grupos en los botones de acceso rápido."
 }
