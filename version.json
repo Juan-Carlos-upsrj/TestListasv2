@@ -1,5 +1,5 @@
 {
-  "version": "1.1.8",
-  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v1.1.8/app-debug.apk",
-  "notes": "¡Versión 1.1.8! Se ha añadido el botón de edición para tareas en la vista de calificaciones."
+  "version": "1.1.9",
+  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v1.1.9/app-debug.apk",
+  "notes": "¡Versión 1.1.9! Restauradas las funciones de duplicar grupos, borrar grupos y borrar alumnos."
 }

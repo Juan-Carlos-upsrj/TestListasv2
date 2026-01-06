@@ -426,10 +426,22 @@ const GroupManagement: React.FC = () => {
         setEditingGroup(undefined);
     };
 
-    const handleDeleteGroup = (groupId: string) => {
-        if (window.confirm('¿Seguro? Se borrarán todos los datos asociados.')) {
+    const handleDeleteGroup = (groupId: string, groupName: string) => {
+        if (window.confirm(`¿Seguro que deseas eliminar el grupo "${groupName}"? Se borrarán todos los datos asociados (asistencias, tareas, calificaciones).`)) {
             dispatch({ type: 'DELETE_GROUP', payload: groupId });
+            dispatch({ type: 'ADD_TOAST', payload: { message: `Grupo '${groupName}' eliminado.`, type: 'info' } });
         }
+    };
+
+    const handleDuplicateGroup = (group: Group) => {
+        const newGroup: Group = {
+            ...group,
+            id: uuidv4(),
+            name: `Copia de ${group.name}`,
+            students: group.students.map(s => ({ ...s, id: uuidv4() }))
+        };
+        dispatch({ type: 'SAVE_GROUP', payload: newGroup });
+        dispatch({ type: 'ADD_TOAST', payload: { message: `Copia creada como '${newGroup.name}'.`, type: 'success' } });
     };
 
     const handleSaveStudent = (student: Student) => {
@@ -437,6 +449,13 @@ const GroupManagement: React.FC = () => {
             dispatch({ type: 'SAVE_STUDENT', payload: { groupId: selectedGroupId, student } });
             setStudentModalOpen(false);
             setEditingStudent(undefined);
+        }
+    };
+
+    const handleDeleteStudent = (studentId: string, studentName: string) => {
+        if (selectedGroupId && window.confirm(`¿Eliminar a ${studentName} de este grupo?`)) {
+            dispatch({ type: 'DELETE_STUDENT', payload: { groupId: selectedGroupId, studentId } });
+            dispatch({ type: 'ADD_TOAST', payload: { message: `${studentName} eliminado.`, type: 'info' } });
         }
     };
     
@@ -458,13 +477,14 @@ const GroupManagement: React.FC = () => {
                                 className={`p-3 rounded-lg cursor-pointer transition-all border-l-4 ${isSelected ? 'bg-primary text-white shadow-md border-transparent' : 'bg-surface-secondary hover:bg-border-color border-transparent'}`}
                             >
                                <div className="flex justify-between items-start">
-                                   <div>
-                                       <p className="font-semibold">{group.name}</p>
-                                       <p className={`text-sm ${isSelected ? 'opacity-90' : 'text-text-secondary'}`}>{group.subject}</p>
+                                   <div className="max-w-[150px] overflow-hidden">
+                                       <p className="font-semibold truncate">{group.name}</p>
+                                       <p className={`text-sm truncate ${isSelected ? 'opacity-90' : 'text-text-secondary'}`}>{group.subject}</p>
                                    </div>
-                                   <div className="flex gap-2">
-                                        <button onClick={(e) => { e.stopPropagation(); setEditingGroup(group); setGroupModalOpen(true); }} className="p-1"><Icon name="edit-3" className="w-4 h-4"/></button>
-                                        <button onClick={(e) => { e.stopPropagation(); handleDeleteGroup(group.id); }} className="p-1"><Icon name="trash-2" className="w-4 h-4"/></button>
+                                   <div className={`flex gap-1 ${isSelected ? 'text-white' : 'text-text-secondary'}`}>
+                                        <button onClick={(e) => { e.stopPropagation(); handleDuplicateGroup(group); }} className="p-1 hover:bg-black/10 rounded" title="Duplicar"><Icon name="copy" className="w-4 h-4"/></button>
+                                        <button onClick={(e) => { e.stopPropagation(); setEditingGroup(group); setGroupModalOpen(true); }} className="p-1 hover:bg-black/10 rounded" title="Editar"><Icon name="edit-3" className="w-4 h-4"/></button>
+                                        <button onClick={(e) => { e.stopPropagation(); handleDeleteGroup(group.id, group.name); }} className="p-1 hover:bg-red-500/20 text-accent-red rounded" title="Eliminar"><Icon name="trash-2" className="w-4 h-4"/></button>
                                    </div>
                                </div>
                            </li>
@@ -517,7 +537,8 @@ const GroupManagement: React.FC = () => {
                                                 </td>
                                                 <td className="p-2 text-right">
                                                     <div className="inline-flex gap-2">
-                                                         <button onClick={() => { setEditingStudent(student); setStudentModalOpen(true); }} className="p-1 text-text-secondary hover:text-primary"><Icon name="edit-3" className="w-4 h-4"/></button>
+                                                         <button onClick={() => { setEditingStudent(student); setStudentModalOpen(true); }} className="p-1 text-text-secondary hover:text-primary" title="Editar"><Icon name="edit-3" className="w-4 h-4"/></button>
+                                                         <button onClick={() => { handleDeleteStudent(student.id, student.name); }} className="p-1 text-accent-red hover:bg-accent-red-light rounded" title="Eliminar"><Icon name="trash-2" className="w-4 h-4"/></button>
                                                     </div>
                                                 </td>
                                             </tr>
