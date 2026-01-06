@@ -1,6 +1,5 @@
-
 {
-  "version": "1.2.0",
-  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v1.2.0/app-debug.apk",
-  "notes": "¡Versión 1.2.0! Ahora puedes añadir una abreviatura a la materia para diferenciar grupos en los botones de acceso rápido."
+  "version": "1.2.1",
+  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v1.2.1/app-debug.apk",
+  "notes": "¡Versión 1.2.1! Restauradas funciones de gestión de grupos (borrar, duplicar) y edición de tareas."
 }
