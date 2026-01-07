@@ -1,3 +1,4 @@
+
 import React, { useContext, useState, useMemo, useEffect, useCallback } from 'react';
 import { AppContext } from '../context/AppContext';
 import { Evaluation, Group } from '../types';
@@ -9,7 +10,6 @@ import { GroupForm } from './GroupManagement';
 import { calculatePartialAverage, getGradeColor, calculateFinalGradeWithRecovery } from '../services/gradeCalculation';
 import GradeImageModal from './GradeImageModal';
 
-// Special IDs for recovery grades
 const GRADE_REMEDIAL_P1 = 'GRADE_REMEDIAL_P1';
 const GRADE_REMEDIAL_P2 = 'GRADE_REMEDIAL_P2';
 const GRADE_EXTRA = 'GRADE_EXTRA';
@@ -72,13 +72,7 @@ const EvaluationForm: React.FC<{
                     </select>
                 </div>
                 <div className="flex items-center gap-3 p-3 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg border border-indigo-100 dark:border-indigo-900/40">
-                    <input 
-                        type="checkbox" 
-                        id="isTeamBased" 
-                        checked={isTeamBased} 
-                        onChange={e => setIsTeamBased(e.target.checked)}
-                        className="h-5 w-5 rounded text-indigo-600 focus:ring-indigo-500"
-                    />
+                    <input type="checkbox" id="isTeamBased" checked={isTeamBased} onChange={e => setIsTeamBased(e.target.checked)} className="h-5 w-5 rounded text-indigo-600 focus:ring-indigo-500"/>
                     <label htmlFor="isTeamBased" className="text-sm font-bold text-indigo-700 dark:text-indigo-400 cursor-pointer">
                         ¿Evaluación por EQUIPOS? <span className="font-normal block text-xs opacity-80">La calificación se compartirá con todos los integrantes del mismo equipo.</span>
                     </label>
@@ -91,7 +85,6 @@ const EvaluationForm: React.FC<{
         </form>
     );
 };
-
 
 const GradesView: React.FC = () => {
     const { state, dispatch } = useContext(AppContext);
@@ -110,26 +103,20 @@ const GradesView: React.FC = () => {
     const group = useMemo(() => groups.find(g => g.id === selectedGroupId), [groups, selectedGroupId]);
     const groupEvaluations = useMemo(() => (evaluations[selectedGroupId || ''] || []), [evaluations, selectedGroupId]);
     const groupGrades = useMemo(() => grades[selectedGroupId || ''] || {}, [grades, selectedGroupId]);
-
     const p1Evaluations = useMemo(() => groupEvaluations.filter(e => e.partial === 1), [groupEvaluations]);
     const p2Evaluations = useMemo(() => groupEvaluations.filter(e => e.partial === 2), [groupEvaluations]);
-
     const p1AttendanceType = useMemo(() => group?.evaluationTypes.partial1.find(t => t.isAttendance), [group]);
     const p2AttendanceType = useMemo(() => group?.evaluationTypes.partial2.find(t => t.isAttendance), [group]);
 
-    useEffect(() => {
-        if (!selectedGroupId && groups.length > 0) setSelectedGroupId(groups[0].id);
-    }, [groups, selectedGroupId, setSelectedGroupId]);
+    useEffect(() => { if (!selectedGroupId && groups.length > 0) setSelectedGroupId(groups[0].id); }, [groups, selectedGroupId, setSelectedGroupId]);
     
     const studentsForRecovery = useMemo(() => {
         if (!group) return [];
         return group.students.filter(student => {
             const p1Avg = calculatePartialAverage(group, 1, groupEvaluations, groupGrades[student.id] || {}, settings, attendance[group.id]?.[student.id] || {});
             const p2Avg = calculatePartialAverage(group, 2, groupEvaluations, groupGrades[student.id] || {}, settings, attendance[group.id]?.[student.id] || {});
-            const r1 = groupGrades[student.id]?.[GRADE_REMEDIAL_P1] ?? null;
-            const r2 = groupGrades[student.id]?.[GRADE_REMEDIAL_P2] ?? null;
-            const extra = groupGrades[student.id]?.[GRADE_EXTRA] ?? null;
-            const special = groupGrades[student.id]?.[GRADE_SPECIAL] ?? null;
+            const r1 = groupGrades[student.id]?.[GRADE_REMEDIAL_P1] ?? null, r2 = groupGrades[student.id]?.[GRADE_REMEDIAL_P2] ?? null;
+            const extra = groupGrades[student.id]?.[GRADE_EXTRA] ?? null, special = groupGrades[student.id]?.[GRADE_SPECIAL] ?? null;
             const { isFailing } = calculateFinalGradeWithRecovery(p1Avg, p2Avg, r1, r2, extra, special);
             return isFailing || (p1Avg !== null && p1Avg < 7) || (p2Avg !== null && p2Avg < 7);
         });
@@ -143,11 +130,8 @@ const GradesView: React.FC = () => {
     };
 
     const handleDeleteEvaluation = (id: string, name: string) => {
-        if (window.confirm(`¿Seguro que deseas eliminar la evaluación "${name}"? Esta acción no se puede deshacer.`)) {
-            if (selectedGroupId) {
-                dispatch({ type: 'DELETE_EVALUATION', payload: { groupId: selectedGroupId, evaluationId: id } });
-                dispatch({ type: 'ADD_TOAST', payload: { message: `Evaluación "${name}" eliminada.`, type: 'success' } });
-            }
+        if (window.confirm(`¿Seguro que deseas eliminar "${name}"?`)) {
+            if (selectedGroupId) dispatch({ type: 'DELETE_EVALUATION', payload: { groupId: selectedGroupId, evaluationId: id } });
         }
     };
 
@@ -156,229 +140,139 @@ const GradesView: React.FC = () => {
         setEvalModalOpen(true);
     };
 
+    const renderHeaderButtons = (ev: Evaluation) => (
+        <div className="flex flex-col items-center justify-center p-2 relative group min-w-[70px]">
+            <div className="absolute top-0 right-0 flex sm:opacity-0 sm:group-hover:opacity-100 transition-opacity bg-white/80 rounded-md shadow-sm z-10">
+                <button onClick={() => handleEditEvaluation(ev)} className="p-1 text-blue-600 hover:bg-blue-50 rounded" title="Editar"><Icon name="edit-3" className="w-3 h-3"/></button>
+                <button onClick={() => handleDeleteEvaluation(ev.id, ev.name)} className="p-1 text-red-600 hover:bg-red-50 rounded" title="Borrar"><Icon name="trash-2" className="w-3 h-3"/></button>
+            </div>
+            {ev.isTeamBased && <Icon name="users" className="w-3 h-3 text-indigo-500 mb-0.5" />}
+            <span className="text-[10px] font-bold leading-tight line-clamp-2 px-1 text-center" title={ev.name}>{ev.name}</span>
+            <span className="text-[9px] opacity-60 font-normal">({ev.maxScore} pts)</span>
+        </div>
+    );
+
     return (
-        <div>
-            <div className="flex justify-end mb-6">
-                <select value={selectedGroupId || ''} onChange={(e) => setSelectedGroupId(e.target.value)} className="w-full sm:w-64 p-2 border border-border-color rounded-md bg-surface">
+        <div className="flex flex-col h-full overflow-hidden">
+            <div className="bg-surface p-3 mb-4 rounded-xl border border-border-color shadow-sm flex flex-col gap-3 sm:flex-row sm:items-center">
+                 <select value={selectedGroupId || ''} onChange={(e) => setSelectedGroupId(e.target.value)} className="w-full sm:w-56 p-2 border border-border-color rounded-md bg-white text-sm focus:ring-2 focus:ring-primary">
                     <option value="" disabled>Selecciona un grupo</option>
                     {groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
                 </select>
+                <div className="flex-grow flex flex-wrap gap-2 justify-end">
+                    <div className="bg-surface-secondary p-1 rounded-lg flex border border-border-color">
+                        <button onClick={() => setViewMode('ordinary')} className={`px-2 py-1.5 rounded-md text-xs font-bold ${viewMode === 'ordinary' ? 'bg-white shadow text-primary' : 'text-text-secondary'}`}>Ordinario</button>
+                        <button onClick={() => setViewMode('recovery')} className={`px-2 py-1.5 rounded-md text-xs font-bold ${viewMode === 'recovery' ? 'bg-amber-100 shadow text-amber-800' : 'text-text-secondary'}`}>Recuperación</button>
+                    </div>
+                    {viewMode === 'ordinary' && (
+                        <div className="flex gap-2">
+                            <Button variant="secondary" size="sm" onClick={() => setImageModalOpen(true)} title="Captura de Calificaciones"><Icon name="camera" className="w-4 h-4"/></Button>
+                            <Button variant="secondary" size="sm" onClick={() => setGroupConfigOpen(true)} title="Criterios"><Icon name="settings" className="w-4 h-4"/></Button>
+                            <Button size="sm" onClick={() => { setEditingEvaluation(undefined); setEvalModalOpen(true); }}><Icon name="plus" className="w-4 h-4"/> <span className="hidden sm:inline ml-1">Nueva</span></Button>
+                        </div>
+                    )}
+                </div>
             </div>
 
             {group ? (
-                <>
-                <div className="mb-6 bg-surface p-4 rounded-xl shadow-sm border border-border-color">
-                    <div className="flex flex-col sm:flex-row justify-between items-center mb-3 gap-3">
-                        <h2 className="text-xl font-bold flex items-center gap-2">
-                            {viewMode === 'recovery' ? <span className="text-amber-600 flex items-center gap-2"><Icon name="users" /> Recuperación</span> : "Calificaciones"}
-                        </h2>
-                        <div className="flex flex-wrap gap-3">
-                            <div className="bg-surface-secondary p-1 rounded-lg flex border border-border-color">
-                                <button onClick={() => setViewMode('ordinary')} className={`px-3 py-1.5 rounded-md text-sm font-semibold ${viewMode === 'ordinary' ? 'bg-white shadow text-primary' : 'text-text-secondary'}`}>Ordinario</button>
-                                <button onClick={() => setViewMode('recovery')} className={`px-3 py-1.5 rounded-md text-sm font-semibold ${viewMode === 'recovery' ? 'bg-amber-100 shadow text-amber-800' : 'text-text-secondary'}`}>Recuperación</button>
-                            </div>
-                            {viewMode === 'ordinary' && (
-                                <>
-                                    <Button variant="secondary" onClick={() => setImageModalOpen(true)} title="Captura de Calificaciones">
-                                        <Icon name="camera" className="w-4 h-4"/>
-                                    </Button>
-                                    <Button variant="secondary" onClick={() => setGroupConfigOpen(true)}>
-                                        <Icon name="settings" className="w-4 h-4"/>
-                                    </Button>
-                                    <Button onClick={() => { setEditingEvaluation(undefined); setEvalModalOpen(true); }}><Icon name="plus" className="w-4 h-4"/> Nueva</Button>
-                                </>
-                            )}
-                        </div>
+                <div className="flex-1 bg-surface rounded-xl border border-border-color shadow-sm overflow-hidden flex flex-col">
+                    <div className="overflow-auto flex-1 custom-scrollbar">
+                        {viewMode === 'ordinary' ? (
+                            <table className="w-full border-collapse text-xs">
+                                <thead className="sticky top-0 z-20 bg-slate-50 shadow-sm">
+                                    <tr>
+                                        <th rowSpan={2} className="sticky left-0 bg-slate-50 p-3 text-left font-bold border-b border-r border-slate-200 min-w-[140px] z-30">Alumno</th>
+                                        <th rowSpan={2} className="p-2 font-bold text-center border-b border-r border-slate-200 bg-slate-100 text-[10px]">Eq.</th>
+                                        <th colSpan={p1Evaluations.length + (p1AttendanceType ? 1 : 0) + 1} className="p-1.5 font-bold text-center border-b border-r border-slate-200 bg-indigo-50 text-indigo-700">Primer Parcial</th>
+                                        <th colSpan={p2Evaluations.length + (p2AttendanceType ? 1 : 0) + 1} className="p-1.5 font-bold text-center border-b border-slate-200 bg-blue-50 text-blue-700">Segundo Parcial</th>
+                                    </tr>
+                                    <tr className="bg-slate-50">
+                                        {p1Evaluations.map(ev => <th key={ev.id} className="border-b border-r border-slate-200 min-w-[85px]">{renderHeaderButtons(ev)}</th>)}
+                                        {p1AttendanceType && <th className="p-2 font-bold text-center border-b border-r border-slate-200 text-emerald-600">Asist.</th>}
+                                        <th className="p-2 font-bold text-center border-b border-r border-slate-200 bg-indigo-100/50 text-indigo-800">PROM</th>
+                                        {p2Evaluations.map(ev => <th key={ev.id} className="border-b border-r border-slate-200 min-w-[85px]">{renderHeaderButtons(ev)}</th>)}
+                                        {p2AttendanceType && <th className="p-2 font-bold text-center border-b border-r border-slate-200 text-emerald-600">Asist.</th>}
+                                        <th className="p-2 font-bold text-center border-b bg-blue-100/50 text-blue-800">PROM</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {group.students.map((student, idx) => {
+                                        const p1Avg = calculatePartialAverage(group, 1, groupEvaluations, groupGrades[student.id] || {}, settings, attendance[group.id]?.[student.id] || {});
+                                        const p2Avg = calculatePartialAverage(group, 2, groupEvaluations, groupGrades[student.id] || {}, settings, attendance[group.id]?.[student.id] || {});
+                                        return (
+                                            <tr key={student.id} className={`${idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/40'} border-b border-slate-100 hover:bg-indigo-50/20`}>
+                                                <td className="sticky left-0 bg-inherit p-2.5 font-medium border-r border-slate-100 z-10 whitespace-nowrap">
+                                                    <div className="flex items-center gap-1.5">
+                                                        <span className="text-[10px] text-slate-400 w-4 inline-block text-right">{idx + 1}.</span>
+                                                        <span className="truncate max-w-[120px]">{student.name}</span>
+                                                        {student.isRepeating && <span className="bg-rose-600 text-white text-[8px] font-bold px-1 rounded-full shrink-0">R</span>}
+                                                    </div>
+                                                </td>
+                                                <td className="p-1 text-center font-bold text-indigo-600 border-r border-slate-100">{student.team || '-'}</td>
+                                                {p1Evaluations.map(ev => (
+                                                    <td key={ev.id} className="p-1 border-r border-slate-100">
+                                                        <input type="number" step="0.1" value={groupGrades[student.id]?.[ev.id] ?? ''} onChange={(e) => handleGradeChange(student.id, ev.id, e.target.value)} className="w-full bg-transparent text-center focus:ring-1 focus:ring-primary rounded py-1" placeholder="-"/>
+                                                    </td>
+                                                ))}
+                                                {p1AttendanceType && <td className="p-1 text-center text-emerald-600 border-r border-slate-100">✔</td>}
+                                                <td className={`p-2 text-center font-bold border-r border-slate-100 bg-slate-50/50 ${getGradeColor(p1Avg)}`}>{p1Avg?.toFixed(1) || '-'}</td>
+                                                {p2Evaluations.map(ev => (
+                                                    <td key={ev.id} className="p-1 border-r border-slate-100">
+                                                        <input type="number" step="0.1" value={groupGrades[student.id]?.[ev.id] ?? ''} onChange={(e) => handleGradeChange(student.id, ev.id, e.target.value)} className="w-full bg-transparent text-center focus:ring-1 focus:ring-primary rounded py-1" placeholder="-"/>
+                                                    </td>
+                                                ))}
+                                                {p2AttendanceType && <td className="p-1 text-center text-emerald-600 border-r border-slate-100">✔</td>}
+                                                <td className={`p-2 text-center font-bold bg-slate-50/50 ${getGradeColor(p2Avg)}`}>{p2Avg?.toFixed(1) || '-'}</td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
+                        ) : (
+                            <table className="w-full border-collapse text-xs">
+                                <thead className="sticky top-0 z-20 bg-amber-50 shadow-sm font-bold">
+                                    <tr className="text-amber-900 border-b border-amber-200">
+                                        <th className="p-3 text-left min-w-[140px]">Alumno</th>
+                                        <th className="p-2 text-center">Rem P1</th>
+                                        <th className="p-2 text-center">Rem P2</th>
+                                        <th className="p-2 text-center">Extra</th>
+                                        <th className="p-2 text-center">Especial</th>
+                                        <th className="p-2 text-center bg-amber-100/50">FINAL</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {studentsForRecovery.map((student, idx) => {
+                                        const p1Avg = calculatePartialAverage(group, 1, groupEvaluations, groupGrades[student.id] || {}, settings, attendance[group.id]?.[student.id] || {});
+                                        const p2Avg = calculatePartialAverage(group, 2, groupEvaluations, groupGrades[student.id] || {}, settings, attendance[group.id]?.[student.id] || {});
+                                        const r1 = groupGrades[student.id]?.[GRADE_REMEDIAL_P1] ?? null, r2 = groupGrades[student.id]?.[GRADE_REMEDIAL_P2] ?? null;
+                                        const extra = groupGrades[student.id]?.[GRADE_EXTRA] ?? null, special = groupGrades[student.id]?.[GRADE_SPECIAL] ?? null;
+                                        const { score: finalScore, isFailing } = calculateFinalGradeWithRecovery(p1Avg, p2Avg, r1, r2, extra, special);
+                                        const canTakeExtra = ((r1 !== null ? r1 : p1Avg) || 0) < 7 || ((r2 !== null ? r2 : p2Avg) || 0) < 7 || isFailing;
+                                        return (
+                                            <tr key={student.id} className={`border-b border-amber-100 ${idx % 2 === 0 ? 'bg-white' : 'bg-amber-50/30'}`}>
+                                                <td className="p-2.5 font-medium whitespace-nowrap">
+                                                    {student.name} {student.isRepeating && <span className="bg-rose-600 text-white text-[8px] font-bold px-1 rounded-full">R</span>}
+                                                </td>
+                                                <td className="p-1 text-center"><input type="number" value={r1 ?? ''} onChange={(e) => handleGradeChange(student.id, GRADE_REMEDIAL_P1, e.target.value)} className="w-12 text-center border-amber-200 focus:ring-amber-500 rounded py-1"/></td>
+                                                <td className="p-1 text-center"><input type="number" value={r2 ?? ''} onChange={(e) => handleGradeChange(student.id, GRADE_REMEDIAL_P2, e.target.value)} className="w-12 text-center border-amber-200 focus:ring-amber-500 rounded py-1"/></td>
+                                                <td className="p-1 text-center"><input type="number" value={extra ?? ''} onChange={(e) => handleGradeChange(student.id, GRADE_EXTRA, e.target.value)} disabled={!canTakeExtra} className={`w-12 text-center rounded py-1 ${!canTakeExtra ? 'opacity-30' : 'border-amber-400 focus:ring-amber-500'}`}/></td>
+                                                <td className="p-1 text-center"><input type="number" value={special ?? ''} onChange={(e) => handleGradeChange(student.id, GRADE_SPECIAL, e.target.value)} disabled={!student.isRepeating} className={`w-12 text-center rounded py-1 ${!student.isRepeating ? 'opacity-30' : 'border-amber-500 focus:ring-amber-500'}`}/></td>
+                                                <td className={`p-2 text-center font-bold bg-amber-100/50 ${getGradeColor(finalScore)}`}>{finalScore?.toFixed(1) || '-'}</td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
+                        )}
                     </div>
                 </div>
-
-                <div className="bg-surface p-4 rounded-xl shadow-sm border border-border-color overflow-x-auto">
-                    {viewMode === 'ordinary' ? (
-                        <table className="w-full border-collapse">
-                            <thead>
-                                <tr>
-                                    <th rowSpan={2} className="sticky left-0 bg-surface p-2 text-left font-semibold z-10 border-b-2 border-border-color">Alumno</th>
-                                    <th rowSpan={2} className="p-2 font-semibold text-center border-b-2 border-border-color text-xs text-text-secondary">Eq.</th>
-                                    {p1Evaluations.map(ev => <th key={ev.id} className="group relative p-2 font-semibold text-center text-xs border-b-2 border-border-color min-w-[80px]">
-                                        <div className="flex flex-col items-center">
-                                            {ev.isTeamBased && <Icon name="users" className="w-3 h-3 text-indigo-500 mb-1" />}
-                                            <span className="truncate max-w-[80px]">{ev.name}</span>
-                                            <div className="absolute -top-1 right-0 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                <button 
-                                                    onClick={() => handleEditEvaluation(ev)}
-                                                    className="p-1 bg-blue-100 text-blue-600 rounded-full hover:bg-blue-200"
-                                                    title="Editar tarea"
-                                                >
-                                                    <Icon name="edit-3" className="w-3 h-3" />
-                                                </button>
-                                                <button 
-                                                    onClick={() => handleDeleteEvaluation(ev.id, ev.name)}
-                                                    className="p-1 bg-red-100 text-red-600 rounded-full hover:bg-red-200"
-                                                    title="Eliminar tarea"
-                                                >
-                                                    <Icon name="trash-2" className="w-3 h-3" />
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </th>)}
-                                    {p1AttendanceType && <th className="p-2 font-semibold text-center border-b-2 border-border-color text-xs text-emerald-600">Asist.</th>}
-                                    <th className="p-2 font-semibold text-center border-b-2 border-border-color bg-surface-secondary text-xs">P1</th>
-                                    {p2Evaluations.map(ev => <th key={ev.id} className="group relative p-2 font-semibold text-center text-xs border-b-2 border-border-color min-w-[80px]">
-                                        <div className="flex flex-col items-center">
-                                            {ev.isTeamBased && <Icon name="users" className="w-3 h-3 text-indigo-500 mb-1" />}
-                                            <span className="truncate max-w-[80px]">{ev.name}</span>
-                                            <div className="absolute -top-1 right-0 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                <button 
-                                                    onClick={() => handleEditEvaluation(ev)}
-                                                    className="p-1 bg-blue-100 text-blue-600 rounded-full hover:bg-blue-200"
-                                                    title="Editar tarea"
-                                                >
-                                                    <Icon name="edit-3" className="w-3 h-3" />
-                                                </button>
-                                                <button 
-                                                    onClick={() => handleDeleteEvaluation(ev.id, ev.name)}
-                                                    className="p-1 bg-red-100 text-red-600 rounded-full hover:bg-red-200"
-                                                    title="Eliminar tarea"
-                                                >
-                                                    <Icon name="trash-2" className="w-3 h-3" />
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </th>)}
-                                    {p2AttendanceType && <th className="p-2 font-semibold text-center border-b-2 border-border-color text-xs text-emerald-600">Asist.</th>}
-                                    <th className="p-2 font-semibold text-center border-b-2 border-border-color bg-surface-secondary text-xs">P2</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {group.students.map(student => {
-                                    const p1Avg = calculatePartialAverage(group, 1, groupEvaluations, groupGrades[student.id] || {}, settings, attendance[group.id]?.[student.id] || {});
-                                    const p2Avg = calculatePartialAverage(group, 2, groupEvaluations, groupGrades[student.id] || {}, settings, attendance[group.id]?.[student.id] || {});
-                                    return (
-                                        <tr key={student.id} className="border-b border-border-color/70 hover:bg-surface-secondary/40">
-                                            <td className="sticky left-0 bg-surface p-2 font-medium z-10 whitespace-nowrap">
-                                                <div className="flex items-center gap-2">
-                                                    {student.name}
-                                                    {student.isRepeating && <span className="bg-rose-600 text-white text-[9px] font-bold px-1 rounded-full">R</span>}
-                                                </div>
-                                            </td>
-                                            <td className="p-1 text-center text-[10px] text-indigo-600 font-bold">{student.team || '-'}</td>
-                                            {p1Evaluations.map(ev => (
-                                                <td key={ev.id} className="p-1 text-center">
-                                                    <input type="number" value={groupGrades[student.id]?.[ev.id] ?? ''} onChange={(e) => handleGradeChange(student.id, ev.id, e.target.value)}
-                                                        className={`w-12 p-1 text-center border border-border-color rounded-md bg-surface text-xs ${ev.isTeamBased ? 'border-indigo-300 ring-1 ring-indigo-100' : ''}`}/>
-                                                </td>
-                                            ))}
-                                            {p1AttendanceType && <td className="p-1 text-center text-[10px] text-emerald-600">✔</td>}
-                                            <td className={`p-2 text-center font-bold text-xs bg-surface-secondary ${getGradeColor(p1Avg)}`}>{p1Avg?.toFixed(1) || '-'}</td>
-                                            {p2Evaluations.map(ev => (
-                                                <td key={ev.id} className="p-1 text-center">
-                                                    <input type="number" value={groupGrades[student.id]?.[ev.id] ?? ''} onChange={(e) => handleGradeChange(student.id, ev.id, e.target.value)}
-                                                        className={`w-12 p-1 text-center border border-border-color rounded-md bg-surface text-xs ${ev.isTeamBased ? 'border-indigo-300 ring-1 ring-indigo-100' : ''}`}/>
-                                                </td>
-                                            ))}
-                                            {p2AttendanceType && <td className="p-1 text-center text-[10px] text-emerald-600">✔</td>}
-                                            <td className={`p-2 text-center font-bold text-xs bg-surface-secondary ${getGradeColor(p2Avg)}`}>{p2Avg?.toFixed(1) || '-'}</td>
-                                        </tr>
-                                    );
-                                })}
-                            </tbody>
-                        </table>
-                    ) : (
-                        <table className="w-full border-collapse">
-                            <thead>
-                                <tr className="bg-amber-50 dark:bg-amber-900/20 text-amber-900 dark:text-amber-100">
-                                    <th className="p-2 text-left font-semibold border-b border-amber-200">Alumno</th>
-                                    <th className="p-2 text-center border-b border-amber-200">Rem P1</th>
-                                    <th className="p-2 text-center border-b border-amber-200">Rem P2</th>
-                                    <th className="p-2 text-center border-b border-amber-200">Extra</th>
-                                    <th className="p-2 text-center border-b border-amber-200">Especial</th>
-                                    <th className="p-2 text-center border-b border-amber-200 font-bold">Final</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {studentsForRecovery.map(student => {
-                                    const p1Avg = calculatePartialAverage(group, 1, groupEvaluations, groupGrades[student.id] || {}, settings, attendance[group.id]?.[student.id] || {});
-                                    const p2Avg = calculatePartialAverage(group, 2, groupEvaluations, groupGrades[student.id] || {}, settings, attendance[group.id]?.[student.id] || {});
-                                    
-                                    const r1 = groupGrades[student.id]?.[GRADE_REMEDIAL_P1] ?? null;
-                                    const r2 = groupGrades[student.id]?.[GRADE_REMEDIAL_P2] ?? null;
-                                    const extra = groupGrades[student.id]?.[GRADE_EXTRA] ?? null;
-                                    const special = groupGrades[student.id]?.[GRADE_SPECIAL] ?? null;
-
-                                    const { score: finalScore, isFailing } = calculateFinalGradeWithRecovery(p1Avg, p2Avg, r1, r2, extra, special);
-                                    
-                                    // REFINED LOGIC: Extra is enabled if ANY effective partial is < 7
-                                    const effectiveP1 = r1 !== null ? r1 : p1Avg;
-                                    const effectiveP2 = r2 !== null ? r2 : p2Avg;
-                                    const hasFailedPartial = (effectiveP1 !== null && effectiveP1 < 7) || (effectiveP2 !== null && effectiveP2 < 7);
-                                    const canTakeExtra = hasFailedPartial || isFailing;
-
-                                    return (
-                                        <tr key={student.id} className="border-b border-border-color/70 hover:bg-surface-secondary/40">
-                                            <td className="p-2 font-medium">
-                                                <div className="flex items-center gap-2">
-                                                    {student.name}
-                                                    {student.isRepeating && <span className="bg-rose-600 text-white text-[9px] font-bold px-1 rounded-full">R</span>}
-                                                </div>
-                                            </td>
-                                            <td className="p-1 text-center">
-                                                <input type="number" value={r1 ?? ''} onChange={(e) => handleGradeChange(student.id, GRADE_REMEDIAL_P1, e.target.value)}
-                                                    className="w-12 p-1 text-center border border-amber-300 rounded-md bg-surface text-xs"/>
-                                            </td>
-                                            <td className="p-1 text-center">
-                                                <input type="number" value={r2 ?? ''} onChange={(e) => handleGradeChange(student.id, GRADE_REMEDIAL_P2, e.target.value)}
-                                                    className="w-12 p-1 text-center border border-amber-300 rounded-md bg-surface text-xs"/>
-                                            </td>
-                                            <td className="p-1 text-center">
-                                                <input 
-                                                    type="number" 
-                                                    value={extra ?? ''} 
-                                                    onChange={(e) => handleGradeChange(student.id, GRADE_EXTRA, e.target.value)}
-                                                    disabled={!canTakeExtra}
-                                                    title={!canTakeExtra ? "Alumno ya acreditó todos los parciales" : "Habilitado por calificación menor a 7 en parciales o promedio"}
-                                                    className={`w-12 p-1 text-center border border-amber-400 rounded-md bg-surface text-xs ${!canTakeExtra ? 'opacity-40 cursor-not-allowed bg-slate-50' : ''}`}
-                                                />
-                                            </td>
-                                            <td className="p-1 text-center">
-                                                <input 
-                                                    type="number" 
-                                                    value={special ?? ''} 
-                                                    onChange={(e) => handleGradeChange(student.id, GRADE_SPECIAL, e.target.value)}
-                                                    disabled={!student.isRepeating}
-                                                    title={!student.isRepeating ? "Solo disponible para alumnos de recursamiento" : "Examen especial"}
-                                                    className={`w-12 p-1 text-center border border-amber-500 rounded-md bg-surface text-xs ${!student.isRepeating ? 'opacity-40 cursor-not-allowed bg-slate-50' : ''}`}
-                                                />
-                                            </td>
-                                            <td className={`p-2 text-center font-bold text-sm bg-surface-secondary ${getGradeColor(finalScore)}`}>
-                                                {finalScore?.toFixed(1) || '-'}
-                                            </td>
-                                        </tr>
-                                    );
-                                })}
-                            </tbody>
-                        </table>
-                    )}
-                </div>
-                </>
-            ) : <div className="text-center py-20">Selecciona un grupo.</div>}
+            ) : <div className="flex-1 flex items-center justify-center text-text-secondary"><p>Selecciona un grupo para calificar.</p></div>}
             
             {group && (
                 <>
-                    <Modal isOpen={isEvalModalOpen} onClose={() => setEvalModalOpen(false)} title={editingEvaluation ? 'Editar Evaluación' : 'Nueva Evaluación'}>
-                        <EvaluationForm evaluation={editingEvaluation} group={group} onSave={(evaluation) => { dispatch({ type: 'SAVE_EVALUATION', payload: { groupId: group.id, evaluation } }); setEvalModalOpen(false); }} onCancel={() => setEvalModalOpen(false)} />
-                    </Modal>
-                    <Modal isOpen={isGroupConfigOpen} onClose={() => setGroupConfigOpen(false)} title="Configuración del Grupo" size="xl">
-                        <GroupForm group={group} existingGroups={groups} onSave={(updatedGroup) => { dispatch({ type: 'SAVE_GROUP', payload: updatedGroup }); setGroupConfigOpen(false); }} onCancel={() => setGroupConfigOpen(false)} />
-                    </Modal>
-                    <GradeImageModal 
-                        isOpen={isImageModalOpen} 
-                        onClose={() => setImageModalOpen(false)} 
-                        group={group}
-                        evaluations={groupEvaluations}
-                        grades={groupGrades}
-                        attendance={attendance[group.id] || {}}
-                        settings={settings}
-                    />
+                    <Modal isOpen={isEvalModalOpen} onClose={() => setEvalModalOpen(false)} title={editingEvaluation ? 'Editar Evaluación' : 'Nueva Evaluación'}><EvaluationForm evaluation={editingEvaluation} group={group} onSave={(ev) => { dispatch({ type: 'SAVE_EVALUATION', payload: { groupId: group.id, evaluation: ev } }); setEvalModalOpen(false); }} onCancel={() => setEvalModalOpen(false)} /></Modal>
+                    <Modal isOpen={isGroupConfigOpen} onClose={() => setGroupConfigOpen(false)} title="Configuración del Grupo" size="xl"><GroupForm group={group} existingGroups={groups} onSave={(ug) => { dispatch({ type: 'SAVE_GROUP', payload: ug }); setGroupConfigOpen(false); }} onCancel={() => setGroupConfigOpen(false)} /></Modal>
+                    <GradeImageModal isOpen={isImageModalOpen} onClose={() => setImageModalOpen(false)} group={group} evaluations={groupEvaluations} grades={groupGrades} attendance={attendance[group.id] || {}} settings={settings}/>
                 </>
             )}
         </div>

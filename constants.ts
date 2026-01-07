@@ -1,7 +1,8 @@
+
 import { AttendanceStatus, DayOfWeek, MotivationalQuote, Professor } from './types';
 
 // Manual version control for the web/mobile app
-export const APP_VERSION = '1.2.1'; 
+export const APP_VERSION = '1.2.2'; 
 
 export const DAYS_OF_WEEK: DayOfWeek[] = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
 
@@ -14,7 +15,6 @@ export const ATTENDANCE_STATUSES: AttendanceStatus[] = [
 ];
 
 // Colores SÓLIDOS para asegurar visibilidad y contraste.
-// Se usa texto blanco (text-white) para todos los estados activos.
 export const STATUS_STYLES: { [key in AttendanceStatus]: { symbol: string; color: string; key: string; } } = {
     [AttendanceStatus.Pending]: { 
         symbol: '-', 
@@ -71,10 +71,7 @@ export const MOTIVATIONAL_QUOTES: MotivationalQuote[] = [
     }
 ];
 
-// Updated colors to ensure high contrast (Darker backgrounds for white text)
-// Added 'hex' property for Chart.js integration
 export const GROUP_COLORS = [
-    // Row 1: Vibrants
     { name: 'blue', hex: '#2563eb', bg: 'bg-blue-600', text: 'text-white', ring: 'ring-blue-600', calendar: 'bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200' },
     { name: 'sky', hex: '#0284c7', bg: 'bg-sky-600', text: 'text-white', ring: 'ring-sky-600', calendar: 'bg-sky-100 dark:bg-sky-900/50 text-sky-800 dark:text-sky-200' },
     { name: 'cyan', hex: '#0891b2', bg: 'bg-cyan-600', text: 'text-white', ring: 'ring-cyan-600', calendar: 'bg-cyan-100 dark:bg-cyan-900/50 text-cyan-800 dark:text-cyan-200' },
@@ -87,8 +84,6 @@ export const GROUP_COLORS = [
     { name: 'orange', hex: '#ea580c', bg: 'bg-orange-600', text: 'text-white', ring: 'ring-orange-600', calendar: 'bg-orange-100 dark:bg-orange-900/50 text-orange-800 dark:text-orange-200' },
     { name: 'red', hex: '#dc2626', bg: 'bg-red-600', text: 'text-white', ring: 'ring-red-600', calendar: 'bg-red-100 dark:bg-red-900/50 text-red-800 dark:text-red-200' },
     { name: 'rose', hex: '#e11d48', bg: 'bg-rose-600', text: 'text-white', ring: 'ring-rose-600', calendar: 'bg-rose-100 dark:bg-rose-900/50 text-rose-800 dark:text-rose-200' },
-    
-    // Row 2: Purples, Pinks & Neutrals
     { name: 'pink', hex: '#db2777', bg: 'bg-pink-600', text: 'text-white', ring: 'ring-pink-600', calendar: 'bg-pink-100 dark:bg-pink-900/50 text-pink-800 dark:text-pink-200' },
     { name: 'fuchsia', hex: '#c026d3', bg: 'bg-fuchsia-600', text: 'text-white', ring: 'ring-fuchsia-600', calendar: 'bg-fuchsia-100 dark:bg-fuchsia-900/50 text-fuchsia-800 dark:text-fuchsia-200' },
     { name: 'purple', hex: '#9333ea', bg: 'bg-purple-600', text: 'text-white', ring: 'ring-purple-600', calendar: 'bg-purple-100 dark:bg-purple-900/50 text-purple-800 dark:text-purple-200' },
@@ -97,8 +92,6 @@ export const GROUP_COLORS = [
     { name: 'slate', hex: '#475569', bg: 'bg-slate-600', text: 'text-white', ring: 'ring-slate-600', calendar: 'bg-slate-100 dark:bg-slate-900/50 text-slate-800 dark:text-slate-200' },
     { name: 'zinc', hex: '#52525b', bg: 'bg-zinc-600', text: 'text-white', ring: 'ring-zinc-600', calendar: 'bg-zinc-100 dark:bg-zinc-900/50 text-zinc-800 dark:text-zinc-200' },
     { name: 'stone', hex: '#57534e', bg: 'bg-stone-600', text: 'text-white', ring: 'ring-stone-600', calendar: 'bg-stone-100 dark:bg-stone-900/50 text-stone-800 dark:text-stone-200' },
-    
-    // Row 3: Deep Tones
     { name: 'midnight', hex: '#1e3a8a', bg: 'bg-indigo-950', text: 'text-white', ring: 'ring-indigo-950', calendar: 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-900 dark:text-indigo-100' },
     { name: 'forest', hex: '#14532d', bg: 'bg-green-900', text: 'text-white', ring: 'ring-green-900', calendar: 'bg-green-100 dark:bg-green-900/50 text-green-900 dark:text-green-100' },
     { name: 'wine', hex: '#881337', bg: 'bg-rose-900', text: 'text-white', ring: 'ring-rose-900', calendar: 'bg-rose-100 dark:bg-rose-900/50 text-rose-900 dark:text-rose-100' },

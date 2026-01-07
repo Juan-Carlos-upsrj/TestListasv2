@@ -1,5 +1,6 @@
+
 {
-  "version": "1.2.1",
-  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v1.2.1/app-debug.apk",
-  "notes": "¡Versión 1.2.1! Restauradas funciones de gestión de grupos (borrar, duplicar) y edición de tareas."
+  "version": "1.2.2",
+  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v1.2.2/app-debug.apk",
+  "notes": "¡Versión 1.2.2! Mejoras críticas de responsividad en tablas y layout móvil."
 }
