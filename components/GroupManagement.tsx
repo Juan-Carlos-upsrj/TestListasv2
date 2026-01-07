@@ -1,4 +1,3 @@
-
 import React, { useContext, useState, useMemo } from 'react';
 import { AppContext } from '../context/AppContext';
 import { Group, Student, DayOfWeek, EvaluationType } from '../types';
@@ -50,6 +49,24 @@ export const EvaluationTypesEditor: React.FC<{
                 <div className={`text-xs font-bold ${totalWeight !== 100 ? 'text-accent-red' : 'text-accent-green-dark'}`}>Total: {totalWeight}%</div>
             </div>
         </fieldset>
+    );
+};
+
+const BulkStudentForm: React.FC<{ onSave: (students: Student[]) => void; onCancel: () => void; }> = ({ onSave, onCancel }) => {
+    const [studentData, setStudentData] = useState('');
+    const handleImport = () => {
+        const lines = studentData.split('\n').filter(line => line.trim() !== '');
+        const newStudents: Student[] = lines.map(line => {
+            const parts = line.split(/[,;\t]/).map(p => p.trim());
+            return { id: uuidv4(), name: parts[0] || '', matricula: parts[1] || '', nickname: parts[2] || '' };
+        }).filter(s => s.name);
+        if (newStudents.length > 0) onSave(newStudents);
+    };
+    return (
+        <div className="space-y-4">
+            <textarea value={studentData} onChange={e => setStudentData(e.target.value)} rows={8} className="w-full p-2 border border-border-color rounded-md bg-surface text-sm focus:ring-2 focus:ring-primary" placeholder="Pega: Nombre, Matrícula, Apodo (uno por línea)"/>
+            <div className="flex justify-end gap-3"><Button variant="secondary" onClick={onCancel}>Cancelar</Button><Button onClick={handleImport}>Importar</Button></div>
+        </div>
     );
 };
 
@@ -172,6 +189,18 @@ const GroupManagement: React.FC = () => {
             </div>
             <Modal isOpen={isGroupModalOpen} onClose={() => setGroupModalOpen(false)} title={editingGroup ? 'Editar Grupo' : 'Nuevo Grupo'} size="xl"><GroupForm group={editingGroup} existingGroups={groups} onSave={handleSaveGroup} onCancel={() => setGroupModalOpen(false)} /></Modal>
             <Modal isOpen={isStudentModalOpen} onClose={() => setStudentModalOpen(false)} title={editingStudent ? 'Editar Alumno' : 'Nuevo Alumno'}><StudentForm student={editingStudent} currentGroup={selectedGroup} allGroups={groups} onSave={handleSaveStudent} onCancel={() => setStudentModalOpen(false)} /></Modal>
+            <Modal isOpen={isBulkModalOpen} onClose={() => setBulkModalOpen(false)} title="Importar Varios Alumnos" size="lg">
+                <BulkStudentForm 
+                    onSave={(students) => {
+                        if (selectedGroupId) {
+                            dispatch({ type: 'BULK_ADD_STUDENTS', payload: { groupId: selectedGroupId, students } });
+                            setBulkModalOpen(false);
+                            dispatch({ type: 'ADD_TOAST', payload: { message: `${students.length} alumnos agregados.`, type: 'success' } });
+                        }
+                    }} 
+                    onCancel={() => setBulkModalOpen(false)} 
+                />
+            </Modal>
         </div>
     );
 };

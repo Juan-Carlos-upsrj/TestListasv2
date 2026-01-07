@@ -1,6 +1,5 @@
-
 {
-  "version": "1.2.2",
-  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v1.2.2/app-debug.apk",
-  "notes": "¡Versión 1.2.2! Mejoras críticas de responsividad en tablas y layout móvil."
+  "version": "1.2.3",
+  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v1.2.3/app-debug.apk",
+  "notes": "¡Versión 1.2.3! Correcciones críticas de compilación y restauración de la importación masiva de alumnos."
 }

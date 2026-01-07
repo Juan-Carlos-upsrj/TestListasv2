@@ -1,4 +1,3 @@
-
 import React, { useContext, useState, useMemo, useEffect, useCallback, useRef, createContext } from 'react';
 import { AppContext } from '../context/AppContext';
 import { AttendanceStatus, Student } from '../types';
@@ -162,7 +161,7 @@ const Row = React.memo(({ index, style }: ListChildComponentProps) => {
     const { 
         students, classDates, attendance, groupId, 
         focusedCell, selection, todayStr, totalWidth,
-        handleStatusChange, onMouseDown, onMouseEnter, precalcStats, nameColWidth
+        onMouseDown, onMouseEnter, precalcStats, nameColWidth
     } = context;
 
     const student = students[index];
@@ -189,7 +188,6 @@ const Row = React.memo(({ index, style }: ListChildComponentProps) => {
             {classDates.map((date, colIndex) => {
                 const status = (studentAttendance[date] || AttendanceStatus.Pending) as AttendanceStatus;
                 const isFocused = focusedCell?.r === index && focusedCell?.c === colIndex;
-                const isToday = date === todayStr;
                 let isSelected = false;
                 if (selection.start && selection.end) {
                      const minR = Math.min(selection.start.r, selection.end.r);
@@ -202,7 +200,7 @@ const Row = React.memo(({ index, style }: ListChildComponentProps) => {
                 return (
                     <div 
                         key={date}
-                        className={`flex items-center justify-center border-r border-slate-200 h-full cursor-pointer select-none relative ${isToday ? 'bg-blue-50/30' : ''} ${isSelected ? '!bg-blue-100' : ''}`}
+                        className={`flex items-center justify-center border-r border-slate-200 h-full cursor-pointer select-none relative ${date === todayStr ? 'bg-blue-50/30' : ''} ${isSelected ? '!bg-blue-100' : ''}`}
                         style={{ width: DATE_COL_WIDTH }}
                         onMouseDown={() => onMouseDown(index, colIndex)}
                         onMouseEnter={() => onMouseEnter(index, colIndex)}
