@@ -1,4 +1,3 @@
-
 import { Group, Settings, AttendanceStatus, Evaluation, EvaluationType } from '../types';
 import { getClassDates } from './dateUtils';
 
@@ -13,34 +12,43 @@ export const calculateAttendancePercentage = (
     settings: Settings,
     attendanceData: { [date: string]: AttendanceStatus }
 ): number => {
-    // Determine date range for the partial
+    const today = new Date();
+    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    
+    // Rango de fechas del parcial
     const start = settings.semesterStart;
     const end = partial === 1 ? settings.firstPartialEnd : settings.semesterEnd;
     
-    // Partial 2 starts day after partial 1 ends
     let partialStart = start;
     if (partial === 2) {
+        // El parcial 2 empieza después de que termine el 1
         const p1End = new Date(settings.firstPartialEnd + 'T00:00:00');
         p1End.setDate(p1End.getDate() + 1);
         partialStart = p1End.toISOString().split('T')[0];
     }
     
     const dates = getClassDates(partialStart, end, group.classDays);
-    if (dates.length === 0) return 100; // Default to 100 if no classes defined yet
+    if (dates.length === 0) return 100;
 
     let presentCount = 0;
+    let totalCount = 0;
     
     dates.forEach(date => {
-        const status = attendanceData[date];
-        if (status === AttendanceStatus.Present || 
-            status === AttendanceStatus.Late || 
-            status === AttendanceStatus.Justified || 
-            status === AttendanceStatus.Exchange) {
-            presentCount++;
+        const status = (attendanceData[date] || AttendanceStatus.Pending) as AttendanceStatus;
+        
+        // Seguir la misma lógica que AttendanceView: contar si pasó hoy O si ya se capturó
+        if (date <= todayStr || status !== AttendanceStatus.Pending) {
+            totalCount++;
+            if (status === AttendanceStatus.Present || 
+                status === AttendanceStatus.Late || 
+                status === AttendanceStatus.Justified || 
+                status === AttendanceStatus.Exchange) {
+                presentCount++;
+            }
         }
     });
 
-    return (presentCount / dates.length) * 100;
+    return totalCount > 0 ? (presentCount / totalCount) * 100 : 100;
 };
 
 export const calculatePartialAverage = (
@@ -91,15 +99,11 @@ export const calculatePartialAverage = (
 
     if (totalWeightOfGradedItems === 0) return null;
 
-    // Normalizing to 0-10 scale
+    // Escala 0-10
     const weightedAverage = (finalPartialScore / totalWeightOfGradedItems) * 10;
     return weightedAverage;
 };
 
-/**
- * Calculates the definitive final grade considering remedial/extra/special stages.
- * Updated Logic: Fails if ANY remedial is failed (<7) OR if overall average is < 7.
- */
 export const calculateFinalGradeWithRecovery = (
     p1Avg: number | null,
     p2Avg: number | null,
@@ -111,13 +115,11 @@ export const calculateFinalGradeWithRecovery = (
     
     if (p1Avg === null || p2Avg === null) return { score: null, type: 'N/A', isFailing: false };
     
-    // Effective Partials: If Remedial exists, it overrides the partial average.
     const effectiveP1 = remedialP1 !== null ? remedialP1 : p1Avg;
     const effectiveP2 = remedialP2 !== null ? remedialP2 : p2Avg;
 
     const ordinaryAvg = (effectiveP1 + effectiveP2) / 2;
 
-    // Hierarchy check: Special > Extra > Ordinary
     if (special !== null) {
         return { score: special, type: 'Especial', isFailing: special < 7 };
     }
@@ -126,23 +128,17 @@ export const calculateFinalGradeWithRecovery = (
         return { score: extra, type: 'Extra', isFailing: extra < 7 };
     }
 
-    // CHECK FAIL CONDITIONS FOR ORDINARY PHASE
-    
-    // 1. Failed a Remedial explicitly (Instant Extra)
     const failedRemedialP1 = remedialP1 !== null && remedialP1 < 7;
     const failedRemedialP2 = remedialP2 !== null && remedialP2 < 7;
     
     if (failedRemedialP1 || failedRemedialP2) {
-        // Even if average > 7, if you failed a remedial, you failed the ordinary phase.
         return { score: ordinaryAvg, type: 'Ordinario', isFailing: true }; 
     }
 
-    // 2. Failed by Average
     if (ordinaryAvg < 7) {
         return { score: ordinaryAvg, type: 'Ordinario', isFailing: true };
     }
 
-    // If passed average and didn't fail any TAKEN remedial
     const type = (remedialP1 !== null || remedialP2 !== null) ? 'Remedial' : 'Ordinario';
     return { score: ordinaryAvg, type, isFailing: false };
 };

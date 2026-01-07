@@ -51,9 +51,11 @@ const calculateStats = (studentAttendance: any, dates: string[], todayStr: strin
     let present = 0, total = 0;
     for (let i = 0; i < dates.length; i++) {
         const date = dates[i];
-        if (date <= todayStr) {
+        const status = (studentAttendance[date] || AttendanceStatus.Pending) as AttendanceStatus;
+        
+        // Contar si la clase ya pasó O si ya se capturó algún estado manualmente
+        if (date <= todayStr || status !== AttendanceStatus.Pending) {
              total++;
-             const status = studentAttendance[date];
              if (status === AttendanceStatus.Present || status === AttendanceStatus.Late || status === AttendanceStatus.Justified || status === AttendanceStatus.Exchange) {
                 present++;
             }
@@ -346,8 +348,10 @@ const AttendanceView: React.FC = () => {
     }, [filteredStudents, attendance, selectedGroupId, p1Dates, p2Dates, classDates, todayStr]);
 
     const headerStructure = useMemo(() => {
-        const p1End = new Date(settings.firstPartialEnd), structure = [];
-        const p1 = classDates.filter(d => new Date(d) <= p1End), p2 = classDates.filter(d => new Date(d) > p1End);
+        const structure = [];
+        const p1 = classDates.filter(d => d <= settings.firstPartialEnd);
+        const p2 = classDates.filter(d => d > settings.firstPartialEnd);
+        
         const getMonths = (dates: string[]) => {
              const months: any[] = [];
              dates.forEach(d => {

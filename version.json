@@ -1,5 +1,5 @@
 {
-  "version": "1.2.3",
-  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v1.2.3/app-debug.apk",
-  "notes": "¡Versión 1.2.3! Correcciones críticas de compilación y restauración de la importación masiva de alumnos."
+  "version": "1.2.4",
+  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v1.2.4/app-debug.apk",
+  "notes": "¡Versión 1.2.4! Corrección definitiva en el cálculo de porcentajes de asistencia por parciales y sincronización de fechas."
 }
