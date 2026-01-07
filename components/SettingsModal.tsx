@@ -311,6 +311,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                                 <label htmlFor="showMatricula" className="font-medium">Mostrar Columna de Matrícula</label>
                                 <input type="checkbox" id="showMatricula" name="showMatricula" checked={settings.showMatricula} onChange={handleChange} className="h-5 w-5 rounded text-primary focus:ring-primary" />
                             </div>
+                            <div className="flex items-center justify-between">
+                                <label htmlFor="showTeamsInGrades" className="font-medium">Mostrar Equipos en Calificaciones</label>
+                                <input type="checkbox" id="showTeamsInGrades" name="showTeamsInGrades" checked={settings.showTeamsInGrades} onChange={handleChange} className="h-5 w-5 rounded text-primary focus:ring-primary" />
+                            </div>
                             <div>
                                 <label htmlFor="lowAttendanceThreshold" className="block text-sm font-medium">Umbral de Asistencia Baja (%)</label>
                                 <input type="number" id="lowAttendanceThreshold" name="lowAttendanceThreshold" value={settings.lowAttendanceThreshold} onChange={handleChange} min="0" max="100" className="mt-1 w-full p-2 border border-border-color rounded-md bg-surface focus:ring-2 focus:ring-primary" />

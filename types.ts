@@ -67,6 +67,7 @@ export interface Settings {
   firstPartialEnd: string;
   semesterEnd: string;
   showMatricula: boolean;
+  showTeamsInGrades: boolean; // New toggle preference
   theme: 'classic' | 'dark';
   lowAttendanceThreshold: number;
   googleCalendarUrl: string;

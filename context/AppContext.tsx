@@ -25,6 +25,7 @@ const defaultState: AppState = {
     firstPartialEnd: nextMonth.toISOString().split('T')[0],
     semesterEnd: fourMonthsLater.toISOString().split('T')[0],
     showMatricula: true,
+    showTeamsInGrades: true,
     theme: 'classic', 
     lowAttendanceThreshold: 80,
     googleCalendarUrl: '',
@@ -199,7 +200,6 @@ const appReducer = (state: AppState, action: AppAction): AppState => {
     case 'BULK_SET_ATTENDANCE': {
         const { groupId, records } = action.payload;
         const updatedAttendance = { ...state.attendance };
-        // FIX: Use updatedAttendance instead of updatedGroupAttendance before declaration
         const updatedGroupAttendance = { ...(updatedAttendance[groupId] || {}) };
         records.forEach(record => {
             const updatedStudentAttendance = { ...(updatedGroupAttendance[record.studentId] || {}) };
