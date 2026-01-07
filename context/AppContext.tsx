@@ -199,6 +199,7 @@ const appReducer = (state: AppState, action: AppAction): AppState => {
     case 'BULK_SET_ATTENDANCE': {
         const { groupId, records } = action.payload;
         const updatedAttendance = { ...state.attendance };
+        // FIX: Use updatedAttendance instead of updatedGroupAttendance before declaration
         const updatedGroupAttendance = { ...(updatedAttendance[groupId] || {}) };
         records.forEach(record => {
             const updatedStudentAttendance = { ...(updatedGroupAttendance[record.studentId] || {}) };
@@ -276,7 +277,9 @@ const appReducer = (state: AppState, action: AppAction): AppState => {
         return { ...state, calendarEvents: eventExists ? state.calendarEvents.map(e => e.id === action.payload.id ? action.payload : e) : [...state.calendarEvents, action.payload] };
     }
     case 'DELETE_EVENT':
-        return { ...state, calendarEvents: state.calendarEvents.filter(e => e.id !== action.payload) };
+        return { ...state, calendarEvents: state.calendarEvents.filter(e => e.type !== 'class' && e.type !== 'evaluation'),
+            selectedGroupId: null,
+        };
     case 'SET_GCAL_EVENTS':
         return { ...state, gcalEvents: action.payload };
     case 'ARCHIVE_CURRENT_STATE': {
@@ -304,6 +307,36 @@ const appReducer = (state: AppState, action: AppAction): AppState => {
             attendance: {}, grades: {}, evaluations: {},
             calendarEvents: state.calendarEvents.filter(e => e.type !== 'class' && e.type !== 'evaluation'),
             selectedGroupId: null,
+        };
+    }
+    case 'RENAME_TEAM': {
+        const { oldName, newName } = action.payload;
+        return {
+            ...state,
+            groups: state.groups.map(g => ({
+                ...g,
+                students: g.students.map(s => s.team === oldName ? { ...s, team: newName } : s)
+            }))
+        };
+    }
+    case 'DELETE_TEAM': {
+        const teamName = action.payload;
+        return {
+            ...state,
+            groups: state.groups.map(g => ({
+                ...g,
+                students: g.students.map(s => s.team === teamName ? { ...s, team: undefined } : s)
+            }))
+        };
+    }
+    case 'ASSIGN_STUDENT_TEAM': {
+        const { studentId, teamName } = action.payload;
+        return {
+            ...state,
+            groups: state.groups.map(g => ({
+                ...g,
+                students: g.students.map(s => s.id === studentId ? { ...s, team: teamName } : s)
+            }))
         };
     }
     default:

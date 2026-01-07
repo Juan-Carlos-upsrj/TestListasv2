@@ -1,3 +1,4 @@
+
 import React, { useContext, useState, useMemo } from 'react';
 import { AppContext } from '../context/AppContext';
 import { Group, Student, DayOfWeek, EvaluationType } from '../types';
@@ -6,6 +7,7 @@ import Modal from './common/Modal';
 import Button from './common/Button';
 import Icon from './icons/Icon';
 import { DAYS_OF_WEEK, GROUP_COLORS } from '../constants';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export const EvaluationTypesEditor: React.FC<{
     types: EvaluationType[];
@@ -121,6 +123,226 @@ const StudentForm: React.FC<{ student?: Student; currentGroup?: Group; allGroups
     );
 };
 
+// --- TEAM MANAGEMENT COMPONENTS ---
+
+const INDIVIDUAL_TEAM_NAME = "_INDIVIDUAL_";
+
+const TeamsManager: React.FC<{ group: Group }> = ({ group }) => {
+    const { state, dispatch } = useContext(AppContext);
+    const { groups } = state;
+    const [editingTeamName, setEditingTeamName] = useState<{ original: string, current: string } | null>(null);
+
+    // Filter students from the CURRENT group who have no team
+    const unassignedStudents = useMemo(() => 
+        group.students.filter(s => !s.team || s.team.trim() === ''),
+    [group.students]);
+
+    // Aggregate ALL students from ALL groups to find cross-group team members
+    const teamsData = useMemo(() => {
+        const teamsMap: { [name: string]: { members: { student: Student, groupName: string }[] } } = {};
+        
+        groups.forEach(g => {
+            g.students.forEach(s => {
+                if (s.team && s.team.trim() !== '') {
+                    if (!teamsMap[s.team]) teamsMap[s.team] = { members: [] };
+                    teamsMap[s.team].members.push({ student: s, groupName: g.name });
+                }
+            });
+        });
+        
+        return Object.entries(teamsMap).sort(([a], [b]) => a.localeCompare(b));
+    }, [groups]);
+
+    const handleRenameTeam = (oldName: string, newName: string) => {
+        if (!newName.trim() || oldName === newName) {
+            setEditingTeamName(null);
+            return;
+        }
+        dispatch({ type: 'RENAME_TEAM', payload: { oldName, newName } });
+        setEditingTeamName(null);
+    };
+
+    const handleDeleteTeam = (name: string) => {
+        if (window.confirm(`¿Disolver el equipo "${name}"? Los integrantes volverán a estar sin equipo.`)) {
+            dispatch({ type: 'DELETE_TEAM', payload: name });
+        }
+    };
+
+    const handleAssignTeam = (studentId: string, teamName: string | undefined) => {
+        dispatch({ type: 'ASSIGN_STUDENT_TEAM', payload: { studentId, teamName } });
+    };
+
+    return (
+        <div className="mt-8 pt-8 border-t border-border-color">
+            <div className="flex items-center gap-3 mb-6">
+                <div className="bg-indigo-600 p-2 rounded-lg text-white">
+                    <Icon name="users" className="w-6 h-6"/>
+                </div>
+                <div>
+                    <h2 className="text-2xl font-bold">Gestión Estratégica de Equipos</h2>
+                    <p className="text-sm text-text-secondary">Organiza integrantes y visualiza equipos compartidos entre grupos.</p>
+                </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                {/* UNASSIGNED PANEL (Waiting Room) */}
+                <div className="lg:col-span-4 flex flex-col gap-4">
+                    <div className="bg-surface p-4 rounded-xl border-2 border-dashed border-border-color shadow-sm h-full max-h-[500px]">
+                        <div className="flex items-center justify-between mb-4 border-b border-border-color pb-2">
+                            <h3 className="font-bold flex items-center gap-2">
+                                <span className="relative flex h-3 w-3">
+                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent-red opacity-75"></span>
+                                    <span className="relative inline-flex rounded-full h-3 w-3 bg-accent-red"></span>
+                                </span>
+                                Alumnos sin equipo ({unassignedStudents.length})
+                            </h3>
+                        </div>
+                        <div className="overflow-y-auto flex-1 custom-scrollbar pr-1 space-y-2">
+                            {unassignedStudents.length > 0 ? (
+                                unassignedStudents.map(s => (
+                                    <motion.div 
+                                        layout
+                                        key={s.id} 
+                                        className="p-3 bg-surface-secondary rounded-lg border border-border-color flex items-center justify-between group hover:border-primary transition-colors"
+                                    >
+                                        <div className="min-w-0">
+                                            <p className="font-bold text-sm truncate">{s.name}</p>
+                                            <p className="text-[10px] text-text-secondary">{s.matricula}</p>
+                                        </div>
+                                        <div className="flex gap-1">
+                                            <button 
+                                                onClick={() => handleAssignTeam(s.id, INDIVIDUAL_TEAM_NAME)}
+                                                className="p-1.5 text-text-secondary hover:text-slate-600 hover:bg-slate-200 rounded-md transition-all"
+                                                title="Trabaja solo"
+                                            >
+                                                <Icon name="user-plus" className="w-4 h-4"/>
+                                            </button>
+                                            <div className="relative group/menu">
+                                                <button className="p-1.5 text-primary hover:bg-primary/10 rounded-md transition-all">
+                                                    <Icon name="plus" className="w-4 h-4"/>
+                                                </button>
+                                                {/* Quick team assign menu */}
+                                                <div className="absolute right-0 bottom-full mb-2 hidden group-hover/menu:block bg-surface border border-border-color shadow-xl rounded-lg py-2 w-48 z-50">
+                                                    <p className="px-3 py-1 text-[10px] font-bold text-text-secondary uppercase border-b border-border-color mb-1">Asignar a...</p>
+                                                    <div className="max-h-40 overflow-y-auto px-1">
+                                                        <button 
+                                                            onClick={() => {
+                                                                const name = window.prompt("Nombre del nuevo equipo:");
+                                                                if (name) handleAssignTeam(s.id, name);
+                                                            }}
+                                                            className="w-full text-left px-2 py-1.5 text-xs hover:bg-primary/10 text-primary font-bold flex items-center gap-2 rounded"
+                                                        >
+                                                            <Icon name="plus" className="w-3 h-3"/> Nuevo Equipo
+                                                        </button>
+                                                        {teamsData.filter(([name]) => name !== INDIVIDUAL_TEAM_NAME).map(([name]) => (
+                                                            <button 
+                                                                key={name}
+                                                                onClick={() => handleAssignTeam(s.id, name)}
+                                                                className="w-full text-left px-2 py-1.5 text-xs hover:bg-surface-secondary rounded transition-colors truncate"
+                                                            >
+                                                                {name}
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </motion.div>
+                                ))
+                            ) : (
+                                <div className="text-center py-10 opacity-30">
+                                    <Icon name="check-circle-2" className="w-12 h-12 mx-auto mb-2"/>
+                                    <p className="text-sm font-bold">Todos tienen equipo</p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+
+                {/* TEAMS GRID */}
+                <div className="lg:col-span-8">
+                    <div className="flex flex-wrap gap-4 content-start">
+                        <AnimatePresence>
+                            {teamsData.map(([name, data]) => {
+                                const isIndividual = name === INDIVIDUAL_TEAM_NAME;
+                                const isCurrentTeamEditing = editingTeamName?.original === name;
+                                
+                                return (
+                                    <motion.div 
+                                        layout
+                                        key={name} 
+                                        initial={{ opacity: 0, scale: 0.9 }}
+                                        animate={{ opacity: 1, scale: 1 }}
+                                        exit={{ opacity: 0, scale: 0.9 }}
+                                        className={`min-w-[280px] flex-1 max-w-sm rounded-xl border-2 shadow-sm flex flex-col ${
+                                            isIndividual ? 'bg-slate-50 border-slate-200' : 'bg-surface border-indigo-100'
+                                        }`}
+                                    >
+                                        <div className={`p-3 border-b flex items-center justify-between ${
+                                            isIndividual ? 'border-slate-200 bg-slate-100/50' : 'border-indigo-50 bg-indigo-50/30'
+                                        }`}>
+                                            <div className="flex-1 min-w-0 mr-2">
+                                                {isCurrentTeamEditing ? (
+                                                    <input 
+                                                        autoFocus
+                                                        className="w-full text-sm font-bold p-1 rounded border border-primary focus:ring-1 focus:ring-primary"
+                                                        value={editingTeamName.current}
+                                                        onChange={e => setEditingTeamName({ ...editingTeamName, current: e.target.value })}
+                                                        onBlur={() => handleRenameTeam(name, editingTeamName.current)}
+                                                        onKeyDown={e => {
+                                                            if (e.key === 'Enter') handleRenameTeam(name, editingTeamName.current);
+                                                            if (e.key === 'Escape') setEditingTeamName(null);
+                                                        }}
+                                                    />
+                                                ) : (
+                                                    <h4 className={`text-sm font-bold truncate flex items-center gap-2 ${isIndividual ? 'text-slate-600' : 'text-indigo-800'}`}>
+                                                        <Icon name={isIndividual ? "user" : "users"} className="w-4 h-4 shrink-0"/>
+                                                        {isIndividual ? "Trabajo Individual" : name}
+                                                    </h4>
+                                                )}
+                                            </div>
+                                            {!isIndividual && (
+                                                <div className="flex gap-1 shrink-0">
+                                                    <button onClick={() => setEditingTeamName({ original: name, current: name })} className="p-1 text-slate-400 hover:text-primary rounded hover:bg-white transition-all"><Icon name="edit-3" className="w-3.5 h-3.5"/></button>
+                                                    <button onClick={() => handleDeleteTeam(name)} className="p-1 text-slate-400 hover:text-accent-red rounded hover:bg-white transition-all"><Icon name="trash-2" className="w-3.5 h-3.5"/></button>
+                                                </div>
+                                            )}
+                                        </div>
+                                        <div className="p-3 space-y-2 max-h-60 overflow-y-auto custom-scrollbar">
+                                            {data.members.map(({ student, groupName }) => (
+                                                <div key={student.id} className="flex items-center justify-between group/member text-xs">
+                                                    <div className="min-w-0">
+                                                        <p className="font-semibold truncate">{student.name}</p>
+                                                        <p className={`text-[9px] ${groupName === group.name ? 'font-bold text-primary' : 'text-text-secondary opacity-70'}`}>
+                                                            {groupName}
+                                                        </p>
+                                                    </div>
+                                                    <button 
+                                                        onClick={() => handleAssignTeam(student.id, undefined)}
+                                                        className="opacity-0 group-hover/member:opacity-100 p-1 text-text-secondary hover:text-accent-red transition-all"
+                                                        title="Quitar del equipo"
+                                                    >
+                                                        <Icon name="x" className="w-3 h-3"/>
+                                                    </button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                        <div className={`p-2 text-center text-[10px] font-bold border-t ${
+                                            isIndividual ? 'border-slate-200 text-slate-400' : 'border-indigo-50 text-indigo-400'
+                                        }`}>
+                                            {data.members.length} Integrantes
+                                        </div>
+                                    </motion.div>
+                                );
+                            })}
+                        </AnimatePresence>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 const GroupManagement: React.FC = () => {
     const { state, dispatch } = useContext(AppContext);
     const { groups, selectedGroupId, settings } = state;
@@ -134,8 +356,8 @@ const GroupManagement: React.FC = () => {
     const handleDeleteStudent = (sid: string, n: string) => { if (selectedGroupId && window.confirm(`¿Eliminar a ${n}?`)) { dispatch({ type: 'DELETE_STUDENT', payload: { groupId: selectedGroupId, studentId: sid } }); dispatch({ type: 'ADD_TOAST', payload: { message: `${n} eliminado.`, type: 'info' } }); } };
 
     return (
-        <div className="h-full flex flex-col overflow-hidden">
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 h-full">
+        <div className="h-full flex flex-col overflow-y-auto custom-scrollbar pr-2">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
                 <div className="lg:col-span-4 bg-surface p-4 rounded-xl shadow-sm border border-border-color flex flex-col overflow-hidden max-h-[300px] lg:max-h-full">
                     <div className="flex justify-between items-center mb-3">
                         <h2 className="text-lg font-bold">Mis Grupos</h2>
@@ -167,7 +389,7 @@ const GroupManagement: React.FC = () => {
                                 <div className="flex items-center justify-between"><h2 className="text-xl font-bold truncate">{selectedGroup.name}</h2><div className="flex gap-2"><Button size="sm" variant="secondary" onClick={() => setBulkModalOpen(true)} className="!p-1.5"><Icon name="list-plus" className="w-4 h-4"/></Button><Button size="sm" onClick={() => { setEditingStudent(undefined); setStudentModalOpen(true); }} className="!p-1.5"><Icon name="user-plus" className="w-4 h-4"/></Button></div></div>
                                 <div className="relative"><div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400"><Icon name="search" className="h-4 w-4"/></div><input type="text" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} placeholder="Buscar alumno..." className="w-full pl-9 pr-3 py-1.5 border border-border-color rounded-md bg-surface text-sm focus:ring-1 focus:ring-primary"/></div>
                             </div>
-                            <div className="overflow-auto flex-1 custom-scrollbar">
+                            <div className="overflow-auto flex-1 custom-scrollbar max-h-[400px]">
                                 <table className="w-full text-left text-xs">
                                     <thead className="sticky top-0 bg-surface z-10"><tr className="border-b border-border-color text-text-secondary"><th className="p-2 w-8">#</th>{settings.showMatricula && <th className="p-2">Matrícula</th>}<th className="p-2">Nombre</th><th className="p-2">Equipo</th><th className="p-2 text-right">Acción</th></tr></thead>
                                     <tbody>
@@ -176,7 +398,13 @@ const GroupManagement: React.FC = () => {
                                                 <td className="p-2 text-text-secondary font-medium">{i + 1}</td>
                                                 {settings.showMatricula && <td className="p-2 opacity-70">{s.matricula || '-'}</td>}
                                                 <td className="p-2 font-bold flex items-center gap-1.5 truncate">{s.name}{s.isRepeating && <span className="bg-rose-600 text-white text-[8px] px-1 rounded-full shrink-0">R</span>}</td>
-                                                <td className="p-2 truncate"><span className="text-[10px] bg-indigo-50 text-indigo-700 px-1.5 py-0.5 rounded font-bold">{s.team || '-'}</span></td>
+                                                <td className="p-2 truncate">
+                                                    {s.team === INDIVIDUAL_TEAM_NAME ? (
+                                                        <span className="text-[10px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded font-bold border border-slate-200">Solo</span>
+                                                    ) : (
+                                                        <span className="text-[10px] bg-indigo-50 text-indigo-700 px-1.5 py-0.5 rounded font-bold">{s.team || '-'}</span>
+                                                    )}
+                                                </td>
                                                 <td className="p-2 text-right whitespace-nowrap"><button onClick={() => { setEditingStudent(s); setStudentModalOpen(true); }} className="p-1.5 text-text-secondary hover:text-primary rounded"><Icon name="edit-3" className="w-3.5 h-3.5"/></button><button onClick={() => { handleDeleteStudent(s.id, s.name); }} className="p-1.5 text-accent-red hover:bg-accent-red-light rounded ml-1"><Icon name="trash-2" className="w-3.5 h-3.5"/></button></td>
                                             </tr>
                                         ))}
@@ -184,9 +412,12 @@ const GroupManagement: React.FC = () => {
                                 </table>
                             </div>
                         </div>
-                   ) : (<div className="flex-1 flex flex-col items-center justify-center opacity-40"><Icon name="users" className="w-16 h-16"/><p className="mt-2 text-sm">Selecciona un grupo.</p></div>)}
+                   ) : (<div className="flex-1 flex flex-col items-center justify-center py-20 opacity-40"><Icon name="users" className="w-16 h-16"/><p className="mt-2 text-sm">Selecciona un grupo.</p></div>)}
                 </div>
             </div>
+
+            {selectedGroup && <TeamsManager group={selectedGroup} />}
+
             <Modal isOpen={isGroupModalOpen} onClose={() => setGroupModalOpen(false)} title={editingGroup ? 'Editar Grupo' : 'Nuevo Grupo'} size="xl"><GroupForm group={editingGroup} existingGroups={groups} onSave={handleSaveGroup} onCancel={() => setGroupModalOpen(false)} /></Modal>
             <Modal isOpen={isStudentModalOpen} onClose={() => setStudentModalOpen(false)} title={editingStudent ? 'Editar Alumno' : 'Nuevo Alumno'}><StudentForm student={editingStudent} currentGroup={selectedGroup} allGroups={groups} onSave={handleSaveStudent} onCancel={() => setStudentModalOpen(false)} /></Modal>
             <Modal isOpen={isBulkModalOpen} onClose={() => setBulkModalOpen(false)} title="Importar Varios Alumnos" size="lg">

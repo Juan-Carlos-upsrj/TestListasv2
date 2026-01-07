@@ -145,7 +145,10 @@ export type AppAction =
   | { type: 'ARCHIVE_CURRENT_STATE'; payload: string } 
   | { type: 'RESTORE_ARCHIVE'; payload: string } 
   | { type: 'DELETE_ARCHIVE'; payload: string } 
-  | { type: 'TRANSITION_SEMESTER'; payload: { newGroups: Group[]; newSettings: Partial<Settings> } };
+  | { type: 'TRANSITION_SEMESTER'; payload: { newGroups: Group[]; newSettings: Partial<Settings> } }
+  | { type: 'RENAME_TEAM'; payload: { oldName: string, newName: string } }
+  | { type: 'DELETE_TEAM'; payload: string }
+  | { type: 'ASSIGN_STUDENT_TEAM'; payload: { studentId: string, teamName: string | undefined } };
 
 export interface Professor {
     name: string;
