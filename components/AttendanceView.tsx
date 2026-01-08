@@ -67,7 +67,7 @@ const calculateStats = (studentAttendance: any, dates: string[], todayStr: strin
 const StickyHeader = () => {
     const context = useContext(AttendanceInternalContext);
     if (!context) return null;
-    const { headerStructure, classDates, totalWidth, todayStr, precalcStats, nameColWidth } = context;
+    const { headerStructure, classDates, totalWidth, precalcStats, nameColWidth } = context;
 
     const globalP1Avg = Math.round(precalcStats.reduce((acc, s) => acc + s.p1.percent, 0) / (precalcStats.length || 1));
     const globalP2Avg = Math.round(precalcStats.reduce((acc, s) => acc + s.p2.percent, 0) / (precalcStats.length || 1));
@@ -116,6 +116,7 @@ const StickyHeader = () => {
                     <span className="font-bold text-[11px] sm:text-sm text-slate-700">Alumno</span>
                 </div>
                 {classDates.map(date => {
+                    const todayStr = new Date().toISOString().split('T')[0];
                     const isToday = date === todayStr;
                     const d = new Date(date + 'T00:00:00');
                     return (
@@ -214,7 +215,7 @@ const Row = React.memo(({ index, style }: ListChildComponentProps) => {
                 );
             })}
 
-             <div className="sticky right-0 z-10 flex h-full shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.1)]">
+             <div className="sticky right-0 z-10 flex h-full shadow-[-2px_0_5_px_-2px_rgba(0,0,0,0.1)]">
                 <div className={`border-l border-slate-300 flex items-center justify-center text-[10px] font-bold ${getScoreColor(p1.percent)}`} style={{ width: STAT_COL_WIDTH }}>{p1.percent}%</div>
                 <div className={`border-l border-slate-300 flex items-center justify-center text-[10px] font-bold ${getScoreColor(p2.percent)}`} style={{ width: STAT_COL_WIDTH }}>{p2.percent}%</div>
                 <div className={`border-l border-slate-300 flex items-center justify-center text-[10px] font-bold ${getScoreColor(global.percent)}`} style={{ width: STAT_COL_WIDTH }}>{global.percent}%</div>
@@ -251,7 +252,9 @@ const AttendanceView: React.FC = () => {
 
     const [focusedCell, setFocusedCell] = useState<Coords | null>(null);
     const [selection, setSelection] = useState<{ start: Coords | null; end: Coords | null; isDragging: boolean }>({ start: null, end: null, isDragging: false });
-    const stateRef = useRef({ focusedCell, selection, group: null as any });
+    
+    // Stable state ref to prevent keyboard listener re-binding loops
+    const stateRef = useRef({ focusedCell, selection, filteredStudents: [] as Student[], classDates: [] as string[] });
 
     const setSelectedGroupId = useCallback((id: string | null) => {
         dispatch({ type: 'SET_SELECTED_GROUP', payload: id });
@@ -274,7 +277,11 @@ const AttendanceView: React.FC = () => {
     }, [groups, selectedGroupId, setSelectedGroupId]);
 
     const classDates = useMemo(() => group ? getClassDates(settings.semesterStart, settings.semesterEnd, group.classDays) : [], [group, settings]);
-    useEffect(() => { stateRef.current = { focusedCell, selection, group }; }, [focusedCell, selection, group]);
+    
+    // Update ref whenever values change, but don't trigger listener re-binding
+    useEffect(() => { 
+        stateRef.current = { focusedCell, selection, filteredStudents, classDates }; 
+    }, [focusedCell, selection, filteredStudents, classDates]);
 
     const handleStatusChange = useCallback((studentId: string, date: string, status: AttendanceStatus) => {
         if (selectedGroupId) dispatch({ type: 'UPDATE_ATTENDANCE', payload: { groupId: selectedGroupId, studentId, date, status } });
@@ -289,13 +296,21 @@ const AttendanceView: React.FC = () => {
         setSelection(prev => prev.isDragging ? { ...prev, end: { r, c } } : prev);
     }, []);
 
+    // FIX: Optimized and input-safe global keyboard listener
     useEffect(() => {
         const handleMouseUp = () => setSelection(prev => ({ ...prev, isDragging: false }));
+        
         const handleKeyDown = (e: KeyboardEvent) => {
-            const target = e.target as HTMLElement;
-            if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return;
-            const { focusedCell, selection, group } = stateRef.current;
-            if (!group) return;
+            // CRITICAL FIX: If focus is inside a text input or textarea, IGNORE shortcuts.
+            const target = e.target;
+            if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || (target as HTMLElement).isContentEditable) {
+                return;
+            }
+
+            const { focusedCell, selection, filteredStudents, classDates } = stateRef.current;
+            if (filteredStudents.length === 0) return;
+
+            // Navigation
             if (focusedCell && ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
                 e.preventDefault();
                 let { r, c } = focusedCell;
@@ -305,30 +320,40 @@ const AttendanceView: React.FC = () => {
                 if (e.key === 'ArrowRight') c = Math.min(classDates.length - 1, c + 1);
                 setFocusedCell({ r, c });
                 if (listRef.current && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) listRef.current.scrollToItem(r);
+                return;
             }
+
+            // Shortcuts
             const keyMap: any = { 'p': 'Presente', 'a': 'Ausente', 'r': 'Retardo', 'j': 'Justificado', 'i': 'Intercambio', 'delete': 'Pendiente' };
             const status = keyMap[e.key.toLowerCase()];
+            
             if (status && focusedCell) {
                 e.preventDefault();
                 let targets = [];
                 if (selection.start && selection.end) {
                     const minR = Math.min(selection.start.r, selection.end.r), maxR = Math.max(selection.start.r, selection.end.r);
                     const minC = Math.min(selection.start.c, selection.end.c), maxC = Math.max(selection.start.c, selection.end.c);
-                    for(let r=minR; r<=maxR; r++) for(let c=minC; c<=maxC; c++) targets.push({r,c});
+                    for(let rowIdx=minR; rowIdx<=maxR; rowIdx++) {
+                        for(let colIdx=minC; colIdx<=maxC; colIdx++) {
+                            targets.push({r: rowIdx, c: colIdx});
+                        }
+                    }
                 } else targets.push(focusedCell);
+
                 targets.forEach(({r, c}) => {
                      const s = filteredStudents[r], d = classDates[c];
                      if(s && d) handleStatusChange(s.id, d, status as AttendanceStatus);
                 });
             }
         };
+
         window.addEventListener('mouseup', handleMouseUp);
         window.addEventListener('keydown', handleKeyDown);
         return () => {
             window.removeEventListener('mouseup', handleMouseUp);
             window.removeEventListener('keydown', handleKeyDown);
         };
-    }, [classDates, handleStatusChange, filteredStudents]);
+    }, [handleStatusChange]); // Minimal dependencies
 
     const { p1Dates, p2Dates } = useMemo(() => ({
         p1Dates: classDates.filter(d => d <= settings.firstPartialEnd),

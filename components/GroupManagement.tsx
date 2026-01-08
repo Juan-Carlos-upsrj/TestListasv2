@@ -1,4 +1,3 @@
-
 import React, { useContext, useState, useMemo } from 'react';
 import { AppContext } from '../context/AppContext';
 import { Group, Student, DayOfWeek, EvaluationType } from '../types';
@@ -6,6 +5,7 @@ import { v4 as uuidv4 } from 'uuid';
 import Modal from './common/Modal';
 import Button from './common/Button';
 import Icon from './icons/Icon';
+import ConfirmationModal from './common/ConfirmationModal';
 import { DAYS_OF_WEEK, GROUP_COLORS } from '../constants';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -72,20 +72,27 @@ const BulkStudentForm: React.FC<{ onSave: (students: Student[]) => void; onCance
     );
 };
 
-export const GroupForm: React.FC<{ group?: Group; existingGroups?: Group[]; onSave: (group: Group) => void; onCancel: () => void; }> = ({ group, existingGroups = [], onSave, onCancel }) => {
+export const GroupForm: React.FC<{ group?: Group; existingGroups?: Group[]; onSave: (group: Group) => void; onCancel: () => void; onImportCriteria: (groupId: string) => void; }> = ({ group, existingGroups = [], onSave, onCancel, onImportCriteria }) => {
     const [name, setName] = useState(group?.name || ''), [subject, setSubject] = useState(group?.subject || ''), [subjectShortName, setSubjectShortName] = useState(group?.subjectShortName || ''), [quarter, setQuarter] = useState(group?.quarter || ''), [classDays, setClassDays] = useState<DayOfWeek[]>(group?.classDays || []), [color, setColor] = useState(group?.color || GROUP_COLORS[0].name);
     const [p1Types, setP1Types] = useState<EvaluationType[]>(group?.evaluationTypes?.partial1 || [{ id: uuidv4(), name: 'General', weight: 100 }]), [p2Types, setP2Types] = useState<EvaluationType[]>(group?.evaluationTypes?.partial2 || [{ id: uuidv4(), name: 'General', weight: 100 }]);
+    
     const handleDayToggle = (day: DayOfWeek) => setClassDays(prev => prev.includes(day) ? prev.filter(d => d !== day) : [...prev, day]);
-    const handleImportCriteria = (sid: string) => {
-        const sg = existingGroups.find(g => g.id === sid); if (!sg) return;
-        if (window.confirm(`¿Importar criterios de "${sg.name}"?`)) { setP1Types(sg.evaluationTypes.partial1.map(t => ({...t, id: uuidv4()}))); setP2Types(sg.evaluationTypes.partial2.map(t => ({...t, id: uuidv4()}))); }
-    };
+    
+    // We use a listener for criteria updates from parent component (the confirmation flow)
+    React.useEffect(() => {
+        if (group && group.evaluationTypes) {
+             setP1Types(group.evaluationTypes.partial1);
+             setP2Types(group.evaluationTypes.partial2);
+        }
+    }, [group?.evaluationTypes]);
+
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault(); const p1w = p1Types.reduce((s, t) => s + Number(t.weight), 0), p2w = p2Types.reduce((s, t) => s + Number(t.weight), 0);
         if (!name || !subject) { alert('Nombre y materia requeridos.'); return; }
         if (p1w !== 100 || p2w !== 100) { alert('La suma debe ser 100%.'); return; }
         onSave({ id: group?.id || uuidv4(), name, subject, subjectShortName: subjectShortName.trim().toUpperCase() || undefined, quarter, classDays, students: group?.students || [], color, evaluationTypes: { partial1: p1Types, partial2: p2Types } });
     };
+
     return (
         <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
@@ -97,7 +104,7 @@ export const GroupForm: React.FC<{ group?: Group; existingGroups?: Group[]; onSa
             <div><label className="block text-xs font-medium mb-2">Días</label><div className="flex flex-wrap gap-1.5">{DAYS_OF_WEEK.map(day => (<button type="button" key={day} onClick={() => handleDayToggle(day)} className={`px-2.5 py-1 rounded-full text-[11px] font-semibold transition-colors ${classDays.includes(day) ? 'bg-primary text-primary-text' : 'bg-surface-secondary hover:bg-border-color'}`}>{day}</button>))}</div></div>
             <div><label className="block text-xs font-medium mb-2">Color</label><div className="flex flex-wrap gap-2.5">{GROUP_COLORS.map(c => (<button type="button" key={c.name} onClick={() => setColor(c.name)} className={`w-7 h-7 rounded-full ${c.bg} transition-transform hover:scale-110 ${color === c.name ? 'ring-2 ring-offset-2 ring-primary ring-offset-surface' : ''}`}/>))}</div></div>
             <div className="space-y-3">
-                <div className="flex justify-between items-center"><label className="text-sm font-bold">Ponderación</label>{existingGroups.length > 0 && <select className="text-[10px] p-1 border border-border-color rounded bg-surface focus:ring-1 focus:ring-primary" onChange={e => { if(e.target.value) { handleImportCriteria(e.target.value); e.target.value = ""; } }} defaultValue=""><option value="" disabled>Copiar de...</option>{existingGroups.filter(g => g.id !== group?.id).map(g => (<option key={g.id} value={g.id}>{g.name}</option>))}</select>}</div>
+                <div className="flex justify-between items-center"><label className="text-sm font-bold">Ponderación</label>{existingGroups.length > 0 && <select className="text-[10px] p-1 border border-border-color rounded bg-surface focus:ring-1 focus:ring-primary" onChange={e => { if(e.target.value) { onImportCriteria(e.target.value); e.target.value = ""; } }} defaultValue=""><option value="" disabled>Copiar de...</option>{existingGroups.filter(g => g.id !== group?.id).map(g => (<option key={g.id} value={g.id}>{g.name}</option>))}</select>}</div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4"><EvaluationTypesEditor types={p1Types} onTypesChange={setP1Types} partialName="Parcial 1" /><EvaluationTypesEditor types={p2Types} onTypesChange={setP2Types} partialName="Parcial 2" /></div>
             </div>
             <div className="flex justify-end gap-3 pt-4"><Button type="button" variant="secondary" onClick={onCancel} size="sm">Cancelar</Button><Button type="submit" size="sm">{group ? 'Guardar' : 'Crear'}</Button></div>
@@ -131,6 +138,7 @@ const TeamsManager: React.FC<{ group: Group }> = ({ group }) => {
     const { state, dispatch } = useContext(AppContext);
     const { groups } = state;
     const [editingTeamName, setEditingTeamName] = useState<{ original: string, current: string } | null>(null);
+    const [confirmDeleteTeam, setConfirmDeleteTeam] = useState<string | null>(null);
 
     // Filter students from the CURRENT group who have no team
     const unassignedStudents = useMemo(() => 
@@ -162,9 +170,10 @@ const TeamsManager: React.FC<{ group: Group }> = ({ group }) => {
         setEditingTeamName(null);
     };
 
-    const handleDeleteTeam = (name: string) => {
-        if (window.confirm(`¿Disolver el equipo "${name}"? Los integrantes volverán a estar sin equipo.`)) {
-            dispatch({ type: 'DELETE_TEAM', payload: name });
+    const handleDeleteTeam = () => {
+        if (confirmDeleteTeam) {
+            dispatch({ type: 'DELETE_TEAM', payload: confirmDeleteTeam });
+            setConfirmDeleteTeam(null);
         }
     };
 
@@ -185,7 +194,6 @@ const TeamsManager: React.FC<{ group: Group }> = ({ group }) => {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                {/* UNASSIGNED PANEL (Waiting Room) */}
                 <div className="lg:col-span-4 flex flex-col gap-4">
                     <div className="bg-surface p-4 rounded-xl border-2 border-dashed border-border-color shadow-sm h-full max-h-[500px]">
                         <div className="flex items-center justify-between mb-4 border-b border-border-color pb-2">
@@ -221,7 +229,6 @@ const TeamsManager: React.FC<{ group: Group }> = ({ group }) => {
                                                 <button className="p-1.5 text-primary hover:bg-primary/10 rounded-md transition-all">
                                                     <Icon name="plus" className="w-4 h-4"/>
                                                 </button>
-                                                {/* Quick team assign menu */}
                                                 <div className="absolute right-0 bottom-full mb-2 hidden group-hover/menu:block bg-surface border border-border-color shadow-xl rounded-lg py-2 w-48 z-50">
                                                     <p className="px-3 py-1 text-[10px] font-bold text-text-secondary uppercase border-b border-border-color mb-1">Asignar a...</p>
                                                     <div className="max-h-40 overflow-y-auto px-1">
@@ -259,7 +266,6 @@ const TeamsManager: React.FC<{ group: Group }> = ({ group }) => {
                     </div>
                 </div>
 
-                {/* TEAMS GRID */}
                 <div className="lg:col-span-8">
                     <div className="flex flex-wrap gap-4 content-start">
                         <AnimatePresence>
@@ -304,7 +310,7 @@ const TeamsManager: React.FC<{ group: Group }> = ({ group }) => {
                                             {!isIndividual && (
                                                 <div className="flex gap-1 shrink-0">
                                                     <button onClick={() => setEditingTeamName({ original: name, current: name })} className="p-1 text-slate-400 hover:text-primary rounded hover:bg-white transition-all"><Icon name="edit-3" className="w-3.5 h-3.5"/></button>
-                                                    <button onClick={() => handleDeleteTeam(name)} className="p-1 text-slate-400 hover:text-accent-red rounded hover:bg-white transition-all"><Icon name="trash-2" className="w-3.5 h-3.5"/></button>
+                                                    <button onClick={() => setConfirmDeleteTeam(name)} className="p-1 text-slate-400 hover:text-accent-red rounded hover:bg-white transition-all"><Icon name="trash-2" className="w-3.5 h-3.5"/></button>
                                                 </div>
                                             )}
                                         </div>
@@ -339,6 +345,18 @@ const TeamsManager: React.FC<{ group: Group }> = ({ group }) => {
                     </div>
                 </div>
             </div>
+
+            <ConfirmationModal
+                isOpen={!!confirmDeleteTeam}
+                onClose={() => setConfirmDeleteTeam(null)}
+                onConfirm={handleDeleteTeam}
+                title="Disolver Equipo"
+                variant="danger"
+                confirmText="Disolver"
+            >
+                <p>¿Seguro que deseas disolver el equipo <strong>"{confirmDeleteTeam}"</strong>?</p>
+                <p className="text-xs mt-2 text-text-secondary">Los integrantes volverán a estar sin equipo asignado.</p>
+            </ConfirmationModal>
         </div>
     );
 };
@@ -346,14 +364,91 @@ const TeamsManager: React.FC<{ group: Group }> = ({ group }) => {
 const GroupManagement: React.FC = () => {
     const { state, dispatch } = useContext(AppContext);
     const { groups, selectedGroupId, settings } = state;
-    const [isGroupModalOpen, setGroupModalOpen] = useState(false), [isStudentModalOpen, setStudentModalOpen] = useState(false), [isBulkModalOpen, setBulkModalOpen] = useState(false), [editingGroup, setEditingGroup] = useState<Group | undefined>(undefined), [editingStudent, setEditingStudent] = useState<Student | undefined>(undefined), [searchTerm, setSearchTerm] = useState('');
+    
+    const [isGroupModalOpen, setGroupModalOpen] = useState(false);
+    const [isStudentModalOpen, setStudentModalOpen] = useState(false);
+    const [isBulkModalOpen, setBulkModalOpen] = useState(false);
+    const [editingGroup, setEditingGroup] = useState<Group | undefined>(undefined);
+    const [editingStudent, setEditingStudent] = useState<Student | undefined>(undefined);
+    const [searchTerm, setSearchTerm] = useState('');
+
+    // --- Confirmation States ---
+    const [confirmDeleteGroup, setConfirmDeleteGroup] = useState<{id: string, name: string} | null>(null);
+    const [confirmDeleteStudent, setConfirmDeleteStudent] = useState<{id: string, name: string} | null>(null);
+    const [confirmDuplicate, setConfirmDuplicate] = useState<Group | null>(null);
+    const [confirmImportCriteria, setConfirmImportCriteria] = useState<{sourceId: string, groupName: string} | null>(null);
+
     const selectedGroup = useMemo(() => groups.find(g => g.id === selectedGroupId), [groups, selectedGroupId]);
-    const filteredStudents = useMemo(() => { if (!selectedGroup) return []; if (!searchTerm.trim()) return selectedGroup.students; const search = searchTerm.toLowerCase(); return selectedGroup.students.filter(s => s.name.toLowerCase().includes(search) || s.matricula?.toLowerCase().includes(search) || s.team?.toLowerCase().includes(search)); }, [selectedGroup, searchTerm]);
-    const handleSaveGroup = (g: Group) => { dispatch({ type: 'SAVE_GROUP', payload: g }); dispatch({ type: 'ADD_TOAST', payload: { message: `Grupo '${g.name}' guardado.`, type: 'success' } }); setGroupModalOpen(false); setEditingGroup(undefined); };
-    const handleDeleteGroup = (id: string, n: string) => { if (window.confirm(`¿Eliminar grupo "${n}"?`)) { dispatch({ type: 'DELETE_GROUP', payload: id }); dispatch({ type: 'ADD_TOAST', payload: { message: `Grupo '${n}' eliminado.`, type: 'info' } }); } };
-    const handleDuplicateGroup = (g: Group) => { const ng = { ...g, id: uuidv4(), name: `Copia de ${g.name}`, students: g.students.map(s => ({ ...s, id: uuidv4() })) }; dispatch({ type: 'SAVE_GROUP', payload: ng }); dispatch({ type: 'ADD_TOAST', payload: { message: `Copia creada.`, type: 'success' } }); };
-    const handleSaveStudent = (s: Student) => { if (selectedGroupId) { dispatch({ type: 'SAVE_STUDENT', payload: { groupId: selectedGroupId, student: s } }); setStudentModalOpen(false); setEditingStudent(undefined); } };
-    const handleDeleteStudent = (sid: string, n: string) => { if (selectedGroupId && window.confirm(`¿Eliminar a ${n}?`)) { dispatch({ type: 'DELETE_STUDENT', payload: { groupId: selectedGroupId, studentId: sid } }); dispatch({ type: 'ADD_TOAST', payload: { message: `${n} eliminado.`, type: 'info' } }); } };
+    
+    const filteredStudents = useMemo(() => { 
+        if (!selectedGroup) return []; 
+        if (!searchTerm.trim()) return selectedGroup.students; 
+        const search = searchTerm.toLowerCase(); 
+        return selectedGroup.students.filter(s => s.name.toLowerCase().includes(search) || s.matricula?.toLowerCase().includes(search) || s.team?.toLowerCase().includes(search)); 
+    }, [selectedGroup, searchTerm]);
+
+    const handleSaveGroup = (g: Group) => { 
+        dispatch({ type: 'SAVE_GROUP', payload: g }); 
+        dispatch({ type: 'ADD_TOAST', payload: { message: `Grupo '${g.name}' guardado.`, type: 'success' } }); 
+        setGroupModalOpen(false); 
+        setEditingGroup(undefined); 
+    };
+
+    const deleteGroupAction = () => {
+        if (confirmDeleteGroup) {
+            dispatch({ type: 'DELETE_GROUP', payload: confirmDeleteGroup.id });
+            dispatch({ type: 'ADD_TOAST', payload: { message: `Grupo '${confirmDeleteGroup.name}' eliminado.`, type: 'info' } });
+            setConfirmDeleteGroup(null);
+        }
+    };
+
+    const duplicateGroupAction = () => {
+        if (confirmDuplicate) {
+            const ng = { 
+                ...confirmDuplicate, 
+                id: uuidv4(), 
+                name: `Copia de ${confirmDuplicate.name}`, 
+                students: confirmDuplicate.students.map(s => ({ ...s, id: uuidv4() })) 
+            };
+            dispatch({ type: 'SAVE_GROUP', payload: ng });
+            dispatch({ type: 'ADD_TOAST', payload: { message: `Copia de '${confirmDuplicate.name}' creada.`, type: 'success' } });
+            setConfirmDuplicate(null);
+        }
+    };
+
+    const handleSaveStudent = (s: Student) => { 
+        if (selectedGroupId) { 
+            dispatch({ type: 'SAVE_STUDENT', payload: { groupId: selectedGroupId, student: s } }); 
+            setStudentModalOpen(false); 
+            setEditingStudent(undefined); 
+        } 
+    };
+
+    const deleteStudentAction = () => {
+        if (confirmDeleteStudent && selectedGroupId) {
+            dispatch({ type: 'DELETE_STUDENT', payload: { groupId: selectedGroupId, studentId: confirmDeleteStudent.id } });
+            dispatch({ type: 'ADD_TOAST', payload: { message: `${confirmDeleteStudent.name} eliminado.`, type: 'info' } });
+            setConfirmDeleteStudent(null);
+        }
+    };
+
+    const importCriteriaAction = () => {
+        if (confirmImportCriteria && editingGroup) {
+            const sg = groups.find(g => g.id === confirmImportCriteria.sourceId);
+            if (sg) {
+                const updatedGroup = {
+                    ...editingGroup,
+                    evaluationTypes: {
+                        partial1: sg.evaluationTypes.partial1.map(t => ({...t, id: uuidv4()})),
+                        partial2: sg.evaluationTypes.partial2.map(t => ({...t, id: uuidv4()}))
+                    }
+                };
+                setEditingGroup(updatedGroup);
+                dispatch({ type: 'ADD_TOAST', payload: { message: `Criterios importados de ${sg.name}.`, type: 'success' } });
+            }
+            setConfirmImportCriteria(null);
+        }
+    };
 
     return (
         <div className="h-full flex flex-col overflow-y-auto custom-scrollbar pr-2">
@@ -371,9 +466,9 @@ const GroupManagement: React.FC = () => {
                                <div className="flex justify-between items-center">
                                    <div className="min-w-0 flex-1"><p className="font-bold text-sm truncate">{group.name}</p><p className={`text-[10px] truncate ${isSelected ? 'opacity-80' : 'text-text-secondary'}`}>{group.subject}</p></div>
                                    <div className={`flex gap-1.5 shrink-0 ml-2 ${isSelected ? 'text-white' : 'text-text-secondary'}`}>
-                                        <button onClick={(e) => { e.stopPropagation(); handleDuplicateGroup(group); }} className="p-1.5 hover:bg-black/10 rounded" title="Duplicar"><Icon name="copy" className="w-3.5 h-3.5"/></button>
+                                        <button onClick={(e) => { e.stopPropagation(); setConfirmDuplicate(group); }} className="p-1.5 hover:bg-black/10 rounded" title="Duplicar"><Icon name="copy" className="w-3.5 h-3.5"/></button>
                                         <button onClick={(e) => { e.stopPropagation(); setEditingGroup(group); setGroupModalOpen(true); }} className="p-1.5 hover:bg-black/10 rounded" title="Editar"><Icon name="edit-3" className="w-3.5 h-3.5"/></button>
-                                        <button onClick={(e) => { e.stopPropagation(); handleDeleteGroup(group.id, group.name); }} className="p-1.5 hover:bg-red-500/20 text-accent-red rounded" title="Borrar"><Icon name="trash-2" className="w-3.5 h-3.5"/></button>
+                                        <button onClick={(e) => { e.stopPropagation(); setConfirmDeleteGroup({id: group.id, name: group.name}); }} className="p-1.5 hover:bg-red-500/20 text-accent-red rounded" title="Borrar"><Icon name="trash-2" className="w-3.5 h-3.5"/></button>
                                    </div>
                                </div>
                            </li>
@@ -405,7 +500,7 @@ const GroupManagement: React.FC = () => {
                                                         <span className="text-[10px] bg-indigo-50 text-indigo-700 px-1.5 py-0.5 rounded font-bold">{s.team || '-'}</span>
                                                     )}
                                                 </td>
-                                                <td className="p-2 text-right whitespace-nowrap"><button onClick={() => { setEditingStudent(s); setStudentModalOpen(true); }} className="p-1.5 text-text-secondary hover:text-primary rounded"><Icon name="edit-3" className="w-3.5 h-3.5"/></button><button onClick={() => { handleDeleteStudent(s.id, s.name); }} className="p-1.5 text-accent-red hover:bg-accent-red-light rounded ml-1"><Icon name="trash-2" className="w-3.5 h-3.5"/></button></td>
+                                                <td className="p-2 text-right whitespace-nowrap"><button onClick={() => { setEditingStudent(s); setStudentModalOpen(true); }} className="p-1.5 text-text-secondary hover:text-primary rounded"><Icon name="edit-3" className="w-3.5 h-3.5"/></button><button onClick={() => { setConfirmDeleteStudent({id: s.id, name: s.name}); }} className="p-1.5 text-accent-red hover:bg-accent-red-light rounded ml-1"><Icon name="trash-2" className="w-3.5 h-3.5"/></button></td>
                                             </tr>
                                         ))}
                                     </tbody>
@@ -418,7 +513,15 @@ const GroupManagement: React.FC = () => {
 
             {selectedGroup && <TeamsManager group={selectedGroup} />}
 
-            <Modal isOpen={isGroupModalOpen} onClose={() => setGroupModalOpen(false)} title={editingGroup ? 'Editar Grupo' : 'Nuevo Grupo'} size="xl"><GroupForm group={editingGroup} existingGroups={groups} onSave={handleSaveGroup} onCancel={() => setGroupModalOpen(false)} /></Modal>
+            <Modal isOpen={isGroupModalOpen} onClose={() => setGroupModalOpen(false)} title={editingGroup ? 'Editar Grupo' : 'Nuevo Grupo'} size="xl">
+                <GroupForm 
+                    group={editingGroup} 
+                    existingGroups={groups} 
+                    onSave={handleSaveGroup} 
+                    onCancel={() => setGroupModalOpen(false)} 
+                    onImportCriteria={(sourceId) => setConfirmImportCriteria({sourceId, groupName: groups.find(g => g.id === sourceId)?.name || ''})}
+                />
+            </Modal>
             <Modal isOpen={isStudentModalOpen} onClose={() => setStudentModalOpen(false)} title={editingStudent ? 'Editar Alumno' : 'Nuevo Alumno'}><StudentForm student={editingStudent} currentGroup={selectedGroup} allGroups={groups} onSave={handleSaveStudent} onCancel={() => setStudentModalOpen(false)} /></Modal>
             <Modal isOpen={isBulkModalOpen} onClose={() => setBulkModalOpen(false)} title="Importar Varios Alumnos" size="lg">
                 <BulkStudentForm 
@@ -432,6 +535,52 @@ const GroupManagement: React.FC = () => {
                     onCancel={() => setBulkModalOpen(false)} 
                 />
             </Modal>
+
+            {/* --- All Confirmation Modals for this view --- */}
+            <ConfirmationModal
+                isOpen={!!confirmDeleteGroup}
+                onClose={() => setConfirmDeleteGroup(null)}
+                onConfirm={deleteGroupAction}
+                title="Eliminar Grupo"
+                variant="danger"
+                confirmText="Eliminar"
+            >
+                ¿Estás seguro de que quieres eliminar el grupo <strong>"{confirmDeleteGroup?.name}"</strong>? 
+                <p className="mt-2 text-xs opacity-70">Se perderán todas las asistencias y calificaciones registradas de este grupo.</p>
+            </ConfirmationModal>
+
+            <ConfirmationModal
+                isOpen={!!confirmDeleteStudent}
+                onClose={() => setConfirmDeleteStudent(null)}
+                onConfirm={deleteStudentAction}
+                title="Eliminar Alumno"
+                variant="danger"
+                confirmText="Eliminar"
+            >
+                ¿Deseas eliminar a <strong>{confirmDeleteStudent?.name}</strong> de este grupo?
+            </ConfirmationModal>
+
+            <ConfirmationModal
+                isOpen={!!confirmDuplicate}
+                onClose={() => setConfirmDuplicate(null)}
+                onConfirm={duplicateGroupAction}
+                title="Duplicar Grupo"
+                confirmText="Duplicar"
+            >
+                ¿Deseas crear una copia del grupo <strong>"{confirmDuplicate?.name}"</strong>? 
+                <p className="mt-2 text-xs opacity-70">Se copiará la lista de alumnos y criterios de evaluación, pero no el historial de asistencias.</p>
+            </ConfirmationModal>
+
+            <ConfirmationModal
+                isOpen={!!confirmImportCriteria}
+                onClose={() => setConfirmImportCriteria(null)}
+                onConfirm={importCriteriaAction}
+                title="Importar Criterios"
+                confirmText="Importar"
+            >
+                ¿Deseas importar los criterios de evaluación del grupo <strong>"{confirmImportCriteria?.groupName}"</strong>?
+                <p className="mt-2 text-xs opacity-70">Esto reemplazará los criterios que hayas configurado en el formulario actual.</p>
+            </ConfirmationModal>
         </div>
     );
 };

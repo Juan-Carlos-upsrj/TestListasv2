@@ -1,9 +1,9 @@
-
 import React, { useContext, useState, useEffect, useRef } from 'react';
 import { AppContext } from '../context/AppContext';
-import { Settings } from '../types';
+import { Settings, Archive } from '../types';
 import Modal from './common/Modal';
 import Button from './common/Button';
+import ConfirmationModal from './common/ConfirmationModal';
 import { GROUP_COLORS, APP_VERSION } from '../constants';
 import { exportBackup, importBackup } from '../services/backupService';
 import Icon from './icons/Icon';
@@ -23,6 +23,11 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
     const [updateStatus, setUpdateStatus] = useState<string>('');
     const [isChecking, setIsChecking] = useState(false);
     const [isTransitionOpen, setTransitionOpen] = useState(false);
+
+    // --- Confirmation States ---
+    const [pendingImportFile, setPendingImportFile] = useState<File | null>(null);
+    const [pendingRestoreArchive, setPendingRestoreArchive] = useState<Archive | null>(null);
+    const [pendingDeleteArchive, setPendingDeleteArchive] = useState<Archive | null>(null);
 
     useEffect(() => {
         setSettings(state.settings);
@@ -104,38 +109,44 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
         }
     };
 
+    const confirmImportAction = async () => {
+        if (pendingImportFile) {
+            try {
+                const importedData = await importBackup(pendingImportFile);
+                dispatch({ type: 'SET_INITIAL_STATE', payload: importedData });
+                dispatch({ type: 'ADD_TOAST', payload: { message: 'Datos importados con éxito.', type: 'success' } });
+                onClose();
+            } catch (error) {
+                const errorMessage = error instanceof Error ? error.message : 'Error desconocido al importar.';
+                dispatch({ type: 'ADD_TOAST', payload: { message: errorMessage, type: 'error' } });
+            }
+            setPendingImportFile(null);
+        }
+    };
+
     const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
-            if (window.confirm('¿Estás seguro de que quieres importar este archivo? Todos los datos actuales se reemplazarán.')) {
-                try {
-                    const importedData = await importBackup(file);
-                    dispatch({ type: 'SET_INITIAL_STATE', payload: importedData });
-                    dispatch({ type: 'ADD_TOAST', payload: { message: 'Datos importados con éxito.', type: 'success' } });
-                    onClose();
-                } catch (error) {
-                    const errorMessage = error instanceof Error ? error.message : 'Error desconocido al importar.';
-                    dispatch({ type: 'ADD_TOAST', payload: { message: errorMessage, type: 'error' } });
-                }
-            }
+            setPendingImportFile(file);
         }
-        // Reset file input value to allow re-uploading the same file
         if(fileInputRef.current) {
             fileInputRef.current.value = '';
         }
     };
     
-    const handleRestoreArchive = (archiveId: string) => {
-        if(window.confirm('¿Restaurar este ciclo antiguo? Perderás los datos actuales no guardados si no has hecho un respaldo.')) {
-            dispatch({ type: 'RESTORE_ARCHIVE', payload: archiveId });
+    const confirmRestoreAction = () => {
+        if (pendingRestoreArchive) {
+            dispatch({ type: 'RESTORE_ARCHIVE', payload: pendingRestoreArchive.id });
             dispatch({ type: 'ADD_TOAST', payload: { message: 'Ciclo restaurado.', type: 'success' } });
             onClose();
+            setPendingRestoreArchive(null);
         }
     };
 
-    const handleDeleteArchive = (archiveId: string) => {
-        if(window.confirm('¿Eliminar este respaldo permanentemente?')) {
-            dispatch({ type: 'DELETE_ARCHIVE', payload: archiveId });
+    const confirmDeleteArchiveAction = () => {
+        if (pendingDeleteArchive) {
+            dispatch({ type: 'DELETE_ARCHIVE', payload: pendingDeleteArchive.id });
+            setPendingDeleteArchive(null);
         }
     };
 
@@ -215,8 +226,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                                             <p className="text-xs text-text-secondary">{new Date(archive.dateArchived).toLocaleDateString()}</p>
                                         </div>
                                         <div className="flex gap-2">
-                                            <button onClick={() => handleRestoreArchive(archive.id)} className="px-2 py-1 bg-indigo-100 text-indigo-700 rounded hover:bg-indigo-200 text-xs font-medium">Cargar</button>
-                                            <button onClick={() => handleDeleteArchive(archive.id)} className="p-1 text-red-500 hover:bg-red-100 rounded"><Icon name="trash-2" className="w-4 h-4"/></button>
+                                            <button onClick={() => setPendingRestoreArchive(archive)} className="px-2 py-1 bg-indigo-100 text-indigo-700 rounded hover:bg-indigo-200 text-xs font-medium">Cargar</button>
+                                            <button onClick={() => setPendingDeleteArchive(archive)} className="p-1 text-red-500 hover:bg-red-100 rounded"><Icon name="trash-2" className="w-4 h-4"/></button>
                                         </div>
                                     </div>
                                 ))}
@@ -362,6 +373,41 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
             </Modal>
             
             <SemesterTransitionModal isOpen={isTransitionOpen} onClose={() => setTransitionOpen(false)} />
+
+            {/* --- Confirmation Modals for Settings --- */}
+            <ConfirmationModal
+                isOpen={!!pendingImportFile}
+                onClose={() => setPendingImportFile(null)}
+                onConfirm={confirmImportAction}
+                title="Importar Respaldo"
+                variant="danger"
+                confirmText="Importar"
+            >
+                ¿Estás seguro de que quieres importar este archivo? <strong>Todos los datos actuales se reemplazarán permanentemente.</strong>
+            </ConfirmationModal>
+
+            <ConfirmationModal
+                isOpen={!!pendingRestoreArchive}
+                onClose={() => setPendingRestoreArchive(null)}
+                onConfirm={confirmRestoreAction}
+                title="Restaurar Ciclo"
+                variant="danger"
+                confirmText="Restaurar"
+            >
+                ¿Deseas restaurar el ciclo <strong>"{pendingRestoreArchive?.name}"</strong>? 
+                <p className="mt-2 text-xs opacity-70">Perderás los datos actuales que no hayas guardado en un respaldo manual.</p>
+            </ConfirmationModal>
+
+            <ConfirmationModal
+                isOpen={!!pendingDeleteArchive}
+                onClose={() => setPendingDeleteArchive(null)}
+                onConfirm={confirmDeleteArchiveAction}
+                title="Eliminar Respaldo"
+                variant="danger"
+                confirmText="Eliminar"
+            >
+                ¿Eliminar permanentemente el respaldo <strong>"{pendingDeleteArchive?.name}"</strong>? Esta acción no se puede deshacer.
+            </ConfirmationModal>
         </>
     );
 };

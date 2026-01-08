@@ -1,4 +1,3 @@
-
 import React, { useContext, useState, useMemo, useEffect, useCallback } from 'react';
 import { AppContext } from '../context/AppContext';
 import { Evaluation, Group } from '../types';
@@ -6,6 +5,7 @@ import { v4 as uuidv4 } from 'uuid';
 import Modal from './common/Modal';
 import Button from './common/Button';
 import Icon from './icons/Icon';
+import ConfirmationModal from './common/ConfirmationModal';
 import { GroupForm } from './GroupManagement';
 import { calculatePartialAverage, getGradeColor, calculateFinalGradeWithRecovery } from '../services/gradeCalculation';
 import GradeImageModal from './GradeImageModal';
@@ -96,6 +96,7 @@ const GradesView: React.FC = () => {
     const [editingEvaluation, setEditingEvaluation] = useState<Evaluation | undefined>(undefined);
     const [viewMode, setViewMode] = useState<'ordinary' | 'recovery'>('ordinary');
     const [searchTerm, setSearchTerm] = useState('');
+    const [confirmDeleteEval, setConfirmDeleteEval] = useState<Evaluation | null>(null);
 
     const setSelectedGroupId = useCallback((id: string | null) => {
         dispatch({ type: 'SET_SELECTED_GROUP', payload: id });
@@ -138,9 +139,10 @@ const GradesView: React.FC = () => {
         }
     };
 
-    const handleDeleteEvaluation = (id: string, name: string) => {
-        if (window.confirm(`¿Seguro que deseas eliminar "${name}"?`)) {
-            if (selectedGroupId) dispatch({ type: 'DELETE_EVALUATION', payload: { groupId: selectedGroupId, evaluationId: id } });
+    const deleteEvaluationAction = () => {
+        if (confirmDeleteEval && selectedGroupId) {
+            dispatch({ type: 'DELETE_EVALUATION', payload: { groupId: selectedGroupId, evaluationId: confirmDeleteEval.id } });
+            setConfirmDeleteEval(null);
         }
     };
 
@@ -157,7 +159,7 @@ const GradesView: React.FC = () => {
         <div className="flex flex-col items-center justify-center p-2 relative group w-full">
             <div className="absolute top-0 right-0 flex sm:opacity-0 sm:group-hover:opacity-100 transition-opacity bg-white/80 rounded-md shadow-sm z-10">
                 <button onClick={() => handleEditEvaluation(ev)} className="p-1 text-blue-600 hover:bg-blue-50 rounded" title="Editar"><Icon name="edit-3" className="w-3 h-3"/></button>
-                <button onClick={() => handleDeleteEvaluation(ev.id, ev.name)} className="p-1 text-red-600 hover:bg-red-50 rounded" title="Borrar"><Icon name="trash-2" className="w-3 h-3"/></button>
+                <button onClick={() => setConfirmDeleteEval(ev)} className="p-1 text-red-600 hover:bg-red-50 rounded" title="Borrar"><Icon name="trash-2" className="w-3 h-3"/></button>
             </div>
             {ev.isTeamBased && <Icon name="users" className="w-3 h-3 text-indigo-500 mb-0.5" />}
             <span className="text-[10px] font-bold leading-tight line-clamp-2 px-1 text-center" title={ev.name}>{ev.name}</span>
@@ -320,8 +322,20 @@ const GradesView: React.FC = () => {
             {group && (
                 <>
                     <Modal isOpen={isEvalModalOpen} onClose={() => setEvalModalOpen(false)} title={editingEvaluation ? 'Editar Evaluación' : 'Nueva Evaluación'}><EvaluationForm evaluation={editingEvaluation} group={group} onSave={(ev) => { dispatch({ type: 'SAVE_EVALUATION', payload: { groupId: group.id, evaluation: ev } }); setEvalModalOpen(false); }} onCancel={() => setEvalModalOpen(false)} /></Modal>
-                    <Modal isOpen={isGroupConfigOpen} onClose={() => setGroupConfigOpen(false)} title="Configuración del Grupo" size="xl"><GroupForm group={group} existingGroups={groups} onSave={(ug) => { dispatch({ type: 'SAVE_GROUP', payload: ug }); setGroupConfigOpen(false); }} onCancel={() => setGroupConfigOpen(false)} /></Modal>
+                    <Modal isOpen={isGroupConfigOpen} onClose={() => setGroupConfigOpen(false)} title="Configuración del Grupo" size="xl"><GroupForm group={group} existingGroups={groups} onSave={(ug) => { dispatch({ type: 'SAVE_GROUP', payload: ug }); setGroupConfigOpen(false); }} onCancel={() => setGroupConfigOpen(false)} onImportCriteria={() => {}} /></Modal>
                     <GradeImageModal isOpen={isImageModalOpen} onClose={() => setImageModalOpen(false)} group={group} evaluations={groupEvaluations} grades={groupGrades} attendance={attendance[group.id] || {}} settings={settings}/>
+                    
+                    <ConfirmationModal
+                        isOpen={!!confirmDeleteEval}
+                        onClose={() => setConfirmDeleteEval(null)}
+                        onConfirm={deleteEvaluationAction}
+                        title="Eliminar Evaluación"
+                        variant="danger"
+                        confirmText="Eliminar"
+                    >
+                        ¿Seguro que deseas eliminar la evaluación <strong>"{confirmDeleteEval?.name}"</strong>?
+                        <p className="mt-2 text-xs opacity-70 text-red-500">Esta acción no se puede deshacer y borrará todas las calificaciones asignadas a ella.</p>
+                    </ConfirmationModal>
                 </>
             )}
         </div>
