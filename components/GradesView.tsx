@@ -1,3 +1,4 @@
+
 import React, { useContext, useState, useMemo, useEffect, useCallback } from 'react';
 import { AppContext } from '../context/AppContext';
 import { Evaluation, Group } from '../types';
@@ -9,6 +10,7 @@ import ConfirmationModal from './common/ConfirmationModal';
 import { GroupForm } from './GroupManagement';
 import { calculatePartialAverage, getGradeColor, calculateFinalGradeWithRecovery } from '../services/gradeCalculation';
 import GradeImageModal from './GradeImageModal';
+import CopyEvaluationsModal from './CopyEvaluationsModal';
 
 const GRADE_REMEDIAL_P1 = 'GRADE_REMEDIAL_P1';
 const GRADE_REMEDIAL_P2 = 'GRADE_REMEDIAL_P2';
@@ -93,6 +95,7 @@ const GradesView: React.FC = () => {
     const [isEvalModalOpen, setEvalModalOpen] = useState(false);
     const [isGroupConfigOpen, setGroupConfigOpen] = useState(false);
     const [isImageModalOpen, setImageModalOpen] = useState(false);
+    const [isCopyModalOpen, setCopyModalOpen] = useState(false);
     const [editingEvaluation, setEditingEvaluation] = useState<Evaluation | undefined>(undefined);
     const [viewMode, setViewMode] = useState<'ordinary' | 'recovery'>('ordinary');
     const [searchTerm, setSearchTerm] = useState('');
@@ -213,6 +216,7 @@ const GradesView: React.FC = () => {
 
                     {viewMode === 'ordinary' && (
                         <div className="flex gap-2">
+                            <Button variant="secondary" size="sm" onClick={() => setCopyModalOpen(true)} title="Importar de otro grupo"><Icon name="copy" className="w-4 h-4"/><span className="hidden lg:inline ml-1">Importar Tareas</span></Button>
                             <Button variant="secondary" size="sm" onClick={() => setImageModalOpen(true)} title="Captura de Calificaciones"><Icon name="camera" className="w-4 h-4"/></Button>
                             <Button variant="secondary" size="sm" onClick={() => setGroupConfigOpen(true)} title="Criterios"><Icon name="settings" className="w-4 h-4"/></Button>
                             <Button size="sm" onClick={() => { setEditingEvaluation(undefined); setEvalModalOpen(true); }}><Icon name="plus" className="w-4 h-4"/> <span className="hidden sm:inline ml-1">Nueva Evaluación</span></Button>
@@ -324,6 +328,7 @@ const GradesView: React.FC = () => {
                     <Modal isOpen={isEvalModalOpen} onClose={() => setEvalModalOpen(false)} title={editingEvaluation ? 'Editar Evaluación' : 'Nueva Evaluación'}><EvaluationForm evaluation={editingEvaluation} group={group} onSave={(ev) => { dispatch({ type: 'SAVE_EVALUATION', payload: { groupId: group.id, evaluation: ev } }); setEvalModalOpen(false); }} onCancel={() => setEvalModalOpen(false)} /></Modal>
                     <Modal isOpen={isGroupConfigOpen} onClose={() => setGroupConfigOpen(false)} title="Configuración del Grupo" size="xl"><GroupForm group={group} existingGroups={groups} onSave={(ug) => { dispatch({ type: 'SAVE_GROUP', payload: ug }); setGroupConfigOpen(false); }} onCancel={() => setGroupConfigOpen(false)} onImportCriteria={() => {}} /></Modal>
                     <GradeImageModal isOpen={isImageModalOpen} onClose={() => setImageModalOpen(false)} group={group} evaluations={groupEvaluations} grades={groupGrades} attendance={attendance[group.id] || {}} settings={settings}/>
+                    <CopyEvaluationsModal isOpen={isCopyModalOpen} onClose={() => setCopyModalOpen(false)} targetGroup={group} />
                     
                     <ConfirmationModal
                         isOpen={!!confirmDeleteEval}

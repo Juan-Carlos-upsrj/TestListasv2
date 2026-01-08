@@ -29,16 +29,9 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
   const { state, dispatch } = useContext(AppContext);
   const { groups, selectedGroupId } = state;
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [appVersion, setAppVersion] = useState('');
   
   // State for collapsible mode (desktop only logic)
   const [isCollapsed, setIsCollapsed] = useLocalStorage('sidebarCollapsed', false);
-
-  useEffect(() => {
-    if (window.electronAPI) {
-        window.electronAPI.getVersion().then(setAppVersion);
-    }
-  }, []);
 
   const handleNavClick = (view: View) => {
     dispatch({ type: 'SET_VIEW', payload: view });
@@ -195,11 +188,6 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
             <Icon name="settings" className="w-5 h-5 flex-shrink-0" />
             {!isCollapsed && <span className="text-base font-semibold whitespace-nowrap">Configuración</span>}
           </button>
-          {appVersion && !isCollapsed && (
-              <div className="mt-2 text-center text-xs text-text-secondary opacity-60">
-                  v{appVersion}
-              </div>
-          )}
         </div>
       </aside>
       <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />

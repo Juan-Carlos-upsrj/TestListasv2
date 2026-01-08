@@ -1,5 +1,6 @@
+
 {
-  "version": "1.2.7",
-  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v1.2.7/app-debug.apk",
-  "notes": "¡Versión 1.2.7! Solución definitiva al bloqueo de buscadores, diálogos de confirmación mejorados en toda la app y mayor estabilidad en el teclado."
+  "version": "1.2.8",
+  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v1.2.8/app-debug.apk",
+  "notes": "¡Versión 1.2.8! Nueva función para copiar tareas/evaluaciones entre grupos y limpieza visual en la barra lateral."
 }
