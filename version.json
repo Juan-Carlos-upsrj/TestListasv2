@@ -1,6 +1,5 @@
-
 {
-  "version": "1.2.8",
-  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v1.2.8/app-debug.apk",
-  "notes": "¡Versión 1.2.8! Nueva función para copiar tareas/evaluaciones entre grupos y limpieza visual en la barra lateral."
+  "version": "1.2.9",
+  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v1.2.9/app-debug.apk",
+  "notes": "¡Versión 1.2.9! Corrección de error crítico de compilación en Sidebar.tsx y limpieza de importaciones."
 }

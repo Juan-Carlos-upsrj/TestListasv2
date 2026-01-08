@@ -1,5 +1,4 @@
-
-import React, { useContext, useState, useEffect, SetStateAction } from 'react';
+import React, { useContext, useState, SetStateAction } from 'react';
 import { AppContext } from '../context/AppContext';
 import SettingsModal from './SettingsModal';
 import Icon from './icons/Icon';
