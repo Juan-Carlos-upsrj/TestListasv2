@@ -1,3 +1,4 @@
+
 import React, { useContext, useState, useMemo } from 'react';
 import { AppContext } from '../context/AppContext';
 import { Group, Student, DayOfWeek, EvaluationType } from '../types';
@@ -136,9 +137,10 @@ const INDIVIDUAL_TEAM_NAME = "_INDIVIDUAL_";
 
 const TeamsManager: React.FC<{ group: Group }> = ({ group }) => {
     const { state, dispatch } = useContext(AppContext);
-    const { groups } = state;
+    const { groups, teamNotes = {} } = state;
     const [editingTeamName, setEditingTeamName] = useState<{ original: string, current: string } | null>(null);
     const [confirmDeleteTeam, setConfirmDeleteTeam] = useState<string | null>(null);
+    const [expandedNotes, setExpandedNotes] = useState<Set<string>>(new Set());
 
     // Filter students from the CURRENT group who have no team
     const unassignedStudents = useMemo(() => 
@@ -181,6 +183,17 @@ const TeamsManager: React.FC<{ group: Group }> = ({ group }) => {
         dispatch({ type: 'ASSIGN_STUDENT_TEAM', payload: { studentId, teamName } });
     };
 
+    const handleUpdateNote = (teamName: string, note: string) => {
+        dispatch({ type: 'UPDATE_TEAM_NOTE', payload: { teamName, note } });
+    };
+
+    const toggleNote = (teamName: string) => {
+        const next = new Set(expandedNotes);
+        if (next.has(teamName)) next.delete(teamName);
+        else next.add(teamName);
+        setExpandedNotes(next);
+    };
+
     return (
         <div className="mt-8 pt-8 border-t border-border-color">
             <div className="flex items-center gap-3 mb-6">
@@ -189,7 +202,7 @@ const TeamsManager: React.FC<{ group: Group }> = ({ group }) => {
                 </div>
                 <div>
                     <h2 className="text-2xl font-bold">Gestión Estratégica de Equipos</h2>
-                    <p className="text-sm text-text-secondary">Organiza integrantes y visualiza equipos compartidos entre grupos.</p>
+                    <p className="text-sm text-text-secondary">Organiza integrantes y anota observaciones privadas sobre su desempeño.</p>
                 </div>
             </div>
 
@@ -272,6 +285,8 @@ const TeamsManager: React.FC<{ group: Group }> = ({ group }) => {
                             {teamsData.map(([name, data]) => {
                                 const isIndividual = name === INDIVIDUAL_TEAM_NAME;
                                 const isCurrentTeamEditing = editingTeamName?.original === name;
+                                const isNoteExpanded = expandedNotes.has(name);
+                                const currentNote = teamNotes[name] || '';
                                 
                                 return (
                                     <motion.div 
@@ -309,11 +324,36 @@ const TeamsManager: React.FC<{ group: Group }> = ({ group }) => {
                                             </div>
                                             {!isIndividual && (
                                                 <div className="flex gap-1 shrink-0">
-                                                    <button onClick={() => setEditingTeamName({ original: name, current: name })} className="p-1 text-slate-400 hover:text-primary rounded hover:bg-white transition-all"><Icon name="edit-3" className="w-3.5 h-3.5"/></button>
+                                                    <button onClick={() => toggleNote(name)} className={`p-1 rounded transition-all ${isNoteExpanded ? 'bg-indigo-600 text-white' : 'text-indigo-600 hover:bg-white'}`} title="Notas del Profesor"><Icon name="edit-3" className="w-3.5 h-3.5"/></button>
+                                                    <button onClick={() => setEditingTeamName({ original: name, current: name })} className="p-1 text-slate-400 hover:text-primary rounded hover:bg-white transition-all"><Icon name="layout" className="w-3.5 h-3.5"/></button>
                                                     <button onClick={() => setConfirmDeleteTeam(name)} className="p-1 text-slate-400 hover:text-accent-red rounded hover:bg-white transition-all"><Icon name="trash-2" className="w-3.5 h-3.5"/></button>
                                                 </div>
                                             )}
                                         </div>
+                                        
+                                        {/* Notes Section (Expandable) */}
+                                        <AnimatePresence>
+                                            {isNoteExpanded && !isIndividual && (
+                                                <motion.div 
+                                                    initial={{ height: 0, opacity: 0 }}
+                                                    animate={{ height: 'auto', opacity: 1 }}
+                                                    exit={{ height: 0, opacity: 0 }}
+                                                    className="overflow-hidden bg-indigo-50/50 border-b border-indigo-100"
+                                                >
+                                                    <div className="p-3">
+                                                        <label className="block text-[9px] font-bold text-indigo-400 uppercase mb-1">Notas Privadas (Entregas/Presentaciones)</label>
+                                                        <textarea 
+                                                            value={currentNote}
+                                                            onChange={e => handleUpdateNote(name, e.target.value)}
+                                                            placeholder="Escribe aquí observaciones sobre sus avances..."
+                                                            rows={3}
+                                                            className="w-full p-2 text-xs border border-indigo-200 rounded-lg bg-white focus:ring-1 focus:ring-indigo-500 resize-none custom-scrollbar"
+                                                        />
+                                                    </div>
+                                                </motion.div>
+                                            )}
+                                        </AnimatePresence>
+
                                         <div className="p-3 space-y-2 max-h-60 overflow-y-auto custom-scrollbar">
                                             {data.members.map(({ student, groupName }) => (
                                                 <div key={student.id} className="flex items-center justify-between group/member text-xs">
@@ -333,10 +373,16 @@ const TeamsManager: React.FC<{ group: Group }> = ({ group }) => {
                                                 </div>
                                             ))}
                                         </div>
-                                        <div className={`p-2 text-center text-[10px] font-bold border-t ${
+                                        
+                                        <div className={`p-2 text-center flex items-center justify-center gap-3 text-[10px] font-bold border-t ${
                                             isIndividual ? 'border-slate-200 text-slate-400' : 'border-indigo-50 text-indigo-400'
                                         }`}>
-                                            {data.members.length} Integrantes
+                                            <span>{data.members.length} Integrantes</span>
+                                            {currentNote && !isIndividual && (
+                                                <span className="flex items-center gap-1 bg-indigo-100 px-1.5 py-0.5 rounded text-indigo-600">
+                                                    <Icon name="edit-3" className="w-2.5 h-2.5"/> Con Nota
+                                                </span>
+                                            )}
                                         </div>
                                     </motion.div>
                                 );
@@ -355,7 +401,7 @@ const TeamsManager: React.FC<{ group: Group }> = ({ group }) => {
                 confirmText="Disolver"
             >
                 <p>¿Seguro que deseas disolver el equipo <strong>"{confirmDeleteTeam}"</strong>?</p>
-                <p className="text-xs mt-2 text-text-secondary">Los integrantes volverán a estar sin equipo asignado.</p>
+                <p className="text-xs mt-2 text-text-secondary">Los integrantes volverán a estar sin equipo asignado y se borrarán sus notas.</p>
             </ConfirmationModal>
         </div>
     );

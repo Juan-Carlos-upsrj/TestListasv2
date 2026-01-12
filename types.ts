@@ -122,6 +122,7 @@ export interface AppState {
   selectedGroupId: string | null;
   toasts: Toast[];
   archives: Archive[];
+  teamNotes?: { [teamName: string]: string }; // NEW: Storage for private team annotations
 }
 
 export type AppAction =
@@ -152,6 +153,7 @@ export type AppAction =
   | { type: 'TRANSITION_SEMESTER'; payload: { newGroups: Group[]; newSettings: Partial<Settings> } }
   | { type: 'RENAME_TEAM'; payload: { oldName: string, newName: string } }
   | { type: 'DELETE_TEAM'; payload: string }
+  | { type: 'UPDATE_TEAM_NOTE'; payload: { teamName: string, note: string } } // NEW ACTION
   | { type: 'ASSIGN_STUDENT_TEAM'; payload: { studentId: string, teamName: string | undefined } };
 
 export interface Professor {

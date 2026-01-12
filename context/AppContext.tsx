@@ -40,6 +40,7 @@ const defaultState: AppState = {
   selectedGroupId: null,
   toasts: [],
   archives: [],
+  teamNotes: {}, // NEW
 };
 
 const appReducer = (state: AppState, action: AppAction): AppState => {
@@ -106,6 +107,7 @@ const appReducer = (state: AppState, action: AppAction): AppState => {
             selectedGroupId: loadedState.selectedGroupId ?? null,
             toasts: [],
             archives: Array.isArray(loadedState.archives) ? loadedState.archives : [],
+            teamNotes: loadedState.teamNotes ?? {},
         };
     }
     case 'SET_VIEW':
@@ -323,8 +325,14 @@ const appReducer = (state: AppState, action: AppAction): AppState => {
     }
     case 'RENAME_TEAM': {
         const { oldName, newName } = action.payload;
+        const newNotes = { ...(state.teamNotes || {}) };
+        if (newNotes[oldName]) {
+            newNotes[newName] = newNotes[oldName];
+            delete newNotes[oldName];
+        }
         return {
             ...state,
+            teamNotes: newNotes,
             groups: state.groups.map(g => ({
                 ...g,
                 students: g.students.map(s => s.team === oldName ? { ...s, team: newName } : s)
@@ -333,12 +341,25 @@ const appReducer = (state: AppState, action: AppAction): AppState => {
     }
     case 'DELETE_TEAM': {
         const teamName = action.payload;
+        const newNotes = { ...(state.teamNotes || {}) };
+        delete newNotes[teamName];
         return {
             ...state,
+            teamNotes: newNotes,
             groups: state.groups.map(g => ({
                 ...g,
                 students: g.students.map(s => s.team === teamName ? { ...s, team: undefined } : s)
             }))
+        };
+    }
+    case 'UPDATE_TEAM_NOTE': {
+        const { teamName, note } = action.payload;
+        return {
+            ...state,
+            teamNotes: {
+                ...(state.teamNotes || {}),
+                [teamName]: note
+            }
         };
     }
     case 'ASSIGN_STUDENT_TEAM': {
