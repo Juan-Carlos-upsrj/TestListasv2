@@ -62,13 +62,15 @@ export interface Evaluation {
   isTeamBased?: boolean; // If true, grades are shared across team members
 }
 
+export type SidebarGroupDisplayMode = 'name' | 'name-abbrev' | 'abbrev';
+
 export interface Settings {
   semesterStart: string;
   firstPartialEnd: string;
   semesterEnd: string;
   showMatricula: boolean;
   showTeamsInGrades: boolean;
-  showAbbreviationInSidebar: boolean; // New toggle preference
+  sidebarGroupDisplayMode: SidebarGroupDisplayMode; // Replaces boolean
   theme: 'classic' | 'dark';
   lowAttendanceThreshold: number;
   googleCalendarUrl: string;

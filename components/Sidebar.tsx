@@ -4,7 +4,7 @@ import { AppContext } from '../context/AppContext';
 import SettingsModal from './SettingsModal';
 import Icon from './icons/Icon';
 import { motion } from 'framer-motion';
-import { ActiveView } from '../types';
+import { ActiveView, SidebarGroupDisplayMode } from '../types';
 import { GROUP_COLORS } from '../constants';
 import { startTour } from '../services/tourService';
 import useLocalStorage from '../hooks/useLocalStorage';
@@ -53,10 +53,25 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
 
   const toggleAbbreviationDisplay = (e: React.MouseEvent) => {
     e.stopPropagation();
+    
+    // Cycle between: name -> name-abbrev -> abbrev -> name
+    const modes: SidebarGroupDisplayMode[] = ['name', 'name-abbrev', 'abbrev'];
+    const currentIndex = modes.indexOf(settings.sidebarGroupDisplayMode || 'name-abbrev');
+    const nextMode = modes[(currentIndex + 1) % modes.length];
+
     dispatch({ 
         type: 'UPDATE_SETTINGS', 
-        payload: { showAbbreviationInSidebar: !settings.showAbbreviationInSidebar } 
+        payload: { sidebarGroupDisplayMode: nextMode } 
     });
+  };
+
+  const getModeTitle = () => {
+      switch (settings.sidebarGroupDisplayMode) {
+          case 'name': return "Mostrar Nombre + Abreviatura";
+          case 'name-abbrev': return "Mostrar Solo Abreviatura";
+          case 'abbrev': return "Mostrar Solo Nombre";
+          default: return "Cambiar vista";
+      }
   };
 
   return (
@@ -103,8 +118,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
                     <h3 className="text-xs font-bold text-text-secondary uppercase tracking-wider">Grupos Rápidos</h3>
                     <button 
                         onClick={toggleAbbreviationDisplay}
-                        className="p-1 hover:bg-surface-secondary rounded-md text-text-secondary hover:text-primary transition-colors"
-                        title={settings.showAbbreviationInSidebar ? "Ver solo nombres" : "Ver con abreviaturas"}
+                        className={`p-1 rounded-md transition-colors ${settings.sidebarGroupDisplayMode !== 'name' ? 'bg-primary/10 text-primary' : 'hover:bg-surface-secondary text-text-secondary hover:text-primary'}`}
+                        title={getModeTitle()}
                     >
                         <Icon name="layout" className="w-3.5 h-3.5" />
                     </button>
@@ -120,7 +135,15 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
                         const activeClass = `${colorObj.bg} !text-white shadow-md ring-2 ring-offset-1 ring-offset-surface ${colorObj.ring || 'ring-primary'}`;
                         const inactiveClass = `bg-surface-secondary text-text-secondary hover:bg-border-color hover:text-text-primary`;
 
-                        const shortName = (settings.showAbbreviationInSidebar && g.subjectShortName) ? ` (${g.subjectShortName})` : '';
+                        // Lógica de visualización de 3 estados
+                        let displayLabel = g.name;
+                        const abbrev = g.subjectShortName || g.subject.substring(0, 3).toUpperCase();
+                        
+                        if (settings.sidebarGroupDisplayMode === 'abbrev') {
+                            displayLabel = abbrev;
+                        } else if (settings.sidebarGroupDisplayMode === 'name-abbrev') {
+                            displayLabel = `${g.name} - ${abbrev}`;
+                        }
 
                         if (isCollapsed) {
                             // Collapsed view: Color dots with first letter
@@ -135,7 +158,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
                                         isActive ? activeClass : inactiveClass
                                     }`}
                                 >
-                                    {g.name.charAt(0).toUpperCase()}
+                                    {displayLabel.charAt(0).toUpperCase()}
                                 </motion.button>
                             );
                         }
@@ -147,11 +170,11 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
                                 whileHover={{ scale: 1.05 }}
                                 whileTap={{ scale: 0.95 }}
                                 title={`${g.name} - ${g.subject}`}
-                                className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all duration-200 border border-transparent whitespace-nowrap overflow-hidden text-ellipsis max-w-full ${
+                                className={`px-3 py-1.5 rounded-md text-[11px] font-bold transition-all duration-200 border border-transparent whitespace-nowrap overflow-hidden text-ellipsis max-w-full ${
                                     isActive ? activeClass : inactiveClass
                                 }`}
                             >
-                                {g.name}{shortName}
+                                {displayLabel}
                             </motion.button>
                         );
                     })}

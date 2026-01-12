@@ -26,7 +26,7 @@ const defaultState: AppState = {
     semesterEnd: fourMonthsLater.toISOString().split('T')[0],
     showMatricula: true,
     showTeamsInGrades: true,
-    showAbbreviationInSidebar: true, // Default enabled
+    sidebarGroupDisplayMode: 'name-abbrev', // New default
     theme: 'classic', 
     lowAttendanceThreshold: 80,
     googleCalendarUrl: '',
@@ -76,6 +76,17 @@ const appReducer = (state: AppState, action: AppAction): AppState => {
 
         const loadedSettings = loadedState.settings;
         const migratedSettings = { ...defaultState.settings, ...loadedSettings };
+
+        // Migration from boolean to string mode
+        if (typeof (migratedSettings as any).showAbbreviationInSidebar !== 'undefined') {
+            if (!(migratedSettings as any).showAbbreviationInSidebar) {
+                migratedSettings.sidebarGroupDisplayMode = 'name';
+            } else {
+                migratedSettings.sidebarGroupDisplayMode = 'name-abbrev';
+            }
+            delete (migratedSettings as any).showAbbreviationInSidebar;
+        }
+
         if ((migratedSettings.theme as any) === 'iaev' || (migratedSettings.theme as any) === 'custom') {
             migratedSettings.theme = 'classic';
         }

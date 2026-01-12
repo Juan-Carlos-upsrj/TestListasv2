@@ -327,9 +327,19 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                                 <label htmlFor="showTeamsInGrades" className="font-medium">Mostrar Equipos en Calificaciones</label>
                                 <input type="checkbox" id="showTeamsInGrades" name="showTeamsInGrades" checked={settings.showTeamsInGrades} onChange={handleChange} className="h-5 w-5 rounded text-primary focus:ring-primary" />
                             </div>
-                            <div className="flex items-center justify-between">
-                                <label htmlFor="showAbbreviationInSidebar" className="font-medium">Mostrar Abreviaturas en Barra Lateral</label>
-                                <input type="checkbox" id="showAbbreviationInSidebar" name="showAbbreviationInSidebar" checked={settings.showAbbreviationInSidebar} onChange={handleChange} className="h-5 w-5 rounded text-primary focus:ring-primary" />
+                            <div>
+                                <label htmlFor="sidebarGroupDisplayMode" className="block text-sm font-medium mb-1">Visualización de Grupos Rápidos</label>
+                                <select 
+                                    id="sidebarGroupDisplayMode" 
+                                    name="sidebarGroupDisplayMode" 
+                                    value={settings.sidebarGroupDisplayMode} 
+                                    onChange={handleChange}
+                                    className="w-full p-2 border border-border-color rounded-md bg-surface focus:ring-2 focus:ring-primary"
+                                >
+                                    <option value="name">Solo Nombre (6A)</option>
+                                    <option value="name-abbrev">Nombre + Abreviatura (6A - MAT)</option>
+                                    <option value="abbrev">Solo Abreviatura (MAT)</option>
+                                </select>
                             </div>
                             <div>
                                 <label htmlFor="lowAttendanceThreshold" className="block text-sm font-medium">Umbral de Asistencia Baja (%)</label>
