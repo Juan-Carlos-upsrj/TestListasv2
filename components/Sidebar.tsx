@@ -1,3 +1,4 @@
+
 import React, { useContext, useState, SetStateAction } from 'react';
 import { AppContext } from '../context/AppContext';
 import SettingsModal from './SettingsModal';
@@ -26,7 +27,7 @@ interface SidebarProps {
 
 const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
   const { state, dispatch } = useContext(AppContext);
-  const { groups, selectedGroupId } = state;
+  const { groups, selectedGroupId, settings } = state;
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   
   // State for collapsible mode (desktop only logic)
@@ -48,6 +49,14 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
 
   const toggleCollapse = () => {
       setIsCollapsed(!isCollapsed);
+  };
+
+  const toggleAbbreviationDisplay = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    dispatch({ 
+        type: 'UPDATE_SETTINGS', 
+        payload: { showAbbreviationInSidebar: !settings.showAbbreviationInSidebar } 
+    });
   };
 
   return (
@@ -89,7 +98,18 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
         
         {/* Quick Group Selector Buttons */}
         <div className={`p-4 border-b border-border-color ${isCollapsed ? 'flex flex-col items-center' : ''}`} id="sidebar-quick-groups">
-            {!isCollapsed && <h3 className="text-xs font-bold text-text-secondary uppercase tracking-wider mb-3">Grupos Rápidos</h3>}
+            {!isCollapsed && (
+                <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-xs font-bold text-text-secondary uppercase tracking-wider">Grupos Rápidos</h3>
+                    <button 
+                        onClick={toggleAbbreviationDisplay}
+                        className="p-1 hover:bg-surface-secondary rounded-md text-text-secondary hover:text-primary transition-colors"
+                        title={settings.showAbbreviationInSidebar ? "Ver solo nombres" : "Ver con abreviaturas"}
+                    >
+                        <Icon name="layout" className="w-3.5 h-3.5" />
+                    </button>
+                </div>
+            )}
             
             {groups.length > 0 ? (
                 <div className={`flex flex-wrap gap-2 ${isCollapsed ? 'justify-center flex-col w-full' : ''}`}>
@@ -100,7 +120,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
                         const activeClass = `${colorObj.bg} !text-white shadow-md ring-2 ring-offset-1 ring-offset-surface ${colorObj.ring || 'ring-primary'}`;
                         const inactiveClass = `bg-surface-secondary text-text-secondary hover:bg-border-color hover:text-text-primary`;
 
-                        const shortName = g.subjectShortName ? ` (${g.subjectShortName})` : '';
+                        const shortName = (settings.showAbbreviationInSidebar && g.subjectShortName) ? ` (${g.subjectShortName})` : '';
 
                         if (isCollapsed) {
                             // Collapsed view: Color dots with first letter

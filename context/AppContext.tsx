@@ -26,6 +26,7 @@ const defaultState: AppState = {
     semesterEnd: fourMonthsLater.toISOString().split('T')[0],
     showMatricula: true,
     showTeamsInGrades: true,
+    showAbbreviationInSidebar: true, // Default enabled
     theme: 'classic', 
     lowAttendanceThreshold: 80,
     googleCalendarUrl: '',

@@ -1,3 +1,4 @@
+
 import React, { useContext, useState, useEffect, useRef } from 'react';
 import { AppContext } from '../context/AppContext';
 import { Settings, Archive } from '../types';
@@ -325,6 +326,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                             <div className="flex items-center justify-between">
                                 <label htmlFor="showTeamsInGrades" className="font-medium">Mostrar Equipos en Calificaciones</label>
                                 <input type="checkbox" id="showTeamsInGrades" name="showTeamsInGrades" checked={settings.showTeamsInGrades} onChange={handleChange} className="h-5 w-5 rounded text-primary focus:ring-primary" />
+                            </div>
+                            <div className="flex items-center justify-between">
+                                <label htmlFor="showAbbreviationInSidebar" className="font-medium">Mostrar Abreviaturas en Barra Lateral</label>
+                                <input type="checkbox" id="showAbbreviationInSidebar" name="showAbbreviationInSidebar" checked={settings.showAbbreviationInSidebar} onChange={handleChange} className="h-5 w-5 rounded text-primary focus:ring-primary" />
                             </div>
                             <div>
                                 <label htmlFor="lowAttendanceThreshold" className="block text-sm font-medium">Umbral de Asistencia Baja (%)</label>
