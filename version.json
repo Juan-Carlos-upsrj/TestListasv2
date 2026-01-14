@@ -1,6 +1,6 @@
 
 {
-  "version": "1.6.5",
-  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v1.6.5/app-debug.apk",
-  "notes": "¡Versión 1.6.5! El Gestor de Equipos se ha integrado en la cabecera superior. Nueva función para convertir equipos base a equipos Coyote instantáneamente y correcciones de errores críticos de referencia nula."
+  "version": "1.6.6",
+  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v1.6.6/app-debug.apk",
+  "notes": "¡Versión 1.6.6! Corrección definitiva del botón '+' en equipos: ahora los equipos vacíos son visibles inmediatamente. Blindaje contra errores de referencia nula (Xk) y mejoras en la conversión de equipos Base a Coyote."
 }

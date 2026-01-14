@@ -1,5 +1,5 @@
 
-import React, { useContext, useState, useMemo } from 'react';
+import React, { useContext, useState, useMemo, useEffect } from 'react';
 import { AppContext } from '../context/AppContext';
 import { Group, Student, DayOfWeek, EvaluationType } from '../types';
 import { v4 as uuidv4 } from 'uuid';
@@ -78,7 +78,7 @@ export const GroupForm: React.FC<{ group?: Group; existingGroups?: Group[]; onSa
     
     const handleDayToggle = (day: DayOfWeek) => setClassDays(prev => prev.includes(day) ? prev.filter(d => d !== day) : [...prev, day]);
     
-    React.useEffect(() => {
+    useEffect(() => {
         if (group && group.evaluationTypes) {
              setP1Types(group.evaluationTypes.partial1);
              setP2Types(group.evaluationTypes.partial2);
@@ -136,7 +136,6 @@ const StudentForm: React.FC<{ student?: Student; currentGroup?: Group; allGroups
             matricula, 
             nickname, 
             isRepeating, 
-            // FIX: Si el campo está vacío, conservar el valor anterior si existía para evitar borrado accidental
             team: team.trim() || student?.team || undefined 
         }); 
     };
@@ -166,6 +165,14 @@ const TeamsManager: React.FC<{ group: Group }> = ({ group }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [isTeamsModalOpen, setTeamsModalOpen] = useState(false);
     const [isMigrateModalOpen, setMigrateModalOpen] = useState(false);
+    
+    // Estado para equipos que se acaban de crear y no tienen alumnos aún
+    const [tempTeams, setTempTeams] = useState<string[]>([]);
+
+    useEffect(() => {
+        // Resetear equipos temporales cuando cambia el modo
+        setTempTeams([]);
+    }, [isCoyoteMode]);
 
     // Notas del equipo actual
     const currentNote = useMemo(() => {
@@ -178,16 +185,15 @@ const TeamsManager: React.FC<{ group: Group }> = ({ group }) => {
         dispatch({ type: 'UPDATE_TEAM_NOTE', payload: { teamName: selectedTeam, note: val, isCoyote: isCoyoteMode } });
     };
 
-    // Alumnos del contexto actual (Grupo o Cuatrimestre completo)
     const studentsList = useMemo(() => {
         if (isCoyoteMode) {
             const allQuarterStudents: {student: Student, gName: string}[] = [];
             groups.filter(g => g && g.quarter === group.quarter).forEach(g => {
-                g.students.filter(Boolean).forEach(s => allQuarterStudents.push({student: s, gName: g.name}));
+                (g.students || []).filter(Boolean).forEach(s => allQuarterStudents.push({student: s, gName: g.name}));
             });
             return allQuarterStudents;
         } else {
-            return group.students.filter(Boolean).map(s => ({student: s, gName: group.name}));
+            return (group.students || []).filter(Boolean).map(s => ({student: s, gName: group.name}));
         }
     }, [groups, group, isCoyoteMode]);
 
@@ -195,38 +201,42 @@ const TeamsManager: React.FC<{ group: Group }> = ({ group }) => {
         if (!searchTerm.trim()) return studentsList;
         const s = searchTerm.toLowerCase();
         return studentsList.filter(item => 
-            item.student.name.toLowerCase().includes(s) || 
-            item.student.matricula.toLowerCase().includes(s) ||
-            item.student.team?.toLowerCase().includes(s) ||
-            item.student.teamCoyote?.toLowerCase().includes(s)
+            item.student?.name?.toLowerCase().includes(s) || 
+            item.student?.matricula?.toLowerCase().includes(s) ||
+            item.student?.team?.toLowerCase().includes(s) ||
+            item.student?.teamCoyote?.toLowerCase().includes(s)
         );
     }, [studentsList, searchTerm]);
 
     const existingTeams = useMemo(() => {
         const teamsMap = new Map<string, number>();
+        
+        // 1. Equipos con integrantes reales
         if (isCoyoteMode) {
             studentsList.forEach(item => {
-                const tc = item.student.teamCoyote;
-                if (tc) {
-                    teamsMap.set(tc, (teamsMap.get(tc) || 0) + 1);
-                }
+                const tc = item.student?.teamCoyote;
+                if (tc) teamsMap.set(tc, (teamsMap.get(tc) || 0) + 1);
             });
         } else {
-            group.students.filter(Boolean).forEach(s => {
-                const t = s.team;
-                if (t) {
-                    teamsMap.set(t, (teamsMap.get(t) || 0) + 1);
-                }
+            (group.students || []).filter(Boolean).forEach(s => {
+                const t = s?.team;
+                if (t) teamsMap.set(t, (teamsMap.get(t) || 0) + 1);
             });
         }
+        
+        // 2. Integrar equipos temporales (vacíos)
+        tempTeams.forEach(t => {
+            if (!teamsMap.has(t)) teamsMap.set(t, 0);
+        });
+
         return Array.from(teamsMap.entries()).sort((a,b) => a[0].localeCompare(b[0]));
-    }, [studentsList, group.students, isCoyoteMode]);
+    }, [studentsList, group.students, isCoyoteMode, tempTeams]);
 
     const allBaseTeamsForQuarter = useMemo(() => {
         const teamsMap = new Map<string, string[]>();
         groups.filter(g => g && g.quarter === group.quarter).forEach(g => {
-            g.students.filter(Boolean).forEach(s => {
-                if (s.team) {
+            (g.students || []).filter(Boolean).forEach(s => {
+                if (s?.team) {
                     const members = teamsMap.get(s.team) || [];
                     members.push(s.id);
                     teamsMap.set(s.team, members);
@@ -258,6 +268,9 @@ const TeamsManager: React.FC<{ group: Group }> = ({ group }) => {
                 isCoyote: isCoyoteMode 
             } 
         });
+        
+        // Si el equipo deja de estar vacío, quitarlo de temporales
+        if (assign) setTempTeams(prev => prev.filter(t => t !== selectedTeam));
     };
 
     const handleMigrateTeam = (baseTeamName: string, memberIds: string[]) => {
@@ -278,13 +291,24 @@ const TeamsManager: React.FC<{ group: Group }> = ({ group }) => {
             });
         });
 
+        setTempTeams(prev => prev.filter(t => t !== selectedTeam));
         dispatch({ type: 'ADD_TOAST', payload: { message: `Equipo "${baseTeamName}" migrado con éxito a "${selectedTeam}".`, type: 'success' } });
         setMigrateModalOpen(false);
     };
 
     const handleCreateTeam = () => {
         const name = window.prompt(`Nombre del nuevo equipo ${isCoyoteMode ? 'Coyote' : 'Base'}:`);
-        if (name && name.trim()) setSelectedTeam(name.trim());
+        if (name && name.trim()) {
+            const trimmedName = name.trim();
+            // Evitar duplicados
+            if (existingTeams.some(t => t[0].toLowerCase() === trimmedName.toLowerCase())) {
+                dispatch({ type: 'ADD_TOAST', payload: { message: 'Este nombre de equipo ya existe.', type: 'error' } });
+                setSelectedTeam(trimmedName);
+                return;
+            }
+            setTempTeams(prev => [...prev, trimmedName]);
+            setSelectedTeam(trimmedName);
+        }
     };
 
     return (
@@ -326,6 +350,7 @@ const TeamsManager: React.FC<{ group: Group }> = ({ group }) => {
                                 <button 
                                     onClick={handleCreateTeam}
                                     className="p-1.5 bg-primary text-white rounded-lg hover:bg-primary-hover shadow-md active:scale-95 transition-all"
+                                    title="Crear Nuevo Equipo"
                                 >
                                     <Icon name="plus" className="w-4 h-4"/>
                                 </button>
@@ -355,6 +380,7 @@ const TeamsManager: React.FC<{ group: Group }> = ({ group }) => {
                                                     e.stopPropagation();
                                                     if (confirm(`¿Disolver equipo "${name}"?`)) {
                                                         dispatch({ type: 'DELETE_TEAM', payload: { teamName: name, isCoyote: isCoyoteMode } });
+                                                        setTempTeams(prev => prev.filter(t => t !== name));
                                                         if (selectedTeam === name) setSelectedTeam(null);
                                                     }
                                                 }}
@@ -367,7 +393,7 @@ const TeamsManager: React.FC<{ group: Group }> = ({ group }) => {
                                 ) : (
                                     <div className="text-center py-10 opacity-30">
                                         <p className="text-[10px] font-black uppercase tracking-widest">Sin equipos en esta vista</p>
-                                        <p className="text-[9px] mt-2 italic">Crea uno o asigna un equipo a un alumno para que aparezca.</p>
+                                        <p className="text-[9px] mt-2 italic">Crea uno con el botón "+" de arriba para comenzar.</p>
                                     </div>
                                 )}
                             </div>
@@ -379,7 +405,7 @@ const TeamsManager: React.FC<{ group: Group }> = ({ group }) => {
                                 <div className="h-full flex flex-col items-center justify-center bg-slate-50/50 rounded-2xl border-2 border-dashed border-border-color opacity-50 p-8 text-center">
                                     <Icon name="arrow-left" className="w-12 h-12 mb-4 text-slate-300 animate-pulse"/>
                                     <h4 className="text-xl font-black text-slate-400">Selecciona un equipo</h4>
-                                    <p className="text-sm text-slate-400 mt-2">Para asignar alumnos o escribir notas, debes elegir un equipo del panel izquierdo.</p>
+                                    <p className="text-sm text-slate-400 mt-2">Para asignar alumnos o escribir notas, debes elegir un equipo del panel izquierdo o crear uno nuevo.</p>
                                 </div>
                             ) : (
                                 <div className="flex flex-col h-full overflow-hidden animate-in fade-in slide-in-from-bottom-2">
@@ -401,15 +427,17 @@ const TeamsManager: React.FC<{ group: Group }> = ({ group }) => {
                                                     onClick={() => setMigrateModalOpen(true)} 
                                                     className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-md flex-1 sm:flex-none"
                                                 >
-                                                    <Icon name="copy" className="w-4 h-4"/> Importar de Base
+                                                    <Icon name="copy" className="w-4 h-4"/> Importar de Equipo Base
                                                 </Button>
                                             )}
                                             <button 
                                                 onClick={() => {
                                                     const newName = window.prompt("Nuevo nombre:", selectedTeam);
                                                     if (newName && newName.trim() && newName !== selectedTeam) {
-                                                        dispatch({ type: 'RENAME_TEAM', payload: { oldName: selectedTeam, newName: newName.trim(), isCoyote: isCoyoteMode } });
-                                                        setSelectedTeam(newName.trim());
+                                                        const trimmed = newName.trim();
+                                                        dispatch({ type: 'RENAME_TEAM', payload: { oldName: selectedTeam, newName: trimmed, isCoyote: isCoyoteMode } });
+                                                        setTempTeams(prev => prev.map(t => t === selectedTeam ? trimmed : t));
+                                                        setSelectedTeam(trimmed);
                                                     }
                                                 }}
                                                 className="p-2 bg-white border border-border-color rounded-xl hover:bg-slate-50 transition-colors shadow-sm"
@@ -441,7 +469,7 @@ const TeamsManager: React.FC<{ group: Group }> = ({ group }) => {
                                                 type="text" 
                                                 value={searchTerm}
                                                 onChange={e => setSearchTerm(e.target.value)}
-                                                placeholder={`Buscar alumnos...`}
+                                                placeholder={`Buscar alumnos para unir al equipo...`}
                                                 className="w-full pl-10 pr-4 py-2.5 border-2 border-border-color rounded-xl bg-surface focus:ring-2 focus:ring-primary text-sm shadow-sm transition-all"
                                             />
                                         </div>
@@ -460,12 +488,12 @@ const TeamsManager: React.FC<{ group: Group }> = ({ group }) => {
                                             </thead>
                                             <tbody className="divide-y divide-border-color/50">
                                                 {filteredStudents.map(({student, gName}) => {
-                                                    const isInThisTeam = (isCoyoteMode ? student.teamCoyote : student.team) === selectedTeam;
-                                                    const otherTeamName = (isCoyoteMode ? student.teamCoyote : student.team);
+                                                    const isInThisTeam = (isCoyoteMode ? student?.teamCoyote : student?.team) === selectedTeam;
+                                                    const otherTeamName = (isCoyoteMode ? student?.teamCoyote : student?.team);
                                                     const hasOtherTeam = otherTeamName && !isInThisTeam;
 
                                                     return (
-                                                        <tr key={`${student.id}-${gName}`} className={`transition-all ${isInThisTeam ? 'bg-indigo-50/30' : 'hover:bg-slate-50'}`}>
+                                                        <tr key={`${student?.id}-${gName}`} className={`transition-all ${isInThisTeam ? 'bg-indigo-50/30' : 'hover:bg-slate-50'}`}>
                                                             <td className="p-4 text-center">
                                                                 <input 
                                                                     type="checkbox"
@@ -475,8 +503,8 @@ const TeamsManager: React.FC<{ group: Group }> = ({ group }) => {
                                                                 />
                                                             </td>
                                                             <td className="p-4">
-                                                                <p className={`font-bold ${isInThisTeam ? 'text-primary' : 'text-text-primary'}`}>{student.name}</p>
-                                                                <p className="text-[9px] font-bold opacity-40 uppercase">{student.matricula}</p>
+                                                                <p className={`font-bold ${isInThisTeam ? 'text-primary' : 'text-text-primary'}`}>{student?.name || 'Alumno sin nombre'}</p>
+                                                                <p className="text-[9px] font-bold opacity-40 uppercase">{student?.matricula || '-'}</p>
                                                             </td>
                                                             <td className="p-4">
                                                                 <span className={`px-2 py-1 rounded font-black text-[9px] tracking-tighter ${gName === group.name ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-200 text-slate-600'}`}>
@@ -506,13 +534,13 @@ const TeamsManager: React.FC<{ group: Group }> = ({ group }) => {
                 <Modal 
                     isOpen={isMigrateModalOpen} 
                     onClose={() => setMigrateModalOpen(false)} 
-                    title={`Migrar equipo base a "${selectedTeam}"`}
+                    title={`Convertir equipo base a "${selectedTeam}"`}
                     size="md"
                 >
                     <div className="space-y-4">
                         <div className="bg-indigo-50 p-4 rounded-xl border border-indigo-100 flex items-start gap-3">
                             <Icon name="info" className="w-5 h-5 text-indigo-600 shrink-0 mt-0.5"/>
-                            <p className="text-xs text-indigo-800 font-medium">Esto moverá a todos los alumnos de un equipo base (del grupo local) al equipo Coyote seleccionado.</p>
+                            <p className="text-xs text-indigo-800 font-medium">Esto moverá a todos los alumnos de un equipo base (del grupo local) al equipo Coyote seleccionado actualmente.</p>
                         </div>
                         <div className="max-h-[50vh] overflow-y-auto space-y-2 pr-2 custom-scrollbar">
                             {allBaseTeamsForQuarter.length > 0 ? allBaseTeamsForQuarter.map(([tName, members]) => (
@@ -563,9 +591,13 @@ const GroupManagement: React.FC = () => {
     
     const filteredStudents = useMemo(() => { 
         if (!selectedGroup) return []; 
-        if (!searchTerm.trim()) return selectedGroup.students.filter(Boolean); 
+        if (!searchTerm.trim()) return (selectedGroup.students || []).filter(Boolean); 
         const search = searchTerm.toLowerCase(); 
-        return selectedGroup.students.filter(Boolean).filter(s => s.name.toLowerCase().includes(search) || (s.matricula && s.matricula.toLowerCase().includes(search)) || (s.team && s.team.toLowerCase().includes(search))); 
+        return (selectedGroup.students || []).filter(Boolean).filter(s => 
+            s?.name?.toLowerCase().includes(search) || 
+            (s?.matricula && s?.matricula?.toLowerCase().includes(search)) || 
+            (s?.team && s?.team?.toLowerCase().includes(search))
+        ); 
     }, [selectedGroup, searchTerm]);
 
     const handleSaveGroup = (g: Group) => { 
@@ -589,7 +621,7 @@ const GroupManagement: React.FC = () => {
                 ...confirmDuplicate, 
                 id: uuidv4(), 
                 name: `Copia de ${confirmDuplicate.name}`, 
-                students: confirmDuplicate.students.filter(Boolean).map(s => ({ ...s, id: uuidv4() })) 
+                students: (confirmDuplicate.students || []).filter(Boolean).map(s => ({ ...s, id: uuidv4() })) 
             };
             dispatch({ type: 'SAVE_GROUP', payload: ng });
             dispatch({ type: 'ADD_TOAST', payload: { message: `Copia de '${confirmDuplicate.name}' creada.`, type: 'success' } });
@@ -620,8 +652,8 @@ const GroupManagement: React.FC = () => {
                 const updatedGroup = {
                     ...editingGroup,
                     evaluationTypes: {
-                        partial1: sg.evaluationTypes.partial1.map(t => ({...t, id: uuidv4()})),
-                        partial2: sg.evaluationTypes.partial2.map(t => ({...t, id: uuidv4()}))
+                        partial1: (sg.evaluationTypes.partial1 || []).map(t => ({...t, id: uuidv4()})),
+                        partial2: (sg.evaluationTypes.partial2 || []).map(t => ({...t, id: uuidv4()}))
                     }
                 };
                 setEditingGroup(updatedGroup);
