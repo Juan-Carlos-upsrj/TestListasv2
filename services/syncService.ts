@@ -1,5 +1,5 @@
 
-import { AppState, AppAction, Group, DayOfWeek, AttendanceStatus, TeacherClass } from '../types';
+import { AppState, AppAction, Group, DayOfWeek, AttendanceStatus } from '../types';
 import { Dispatch } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { fetchHorarioCompleto } from './horarioService';

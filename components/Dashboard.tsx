@@ -2,13 +2,13 @@
 import React, { useContext, useMemo, useState } from 'react';
 import { Responsive, WidthProvider } from 'react-grid-layout';
 import { AppContext } from '../context/AppContext';
-import { Group, AttendanceStatus, TeacherClass, DayOfWeek } from '../types';
+import { Group, AttendanceStatus, TeacherClass } from '../types';
 import Icon from './icons/Icon';
 import BirthdayCelebration from './BirthdayCelebration';
 import { PROFESSOR_BIRTHDAYS, GROUP_COLORS, DAYS_OF_WEEK } from '../constants';
 import Modal from './common/Modal';
 import AttendanceTaker from './AttendanceTaker';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { syncAttendanceData, syncScheduleData } from '../services/syncService';
 import Button from './common/Button';
 import SemesterTransitionModal from './SemesterTransitionModal';
