@@ -53,18 +53,21 @@ const appReducer = (state: AppState, action: AppAction): AppState => {
         const loadedState = action.payload || {};
         const loadedGroups: Group[] = (Array.isArray(loadedState.groups) ? loadedState.groups : []).filter(g => g && g.id);
         
-        // MIGRACIÓN DE GRUPOS Y ALUMNOS: Rescate exhaustivo de equipos
+        // MIGRACIÓN DE GRUPOS Y ALUMNOS: Rescate exhaustivo de equipos y prevención de nulos
         const migratedGroups = loadedGroups.map((group, index) => {
             const hasEvalTypes = group.evaluationTypes && group.evaluationTypes.partial1 && group.evaluationTypes.partial2;
             return {
                 ...group,
-                students: (group.students || []).map((s: any) => {
+                students: (group.students || []).filter(Boolean).map((s: any) => {
                     // Rescatar equipos de cualquier propiedad posible de versiones anteriores
                     const legacyTeam = s.team || s.equipo || s.equipoBase || s.teamName || s.equipo_nombre;
                     const legacyCoyote = s.teamCoyote || s.equipoCoyote || s.coyoteTeam || s.equipo_coyote;
                     
                     return {
                         ...s,
+                        id: s.id || uuidv4(),
+                        name: s.name || 'Alumno sin nombre',
+                        matricula: s.matricula || '',
                         team: legacyTeam || undefined,
                         teamCoyote: legacyCoyote || undefined
                     } as Student;
@@ -364,8 +367,8 @@ const appReducer = (state: AppState, action: AppAction): AppState => {
                     const currentTeam = isCoyote ? s.teamCoyote : s.team;
                     if (currentTeam === teamName) {
                         const updatedStudent = { ...s };
-                        if (isCoyote) delete updatedStudent.teamCoyote;
-                        else delete updatedStudent.team;
+                        if (isCoyote) delete (updatedStudent as any).teamCoyote;
+                        else delete (updatedStudent as any).team;
                         return updatedStudent;
                     }
                     return s;

@@ -118,8 +118,8 @@ const StudentForm: React.FC<{ student?: Student; currentGroup?: Group; allGroups
         if (!currentGroup || !currentGroup.quarter) return []; 
         const teams = new Set<string>(); 
         allGroups.forEach(g => { 
-            if (g.quarter === currentGroup.quarter) g.students.forEach(s => { 
-                if (s.team) teams.add(s.team); 
+            if (g && g.quarter === currentGroup.quarter) g.students.forEach(s => { 
+                if (s && s.team) teams.add(s.team); 
             }); 
         }); 
         return Array.from(teams).sort(); 
@@ -182,12 +182,12 @@ const TeamsManager: React.FC<{ group: Group }> = ({ group }) => {
     const studentsList = useMemo(() => {
         if (isCoyoteMode) {
             const allQuarterStudents: {student: Student, gName: string}[] = [];
-            groups.filter(g => g.quarter === group.quarter).forEach(g => {
-                g.students.forEach(s => allQuarterStudents.push({student: s, gName: g.name}));
+            groups.filter(g => g && g.quarter === group.quarter).forEach(g => {
+                g.students.filter(Boolean).forEach(s => allQuarterStudents.push({student: s, gName: g.name}));
             });
             return allQuarterStudents;
         } else {
-            return group.students.map(s => ({student: s, gName: group.name}));
+            return group.students.filter(Boolean).map(s => ({student: s, gName: group.name}));
         }
     }, [groups, group, isCoyoteMode]);
 
@@ -212,7 +212,7 @@ const TeamsManager: React.FC<{ group: Group }> = ({ group }) => {
                 }
             });
         } else {
-            group.students.forEach(s => {
+            group.students.filter(Boolean).forEach(s => {
                 const t = s.team;
                 if (t) {
                     teamsMap.set(t, (teamsMap.get(t) || 0) + 1);
@@ -224,8 +224,8 @@ const TeamsManager: React.FC<{ group: Group }> = ({ group }) => {
 
     const allBaseTeamsForQuarter = useMemo(() => {
         const teamsMap = new Map<string, string[]>();
-        groups.filter(g => g.quarter === group.quarter).forEach(g => {
-            g.students.forEach(s => {
+        groups.filter(g => g && g.quarter === group.quarter).forEach(g => {
+            g.students.filter(Boolean).forEach(s => {
                 if (s.team) {
                     const members = teamsMap.get(s.team) || [];
                     members.push(s.id);
@@ -559,13 +559,13 @@ const GroupManagement: React.FC = () => {
     const [confirmDuplicate, setConfirmDuplicate] = useState<Group | null>(null);
     const [confirmImportCriteria, setConfirmImportCriteria] = useState<{sourceId: string, groupName: string} | null>(null);
 
-    const selectedGroup = useMemo(() => groups.find(g => g.id === selectedGroupId), [groups, selectedGroupId]);
+    const selectedGroup = useMemo(() => groups.find(g => g && g.id === selectedGroupId), [groups, selectedGroupId]);
     
     const filteredStudents = useMemo(() => { 
         if (!selectedGroup) return []; 
-        if (!searchTerm.trim()) return selectedGroup.students; 
+        if (!searchTerm.trim()) return selectedGroup.students.filter(Boolean); 
         const search = searchTerm.toLowerCase(); 
-        return selectedGroup.students.filter(s => s.name.toLowerCase().includes(search) || (s.matricula && s.matricula.toLowerCase().includes(search)) || (s.team && s.team.toLowerCase().includes(search))); 
+        return selectedGroup.students.filter(Boolean).filter(s => s.name.toLowerCase().includes(search) || (s.matricula && s.matricula.toLowerCase().includes(search)) || (s.team && s.team.toLowerCase().includes(search))); 
     }, [selectedGroup, searchTerm]);
 
     const handleSaveGroup = (g: Group) => { 
@@ -589,7 +589,7 @@ const GroupManagement: React.FC = () => {
                 ...confirmDuplicate, 
                 id: uuidv4(), 
                 name: `Copia de ${confirmDuplicate.name}`, 
-                students: confirmDuplicate.students.map(s => ({ ...s, id: uuidv4() })) 
+                students: confirmDuplicate.students.filter(Boolean).map(s => ({ ...s, id: uuidv4() })) 
             };
             dispatch({ type: 'SAVE_GROUP', payload: ng });
             dispatch({ type: 'ADD_TOAST', payload: { message: `Copia de '${confirmDuplicate.name}' creada.`, type: 'success' } });
@@ -615,7 +615,7 @@ const GroupManagement: React.FC = () => {
 
     const importCriteriaAction = () => {
         if (confirmImportCriteria && editingGroup) {
-            const sg = groups.find(g => g.id === confirmImportCriteria.sourceId);
+            const sg = groups.find(g => g && g.id === confirmImportCriteria.sourceId);
             if (sg) {
                 const updatedGroup = {
                     ...editingGroup,
@@ -640,7 +640,7 @@ const GroupManagement: React.FC = () => {
                         <Button size="sm" onClick={() => { setEditingGroup(undefined); setGroupModalOpen(true); }} className="!p-1.5"><Icon name="plus" className="w-4 h-4"/></Button>
                     </div>
                     <ul className="space-y-3 overflow-y-auto pr-1 flex-1 custom-scrollbar">
-                       {groups.map(group => {
+                       {groups.filter(Boolean).map(group => {
                             const isSelected = selectedGroupId === group.id;
                             return (
                             <li key={group.id} onClick={() => dispatch({ type: 'SET_SELECTED_GROUP', payload: group.id })} className={`group/item p-4 rounded-xl cursor-pointer transition-all border-l-4 ${isSelected ? 'bg-primary text-white border-transparent shadow-lg shadow-primary/20 scale-[1.02]' : 'bg-surface-secondary/50 hover:bg-surface-secondary border-transparent'}`}>
@@ -756,7 +756,7 @@ const GroupManagement: React.FC = () => {
                     existingGroups={groups} 
                     onSave={handleSaveGroup} 
                     onCancel={() => setGroupModalOpen(false)} 
-                    onImportCriteria={(sourceId) => setConfirmImportCriteria({sourceId, groupName: groups.find(g => g.id === sourceId)?.name || ''})}
+                    onImportCriteria={(sourceId) => setConfirmImportCriteria({sourceId, groupName: groups.find(g => g && g.id === sourceId)?.name || ''})}
                 />
             </Modal>
             <Modal isOpen={isStudentModalOpen} onClose={() => setStudentModalOpen(false)} title={editingStudent ? 'Editar Alumno' : 'Nuevo Alumno'}><StudentForm student={editingStudent} currentGroup={selectedGroup} allGroups={groups} onSave={handleSaveStudent} onCancel={() => setStudentModalOpen(false)} /></Modal>

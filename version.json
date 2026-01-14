@@ -1,6 +1,6 @@
 
 {
-  "version": "1.6.4",
-  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v1.6.4/app-debug.apk",
-  "notes": "¡Versión 1.6.4! El Gestor de Equipos se ha movido a la cabecera superior del grupo para un acceso más rápido y una interfaz más limpia."
+  "version": "1.6.5",
+  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v1.6.5/app-debug.apk",
+  "notes": "¡Versión 1.6.5! El Gestor de Equipos se ha integrado en la cabecera superior. Nueva función para convertir equipos base a equipos Coyote instantáneamente y correcciones de errores críticos de referencia nula."
 }
