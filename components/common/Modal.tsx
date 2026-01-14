@@ -1,3 +1,4 @@
+
 import React, { ReactNode, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Icon from '../icons/Icon';
@@ -8,7 +9,7 @@ interface ModalProps {
   title: string;
   children: ReactNode;
   footer?: ReactNode;
-  size?: 'sm' | 'md' | 'lg' | 'xl';
+  size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | '4xl' | '5xl' | '6xl' | '7xl';
 }
 
 const sizeClasses = {
@@ -16,6 +17,12 @@ const sizeClasses = {
     md: 'max-w-md',
     lg: 'max-w-lg',
     xl: 'max-w-xl',
+    '2xl': 'max-w-2xl',
+    '3xl': 'max-w-3xl',
+    '4xl': 'max-w-4xl',
+    '5xl': 'max-w-5xl',
+    '6xl': 'max-w-6xl',
+    '7xl': 'max-w-7xl',
 };
 
 const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, footer, size = 'md' }) => {
@@ -34,7 +41,7 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, footer,
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto">
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -46,9 +53,9 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, footer,
             initial={{ y: -50, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 50, opacity: 0 }}
-            className={`relative z-10 w-full ${sizeClasses[size]} bg-surface rounded-xl shadow-2xl flex flex-col max-h-[90vh]`}
+            className={`relative z-10 w-full ${sizeClasses[size]} bg-surface rounded-xl shadow-2xl flex flex-col max-h-[95vh] my-auto`}
           >
-            <header className="flex items-center justify-between p-4 border-b border-border-color">
+            <header className="flex items-center justify-between p-4 border-b border-border-color shrink-0">
               <h2 className="text-xl font-bold text-text-primary">{title}</h2>
               <button
                 onClick={onClose}
@@ -57,11 +64,11 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, footer,
                 <Icon name="x" className="w-5 h-5"/>
               </button>
             </header>
-            <div className="p-6 overflow-y-auto flex-grow">
+            <div className="p-6 overflow-y-auto flex-grow custom-scrollbar">
               {children}
             </div>
             {footer && (
-              <footer className="flex justify-end p-4 border-t border-border-color bg-surface-secondary/50 rounded-b-xl">
+              <footer className="flex justify-end p-4 border-t border-border-color bg-surface-secondary/50 rounded-b-xl shrink-0">
                 {footer}
               </footer>
             )}

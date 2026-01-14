@@ -1,6 +1,6 @@
 
 {
-  "version": "1.5.6",
-  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v1.5.6/app-debug.apk",
-  "notes": "¡Versión 1.5.6! Se corrigieron errores técnicos de compilación y se optimizó el nuevo Gestor de Equipos Coyote."
+  "version": "1.5.7",
+  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v1.5.7/app-debug.apk",
+  "notes": "¡Versión 1.5.7! Gestor de Equipos ampliado (6xl) con mejor adaptabilidad visual y mayor altura (80vh)."
 }
