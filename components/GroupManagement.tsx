@@ -266,7 +266,7 @@ const TeamsManager: React.FC<{ group: Group }> = ({ group }) => {
         if (assign) setTempTeams(prev => prev.filter(t => t !== selectedTeam));
     };
 
-    const handleMigrateTeam = (baseTeamName: string, memberIds: string[]) => {
+    const handleMigrateTeam = (_baseTeamName: string, memberIds: string[]) => {
         if (!selectedTeam) return;
         const currentCount = existingTeams.find(t => t[0] === selectedTeam)?.[1] || 0;
         const availableSlots = 4 - currentCount;

@@ -1,6 +1,6 @@
 
 {
-  "version": "1.7.1",
-  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v1.7.1/app-debug.apk",
-  "notes": "¡Versión 1.7.1! Se han añadido dos nuevas herramientas al gestor de equipos: 1. Posibilidad de convertir equipos de Base a Coyote y viceversa sin perder las notas. 2. Generador aleatorio de equipos (disponible en modo Base) para distribuir alumnos rápidamente."
+  "version": "1.7.2",
+  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v1.7.2/app-debug.apk",
+  "notes": "¡Versión 1.7.2! Se ha corregido un error de compilación que impedía generar el ejecutable. Se mantienen las nuevas herramientas de gestión de equipos (conversión Base/Coyote y generación aleatoria)."
 }
