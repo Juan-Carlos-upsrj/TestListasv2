@@ -1,6 +1,6 @@
 
 {
-  "version": "1.5.4",
-  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v1.5.4/app-debug.apk",
-  "notes": "¡Versión 1.5.4! Nuevo Generador Inteligente de Equipos y Banca Visual para organizar a tus alumnos con un solo clic."
+  "version": "1.5.5",
+  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v1.5.5/app-debug.apk",
+  "notes": "¡Versión 1.5.5! Se introdujeron los Equipos Coyote con límite de 4 integrantes y capacidad de reclutar alumnos de otros grupos del mismo cuatrimestre."
 }

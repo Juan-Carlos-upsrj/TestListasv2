@@ -1,6 +1,6 @@
 
 import React, { createContext, useReducer, useEffect, ReactNode, Dispatch, useState } from 'react';
-import { AppState, AppAction, AttendanceStatus, Group, Evaluation, Archive } from '../types';
+import { AppState, AppAction, AttendanceStatus, Group, Evaluation, Archive, Student } from '../types';
 import { GROUP_COLORS } from '../constants';
 import { getState, saveState } from '../services/dbService';
 import { fetchGoogleCalendarEvents } from '../services/calendarService';
@@ -43,7 +43,8 @@ const defaultState: AppState = {
   toasts: [],
   archives: [],
   teamNotes: {},
-  teacherSchedule: [], // NUEVO
+  coyoteTeamNotes: {},
+  teacherSchedule: [],
 };
 
 const appReducer = (state: AppState, action: AppAction): AppState => {
@@ -114,7 +115,8 @@ const appReducer = (state: AppState, action: AppAction): AppState => {
             toasts: [],
             archives: Array.isArray(loadedState.archives) ? loadedState.archives : [],
             teamNotes: loadedState.teamNotes ?? {},
-            teacherSchedule: loadedState.teacherSchedule ?? [], // CARGAR
+            coyoteTeamNotes: loadedState.coyoteTeamNotes ?? {},
+            teacherSchedule: loadedState.teacherSchedule ?? [], 
         };
     }
     case 'SET_VIEW':
@@ -328,55 +330,70 @@ const appReducer = (state: AppState, action: AppAction): AppState => {
         };
     }
     case 'RENAME_TEAM': {
-        const { oldName, newName } = action.payload;
-        const newNotes = { ...(state.teamNotes || {}) };
+        const { oldName, newName, isCoyote } = action.payload;
+        const targetNotesField = isCoyote ? 'coyoteTeamNotes' : 'teamNotes';
+        const newNotes = { ...(state[targetNotesField] || {}) };
         if (newNotes[oldName]) {
             newNotes[newName] = newNotes[oldName];
             delete newNotes[oldName];
         }
         return {
             ...state,
-            teamNotes: newNotes,
+            [targetNotesField]: newNotes,
             groups: state.groups.map(g => ({
                 ...g,
-                students: g.students.map(s => s.team === oldName ? { ...s, team: newName } : s)
+                students: g.students.map(s => {
+                    const currentTeam = isCoyote ? s.teamCoyote : s.team;
+                    if (currentTeam === oldName) {
+                        return { ...s, [isCoyote ? 'teamCoyote' : 'team']: newName };
+                    }
+                    return s;
+                })
             }))
         };
     }
     case 'DELETE_TEAM': {
-        const teamName = action.payload;
-        const newNotes = { ...(state.teamNotes || {}) };
+        const { teamName, isCoyote } = action.payload;
+        const targetNotesField = isCoyote ? 'coyoteTeamNotes' : 'teamNotes';
+        const newNotes = { ...(state[targetNotesField] || {}) };
         delete newNotes[teamName];
         return {
             ...state,
-            teamNotes: newNotes,
+            [targetNotesField]: newNotes,
             groups: state.groups.map(g => ({
                 ...g,
-                students: g.students.map(s => s.team === teamName ? { ...s, team: undefined } : s)
+                students: g.students.map(s => {
+                    const currentTeam = isCoyote ? s.teamCoyote : s.team;
+                    if (currentTeam === teamName) {
+                        return { ...s, [isCoyote ? 'teamCoyote' : 'team']: undefined };
+                    }
+                    return s;
+                })
             }))
         };
     }
     case 'UPDATE_TEAM_NOTE': {
-        const { teamName, note } = action.payload;
+        const { teamName, note, isCoyote } = action.payload;
+        const targetNotesField = isCoyote ? 'coyoteTeamNotes' : 'teamNotes';
         return {
             ...state,
-            teamNotes: {
-                ...(state.teamNotes || {}),
+            [targetNotesField]: {
+                ...(state[targetNotesField] || {}),
                 [teamName]: note
             }
         };
     }
     case 'ASSIGN_STUDENT_TEAM': {
-        const { studentId, teamName } = action.payload;
+        const { studentId, teamName, isCoyote } = action.payload;
         return {
             ...state,
             groups: state.groups.map(g => ({
                 ...g,
-                students: g.students.map(s => s.id === studentId ? { ...s, team: teamName } : s)
+                students: g.students.map(s => s.id === studentId ? { ...s, [isCoyote ? 'teamCoyote' : 'team']: teamName } : s)
             }))
         };
     }
-    case 'SET_TEACHER_SCHEDULE': // NUEVO
+    case 'SET_TEACHER_SCHEDULE':
         return { ...state, teacherSchedule: action.payload };
     default:
       return state;

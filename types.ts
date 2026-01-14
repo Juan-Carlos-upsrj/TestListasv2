@@ -19,7 +19,8 @@ export interface Student {
   matricula: string;
   nickname?: string;
   isRepeating?: boolean; // True if repeating the subject (Recursamiento)
-  team?: string;        // Name or ID of the team they belong to
+  team?: string;        // Name or ID of the team they belong to (BASE)
+  teamCoyote?: string;  // Name or ID of the Coyote team
 }
 
 export interface EvaluationType {
@@ -79,8 +80,8 @@ export interface Settings {
   apiUrl: string;
   apiKey: string;
   mobileUpdateUrl: string; // URL for version.json
-  enableReminders: boolean; // NUEVO
-  reminderTime: number;    // NUEVO (minutos)
+  enableReminders: boolean; 
+  reminderTime: number;    
 }
 
 export type ActiveView = 'dashboard' | 'groups' | 'attendance' | 'grades' | 'reports' | 'calendar';
@@ -134,7 +135,8 @@ export interface AppState {
   toasts: Toast[];
   archives: Archive[];
   teamNotes?: { [teamName: string]: string }; 
-  teacherSchedule?: TeacherClass[]; // NUEVO: Para seguimiento de alertas
+  coyoteTeamNotes?: { [teamName: string]: string }; // NUEVO
+  teacherSchedule?: TeacherClass[]; 
 }
 
 // Added missing types to resolve import errors across the application
@@ -187,8 +189,8 @@ export type AppAction =
   | { type: 'RESTORE_ARCHIVE'; payload: string } 
   | { type: 'DELETE_ARCHIVE'; payload: string } 
   | { type: 'TRANSITION_SEMESTER'; payload: { newGroups: Group[]; newSettings: Partial<Settings> } }
-  | { type: 'RENAME_TEAM'; payload: { oldName: string, newName: string } }
-  | { type: 'DELETE_TEAM'; payload: string }
-  | { type: 'UPDATE_TEAM_NOTE'; payload: { teamName: string, note: string } } 
-  | { type: 'ASSIGN_STUDENT_TEAM'; payload: { studentId: string, teamName: string | undefined } }
-  | { type: 'SET_TEACHER_SCHEDULE'; payload: TeacherClass[] }; // NUEVO
+  | { type: 'RENAME_TEAM'; payload: { oldName: string, newName: string, isCoyote: boolean } } // ACTUALIZADO
+  | { type: 'DELETE_TEAM'; payload: { teamName: string, isCoyote: boolean } } // ACTUALIZADO
+  | { type: 'UPDATE_TEAM_NOTE'; payload: { teamName: string, note: string, isCoyote: boolean } } // ACTUALIZADO
+  | { type: 'ASSIGN_STUDENT_TEAM'; payload: { studentId: string, teamName: string | undefined, isCoyote: boolean } } // ACTUALIZADO
+  | { type: 'SET_TEACHER_SCHEDULE'; payload: TeacherClass[] }; 
