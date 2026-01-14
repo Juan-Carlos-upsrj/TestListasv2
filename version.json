@@ -1,6 +1,6 @@
 
 {
-  "version": "1.4.7",
-  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v1.4.7/app-debug.apk",
-  "notes": "¡Versión 1.4.7! Ahora puedes gestionar tu horario de forma manual: añade, edita o elimina clases directamente desde el modal de horario."
+  "version": "1.4.8",
+  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v1.4.8/app-debug.apk",
+  "notes": "¡Versión 1.4.8! Gestión inteligente de horario: Ahora puedes asignar rápidamente horas a las materias y grupos que ya tienes cargados, viendo qué días de clase tienes pendientes de configurar."
 }

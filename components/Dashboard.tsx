@@ -19,16 +19,25 @@ const ResponsiveGridLayout = WidthProvider(Responsive);
 // --- COMPONENTE HORARIO ---
 
 const TeacherScheduleModal: React.FC<{ schedule: TeacherClass[], isOpen: boolean, onClose: () => void }> = ({ schedule, isOpen, onClose }) => {
-    const { dispatch } = useContext(AppContext);
+    const { state, dispatch } = useContext(AppContext);
+    const { groups } = state;
     const [isEditing, setIsEditing] = useState(false);
     
-    // Formulario para nueva clase
-    const [newClass, setNewClass] = useState<Partial<TeacherClass>>({
+    // Formulario para nueva clase manual (full custom)
+    const [newCustomClass, setNewCustomClass] = useState<Partial<TeacherClass>>({
         day: 'Lunes',
         startTime: 7,
-        duration: 1,
+        duration: 2,
         subjectName: '',
         groupName: ''
+    });
+
+    // Estado para la asignación rápida desde grupos existentes
+    const [quickAssign, setQuickAssign] = useState<{ groupId: string, day: DayOfWeek, start: number, duration: number }>({
+        groupId: '',
+        day: 'Lunes',
+        start: 7,
+        duration: 2
     });
 
     const scheduleByDay = useMemo(() => {
@@ -39,23 +48,50 @@ const TeacherScheduleModal: React.FC<{ schedule: TeacherClass[], isOpen: boolean
         return map;
     }, [schedule]);
 
+    // Calcular sesiones de grupos que no tienen hora asignada aún
+    const unassignedGroupSessions = useMemo(() => {
+        const sessions: { groupId: string, groupName: string, subject: string, day: DayOfWeek }[] = [];
+        groups.forEach(g => {
+            g.classDays.forEach(day => {
+                // Verificar si ya existe una entrada en el horario para este grupo y este día
+                const exists = schedule.some(c => c.groupName === g.name && c.subjectName === g.subject && c.day === day);
+                if (!exists) {
+                    sessions.push({ groupId: g.id, groupName: g.name, subject: g.subject, day });
+                }
+            });
+        });
+        return sessions;
+    }, [groups, schedule]);
+
     const formatTime = (hour: number) => `${hour}:00`;
 
-    const handleAddClass = (e: React.FormEvent) => {
+    const handleAddManualClass = (e: React.FormEvent) => {
         e.preventDefault();
-        if (!newClass.subjectName || !newClass.groupName) return;
+        if (!newCustomClass.subjectName || !newCustomClass.groupName) return;
         
         const completeClass: TeacherClass = {
             id: uuidv4(),
-            day: (newClass.day as DayOfWeek) || 'Lunes',
-            startTime: Number(newClass.startTime) || 7,
-            duration: Number(newClass.duration) || 1,
-            subjectName: newClass.subjectName,
-            groupName: newClass.groupName
+            day: (newCustomClass.day as DayOfWeek) || 'Lunes',
+            startTime: Number(newCustomClass.startTime) || 7,
+            duration: Number(newCustomClass.duration) || 1,
+            subjectName: newCustomClass.subjectName,
+            groupName: newCustomClass.groupName
         };
 
         dispatch({ type: 'SET_TEACHER_SCHEDULE', payload: [...schedule, completeClass] });
-        setNewClass({ ...newClass, subjectName: '', groupName: '' });
+        setNewCustomClass({ ...newCustomClass, subjectName: '', groupName: '' });
+    };
+
+    const handleQuickAdd = (session: typeof unassignedGroupSessions[0], startTime: number, duration: number) => {
+        const completeClass: TeacherClass = {
+            id: uuidv4(),
+            day: session.day,
+            startTime,
+            duration,
+            subjectName: session.subject,
+            groupName: session.groupName
+        };
+        dispatch({ type: 'SET_TEACHER_SCHEDULE', payload: [...schedule, completeClass] });
     };
 
     const handleDeleteClass = (id: string) => {
@@ -72,75 +108,133 @@ const TeacherScheduleModal: React.FC<{ schedule: TeacherClass[], isOpen: boolean
                 <div className="flex justify-between w-full">
                     <Button variant="secondary" size="sm" onClick={() => setIsEditing(!isEditing)}>
                         <Icon name={isEditing ? "calendar" : "settings"} className="w-4 h-4" />
-                        {isEditing ? "Ver Horario" : "Gestionar Clases"}
+                        {isEditing ? "Ver Horario" : "Gestionar Clases / Horas"}
                     </Button>
                     <Button variant="secondary" size="sm" onClick={onClose}>Cerrar</Button>
                 </div>
             }
         >
-            <div className="space-y-6 max-h-[60vh] overflow-y-auto custom-scrollbar pr-2">
+            <div className="space-y-6 max-h-[65vh] overflow-y-auto custom-scrollbar pr-2">
                 
                 {isEditing && (
-                    <motion.div 
-                        initial={{ opacity: 0, y: -10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="bg-slate-50 p-4 rounded-xl border border-slate-200 mb-6"
-                    >
-                        <h4 className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
-                            <Icon name="plus" className="w-4 h-4" /> Agregar Clase Manual
-                        </h4>
-                        <form onSubmit={handleAddClass} className="grid grid-cols-1 sm:grid-cols-12 gap-3">
-                            <div className="sm:col-span-4">
-                                <label className="text-[10px] font-bold uppercase text-slate-400">Día</label>
-                                <select 
-                                    className="w-full p-2 text-sm border border-slate-300 rounded-lg bg-white"
-                                    value={newClass.day}
-                                    onChange={e => setNewClass({...newClass, day: e.target.value as DayOfWeek})}
-                                >
-                                    {DAYS_OF_WEEK.map(d => <option key={d} value={d}>{d}</option>)}
-                                </select>
-                            </div>
-                            <div className="sm:col-span-4">
-                                <label className="text-[10px] font-bold uppercase text-slate-400">Inicio (Hora)</label>
-                                <input 
-                                    type="number" min="7" max="22"
-                                    className="w-full p-2 text-sm border border-slate-300 rounded-lg bg-white"
-                                    value={newClass.startTime}
-                                    onChange={e => setNewClass({...newClass, startTime: parseInt(e.target.value)})}
-                                />
-                            </div>
-                            <div className="sm:col-span-4">
-                                <label className="text-[10px] font-bold uppercase text-slate-400">Duración (Horas)</label>
-                                <input 
-                                    type="number" min="1" max="5"
-                                    className="w-full p-2 text-sm border border-slate-300 rounded-lg bg-white"
-                                    value={newClass.duration}
-                                    onChange={e => setNewClass({...newClass, duration: parseInt(e.target.value)})}
-                                />
-                            </div>
-                            <div className="sm:col-span-5">
-                                <label className="text-[10px] font-bold uppercase text-slate-400">Materia</label>
-                                <input 
-                                    type="text" placeholder="Ej. Matemáticas"
-                                    className="w-full p-2 text-sm border border-slate-300 rounded-lg bg-white"
-                                    value={newClass.subjectName}
-                                    onChange={e => setNewClass({...newClass, subjectName: e.target.value})}
-                                />
-                            </div>
-                            <div className="sm:col-span-5">
-                                <label className="text-[10px] font-bold uppercase text-slate-400">Grupo</label>
-                                <input 
-                                    type="text" placeholder="Ej. 6A"
-                                    className="w-full p-2 text-sm border border-slate-300 rounded-lg bg-white"
-                                    value={newClass.groupName}
-                                    onChange={e => setNewClass({...newClass, groupName: e.target.value})}
-                                />
-                            </div>
-                            <div className="sm:col-span-2 flex items-end">
-                                <Button type="submit" size="sm" className="w-full !py-2.5">Añadir</Button>
-                            </div>
-                        </form>
-                    </motion.div>
+                    <div className="space-y-6">
+                        {/* SECCIÓN 1: ASIGNACIÓN RÁPIDA (LO QUE PIDIÓ EL USUARIO) */}
+                        <motion.div 
+                            initial={{ opacity: 0, y: -10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="bg-indigo-50/50 p-4 rounded-xl border border-indigo-100"
+                        >
+                            <h4 className="text-sm font-bold text-indigo-700 mb-3 flex items-center gap-2">
+                                <Icon name="list-checks" className="w-4 h-4" /> Sesiones de Grupos Pendientes de Hora
+                            </h4>
+                            {unassignedGroupSessions.length > 0 ? (
+                                <div className="grid grid-cols-1 gap-2">
+                                    {unassignedGroupSessions.map((session, idx) => (
+                                        <div key={idx} className="flex flex-col sm:flex-row items-center gap-3 bg-white p-3 rounded-lg border border-indigo-100 shadow-sm">
+                                            <div className="flex-1 min-w-0 text-center sm:text-left">
+                                                <p className="text-xs font-bold text-indigo-600 uppercase tracking-wider">{session.day}</p>
+                                                <p className="font-bold text-sm truncate">{session.groupName}</p>
+                                                <p className="text-[10px] text-text-secondary truncate">{session.subject}</p>
+                                            </div>
+                                            <div className="flex items-center gap-2 shrink-0">
+                                                <div className="flex flex-col">
+                                                    <label className="text-[8px] font-bold uppercase text-slate-400">Inicio</label>
+                                                    <input 
+                                                        type="number" min="7" max="22" defaultValue="7"
+                                                        id={`start-${idx}`}
+                                                        className="w-16 p-1 text-xs border border-slate-200 rounded bg-slate-50"
+                                                    />
+                                                </div>
+                                                <div className="flex flex-col">
+                                                    <label className="text-[8px] font-bold uppercase text-slate-400">Horas</label>
+                                                    <input 
+                                                        type="number" min="1" max="5" defaultValue="2"
+                                                        id={`dur-${idx}`}
+                                                        className="w-12 p-1 text-xs border border-slate-200 rounded bg-slate-50"
+                                                    />
+                                                </div>
+                                                <Button 
+                                                    size="sm" 
+                                                    className="!py-1.5 !px-2 mt-2"
+                                                    onClick={() => {
+                                                        const s = parseInt((document.getElementById(`start-${idx}`) as HTMLInputElement).value);
+                                                        const d = parseInt((document.getElementById(`dur-${idx}`) as HTMLInputElement).value);
+                                                        handleQuickAdd(session, s, d);
+                                                    }}
+                                                >
+                                                    <Icon name="plus" className="w-3 h-3" />
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <p className="text-xs text-indigo-400 italic text-center py-2">Todos tus grupos ya tienen sus horas asignadas.</p>
+                            )}
+                        </motion.div>
+
+                        {/* SECCIÓN 2: AGREGAR MANUAL (EXTRA) */}
+                        <motion.div 
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            className="bg-slate-50 p-4 rounded-xl border border-slate-200"
+                        >
+                            <h4 className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
+                                <Icon name="plus" className="w-4 h-4" /> Agregar Actividad Extra (Juntas, Asesorías, etc.)
+                            </h4>
+                            <form onSubmit={handleAddManualClass} className="grid grid-cols-1 sm:grid-cols-12 gap-3">
+                                <div className="sm:col-span-4">
+                                    <label className="text-[10px] font-bold uppercase text-slate-400">Día</label>
+                                    <select 
+                                        className="w-full p-2 text-sm border border-slate-300 rounded-lg bg-white"
+                                        value={newCustomClass.day}
+                                        onChange={e => setNewCustomClass({...newCustomClass, day: e.target.value as DayOfWeek})}
+                                    >
+                                        {DAYS_OF_WEEK.map(d => <option key={d} value={d}>{d}</option>)}
+                                    </select>
+                                </div>
+                                <div className="sm:col-span-4">
+                                    <label className="text-[10px] font-bold uppercase text-slate-400">Inicio (Hora)</label>
+                                    <input 
+                                        type="number" min="7" max="22"
+                                        className="w-full p-2 text-sm border border-slate-300 rounded-lg bg-white"
+                                        value={newCustomClass.startTime}
+                                        onChange={e => setNewCustomClass({...newCustomClass, startTime: parseInt(e.target.value)})}
+                                    />
+                                </div>
+                                <div className="sm:col-span-4">
+                                    <label className="text-[10px] font-bold uppercase text-slate-400">Duración</label>
+                                    <input 
+                                        type="number" min="1" max="5"
+                                        className="w-full p-2 text-sm border border-slate-300 rounded-lg bg-white"
+                                        value={newCustomClass.duration}
+                                        onChange={e => setNewCustomClass({...newCustomClass, duration: parseInt(e.target.value)})}
+                                    />
+                                </div>
+                                <div className="sm:col-span-5">
+                                    <label className="text-[10px] font-bold uppercase text-slate-400">Actividad / Materia</label>
+                                    <input 
+                                        type="text" placeholder="Ej. Reunión Academia"
+                                        className="w-full p-2 text-sm border border-slate-300 rounded-lg bg-white"
+                                        value={newCustomClass.subjectName}
+                                        onChange={e => setNewCustomClass({...newCustomClass, subjectName: e.target.value})}
+                                    />
+                                </div>
+                                <div className="sm:col-span-5">
+                                    <label className="text-[10px] font-bold uppercase text-slate-400">Lugar / Grupo</label>
+                                    <input 
+                                        type="text" placeholder="Ej. Sala A"
+                                        className="w-full p-2 text-sm border border-slate-300 rounded-lg bg-white"
+                                        value={newCustomClass.groupName}
+                                        onChange={e => setNewCustomClass({...newCustomClass, groupName: e.target.value})}
+                                    />
+                                </div>
+                                <div className="sm:col-span-2 flex items-end">
+                                    <Button type="submit" size="sm" className="w-full !py-2.5">Añadir</Button>
+                                </div>
+                            </form>
+                        </motion.div>
+                    </div>
                 )}
 
                 <AnimatePresence mode="wait">
@@ -175,8 +269,8 @@ const TeacherScheduleModal: React.FC<{ schedule: TeacherClass[], isOpen: boolean
                                                     </div>
                                                     <div className="text-right flex items-center gap-3">
                                                         <div>
-                                                            <p className="text-[10px] font-bold text-slate-400 uppercase">Duración</p>
-                                                            <p className="text-xs font-bold text-slate-600">{c.duration}h</p>
+                                                            <p className="text-[10px] font-bold text-slate-400 uppercase">Fin</p>
+                                                            <p className="text-xs font-bold text-slate-600">{formatTime(c.startTime + c.duration)}</p>
                                                         </div>
                                                         {isEditing && (
                                                             <button 
@@ -203,7 +297,7 @@ const TeacherScheduleModal: React.FC<{ schedule: TeacherClass[], isOpen: boolean
                     })}
                 </AnimatePresence>
                 
-                {schedule.length === 0 && (
+                {schedule.length === 0 && !isEditing && (
                     <div className="text-center py-10 opacity-40">
                         <Icon name="calendar" className="w-16 h-16 mx-auto mb-2" />
                         <p>No hay horario cargado. Pulsa el botón "Horario" en el Dashboard para sincronizar o usa el modo gestión para añadir clases manualmente.</p>
