@@ -79,7 +79,6 @@ export const GroupForm: React.FC<{ group?: Group; existingGroups?: Group[]; onSa
     
     const handleDayToggle = (day: DayOfWeek) => setClassDays(prev => prev.includes(day) ? prev.filter(d => d !== day) : [...prev, day]);
     
-    // We use a listener for criteria updates from parent component (the confirmation flow)
     React.useEffect(() => {
         if (group && group.evaluationTypes) {
              setP1Types(group.evaluationTypes.partial1);
@@ -141,6 +140,7 @@ const TeamsManager: React.FC<{ group: Group }> = ({ group }) => {
     const [editingTeamName, setEditingTeamName] = useState<{ original: string, current: string } | null>(null);
     const [confirmDeleteTeam, setConfirmDeleteTeam] = useState<string | null>(null);
     const [expandedNotes, setExpandedNotes] = useState<Set<string>>(new Set());
+    const [isGeneratorOpen, setGeneratorOpen] = useState(false);
 
     // Filter students from the CURRENT group who have no team
     const unassignedStudents = useMemo(() => 
@@ -149,7 +149,6 @@ const TeamsManager: React.FC<{ group: Group }> = ({ group }) => {
 
     // Aggregate ALL students but FILTER results to only show teams present in the CURRENT group
     const teamsData = useMemo(() => {
-        // 1. Find all team names present in the current group
         const relevantTeamNames = new Set<string>();
         group.students.forEach(s => {
             if (s.team && s.team.trim() !== '') {
@@ -159,7 +158,6 @@ const TeamsManager: React.FC<{ group: Group }> = ({ group }) => {
 
         const teamsMap: { [name: string]: { members: { student: Student, groupName: string }[] } } = {};
         
-        // 2. Collect members only for those relevant teams
         groups.forEach(g => {
             g.students.forEach(s => {
                 if (s.team && relevantTeamNames.has(s.team)) {
@@ -203,28 +201,69 @@ const TeamsManager: React.FC<{ group: Group }> = ({ group }) => {
         setExpandedNotes(next);
     };
 
+    const handleAutoGenerate = (config: { type: 'count' | 'size', value: number }) => {
+        const studentsToAssign = [...unassignedStudents];
+        // Shuffle students
+        for (let i = studentsToAssign.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [studentsToAssign[i], studentsToAssign[j]] = [studentsToAssign[j], studentsToAssign[i]];
+        }
+
+        let numTeams = 0;
+        if (config.type === 'count') {
+            numTeams = config.value;
+        } else {
+            numTeams = Math.ceil(studentsToAssign.length / config.value);
+        }
+
+        if (numTeams <= 0) return;
+
+        studentsToAssign.forEach((student, index) => {
+            const teamNum = (index % numTeams) + 1;
+            const teamName = `Equipo ${teamNum}`;
+            dispatch({ type: 'ASSIGN_STUDENT_TEAM', payload: { studentId: student.id, teamName } });
+        });
+
+        setGeneratorOpen(false);
+        dispatch({ type: 'ADD_TOAST', payload: { message: `Equipos generados para ${studentsToAssign.length} alumnos.`, type: 'success' } });
+    };
+
     return (
         <div className="mt-8 pt-8 border-t border-border-color">
-            <div className="flex items-center gap-3 mb-6">
-                <div className="bg-indigo-600 p-2 rounded-lg text-white">
-                    <Icon name="users" className="w-6 h-6"/>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                <div className="flex items-center gap-3">
+                    <div className="bg-indigo-600 p-2 rounded-lg text-white">
+                        <Icon name="users" className="w-6 h-6"/>
+                    </div>
+                    <div>
+                        <h2 className="text-2xl font-bold">Equipos del Grupo</h2>
+                        <p className="text-sm text-text-secondary">Organiza integrantes y anota observaciones privadas.</p>
+                    </div>
                 </div>
-                <div>
-                    <h2 className="text-2xl font-bold">Equipos del Grupo</h2>
-                    <p className="text-sm text-text-secondary">Visualiza integrantes y anota observaciones privadas para tu seguimiento.</p>
+                <div className="flex gap-2">
+                    <Button variant="secondary" size="sm" onClick={() => {
+                        if (confirm("¿Limpiar todos los equipos del grupo?")) {
+                            group.students.forEach(s => dispatch({ type: 'ASSIGN_STUDENT_TEAM', payload: { studentId: s.id, teamName: undefined } }));
+                        }
+                    }}>
+                        <Icon name="trash-2" className="w-4 h-4"/> Limpiar Todo
+                    </Button>
+                    <Button size="sm" onClick={() => setGeneratorOpen(true)} className="bg-indigo-600">
+                        <Icon name="layout" className="w-4 h-4"/> Generador Inteligente
+                    </Button>
                 </div>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
                 <div className="lg:col-span-4 flex flex-col gap-4">
-                    <div className="bg-surface p-4 rounded-xl border-2 border-dashed border-border-color shadow-sm h-full max-h-[500px]">
+                    <div className="bg-surface p-4 rounded-xl border-2 border-dashed border-border-color shadow-sm h-full max-h-[500px] flex flex-col">
                         <div className="flex items-center justify-between mb-4 border-b border-border-color pb-2">
                             <h3 className="font-bold flex items-center gap-2">
                                 <span className="relative flex h-3 w-3">
                                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent-red opacity-75"></span>
                                     <span className="relative inline-flex rounded-full h-3 w-3 bg-accent-red"></span>
                                 </span>
-                                Alumnos sin equipo ({unassignedStudents.length})
+                                Banca ({unassignedStudents.length})
                             </h3>
                         </div>
                         <div className="overflow-y-auto flex-1 custom-scrollbar pr-1 space-y-2">
@@ -233,48 +272,24 @@ const TeamsManager: React.FC<{ group: Group }> = ({ group }) => {
                                     <motion.div 
                                         layout
                                         key={s.id} 
-                                        className="p-3 bg-surface-secondary rounded-lg border border-border-color flex items-center justify-between group hover:border-primary transition-colors"
+                                        className="p-3 bg-surface-secondary rounded-lg border border-border-color flex items-center justify-between group hover:border-primary transition-all cursor-pointer"
+                                        onClick={() => {
+                                            const name = window.prompt(`Asignar equipo para ${s.name}:`);
+                                            if (name) handleAssignTeam(s.id, name);
+                                        }}
                                     >
                                         <div className="min-w-0">
                                             <p className="font-bold text-sm truncate">{s.name}</p>
                                             <p className="text-[10px] text-text-secondary">{s.matricula}</p>
                                         </div>
-                                        <div className="flex gap-1">
+                                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                             <button 
-                                                onClick={() => handleAssignTeam(s.id, INDIVIDUAL_TEAM_NAME)}
+                                                onClick={(e) => { e.stopPropagation(); handleAssignTeam(s.id, INDIVIDUAL_TEAM_NAME); }}
                                                 className="p-1.5 text-text-secondary hover:text-slate-600 hover:bg-slate-200 rounded-md transition-all"
                                                 title="Trabaja solo"
                                             >
                                                 <Icon name="user-plus" className="w-4 h-4"/>
                                             </button>
-                                            <div className="relative group/menu">
-                                                <button className="p-1.5 text-primary hover:bg-primary/10 rounded-md transition-all">
-                                                    <Icon name="plus" className="w-4 h-4"/>
-                                                </button>
-                                                <div className="absolute right-0 bottom-full mb-2 hidden group-hover/menu:block bg-surface border border-border-color shadow-xl rounded-lg py-2 w-48 z-50">
-                                                    <p className="px-3 py-1 text-[10px] font-bold text-text-secondary uppercase border-b border-border-color mb-1">Asignar a...</p>
-                                                    <div className="max-h-40 overflow-y-auto px-1">
-                                                        <button 
-                                                            onClick={() => {
-                                                                const name = window.prompt("Nombre del nuevo equipo:");
-                                                                if (name) handleAssignTeam(s.id, name);
-                                                            }}
-                                                            className="w-full text-left px-2 py-1.5 text-xs hover:bg-primary/10 text-primary font-bold flex items-center gap-2 rounded"
-                                                        >
-                                                            <Icon name="plus" className="w-3 h-3"/> Nuevo Equipo
-                                                        </button>
-                                                        {teamsData.filter(([name]) => name !== INDIVIDUAL_TEAM_NAME).map(([name]) => (
-                                                            <button 
-                                                                key={name}
-                                                                onClick={() => handleAssignTeam(s.id, name)}
-                                                                className="w-full text-left px-2 py-1.5 text-xs hover:bg-surface-secondary rounded transition-colors truncate"
-                                                            >
-                                                                {name}
-                                                            </button>
-                                                        ))}
-                                                    </div>
-                                                </div>
-                                            </div>
                                         </div>
                                     </motion.div>
                                 ))
@@ -304,7 +319,7 @@ const TeamsManager: React.FC<{ group: Group }> = ({ group }) => {
                                         initial={{ opacity: 0, scale: 0.9 }}
                                         animate={{ opacity: 1, scale: 1 }}
                                         exit={{ opacity: 0, scale: 0.9 }}
-                                        className={`min-w-[280px] flex-1 max-w-sm rounded-xl border-2 shadow-sm flex flex-col ${
+                                        className={`min-w-[280px] flex-1 max-w-sm rounded-xl border-2 shadow-sm flex flex-col transition-all hover:shadow-md ${
                                             isIndividual ? 'bg-slate-50 border-slate-200' : 'bg-surface border-indigo-100'
                                         }`}
                                     >
@@ -340,7 +355,6 @@ const TeamsManager: React.FC<{ group: Group }> = ({ group }) => {
                                             )}
                                         </div>
                                         
-                                        {/* Notes Section (Expandable) */}
                                         <AnimatePresence>
                                             {isNoteExpanded && !isIndividual && (
                                                 <motion.div 
@@ -350,11 +364,10 @@ const TeamsManager: React.FC<{ group: Group }> = ({ group }) => {
                                                     className="overflow-hidden bg-indigo-50/50 border-b border-indigo-100"
                                                 >
                                                     <div className="p-3">
-                                                        <label className="block text-[9px] font-bold text-indigo-400 uppercase mb-1">Notas Privadas (Entregas/Presentaciones)</label>
                                                         <textarea 
                                                             value={currentNote}
                                                             onChange={e => handleUpdateNote(name, e.target.value)}
-                                                            placeholder="Escribe aquí observaciones sobre sus avances..."
+                                                            placeholder="Notas sobre su desempeño..."
                                                             rows={3}
                                                             className="w-full p-2 text-xs border border-indigo-200 rounded-lg bg-white focus:ring-1 focus:ring-indigo-500 resize-none custom-scrollbar"
                                                         />
@@ -381,17 +394,23 @@ const TeamsManager: React.FC<{ group: Group }> = ({ group }) => {
                                                     </button>
                                                 </div>
                                             ))}
+                                            {unassignedStudents.length > 0 && !isIndividual && (
+                                                <button 
+                                                    onClick={() => {
+                                                        const s = unassignedStudents[0];
+                                                        handleAssignTeam(s.id, name);
+                                                    }}
+                                                    className="w-full py-1.5 border border-dashed border-indigo-200 rounded-lg text-[10px] text-indigo-400 hover:bg-indigo-50 transition-colors font-bold flex items-center justify-center gap-1"
+                                                >
+                                                    <Icon name="plus" className="w-3 h-3"/> Añadir Siguiente
+                                                </button>
+                                            )}
                                         </div>
                                         
                                         <div className={`p-2 text-center flex items-center justify-center gap-3 text-[10px] font-bold border-t ${
                                             isIndividual ? 'border-slate-200 text-slate-400' : 'border-indigo-50 text-indigo-400'
                                         }`}>
-                                            <span>{data.members.length} Integrantes</span>
-                                            {currentNote && !isIndividual && (
-                                                <span className="flex items-center gap-1 bg-indigo-100 px-1.5 py-0.5 rounded text-indigo-600">
-                                                    <Icon name="edit-3" className="w-2.5 h-2.5"/> Con Nota
-                                                </span>
-                                            )}
+                                            <span>{data.members.length} Alumnos</span>
                                         </div>
                                     </motion.div>
                                 );
@@ -400,6 +419,45 @@ const TeamsManager: React.FC<{ group: Group }> = ({ group }) => {
                     </div>
                 </div>
             </div>
+
+            <Modal isOpen={isGeneratorOpen} onClose={() => setGeneratorOpen(false)} title="Generador Inteligente de Equipos" size="md">
+                <div className="space-y-6 p-2">
+                    <div className="bg-indigo-50 p-4 rounded-xl border border-indigo-100 flex items-start gap-3">
+                        <Icon name="info" className="w-5 h-5 text-indigo-600 mt-1"/>
+                        <p className="text-sm text-indigo-700">Se asignará un equipo a los <strong>{unassignedStudents.length}</strong> alumnos que están actualmente en la banca.</p>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                        <button 
+                            onClick={() => {
+                                const val = window.prompt("¿Cuántos equipos quieres crear?");
+                                if (val) handleAutoGenerate({ type: 'count', value: parseInt(val) });
+                            }}
+                            className="p-6 border-2 border-border-color rounded-2xl hover:border-indigo-500 hover:bg-indigo-50 transition-all flex flex-col items-center gap-3 group"
+                        >
+                            <div className="bg-white p-3 rounded-full shadow-sm group-hover:scale-110 transition-transform"><Icon name="grid" className="w-6 h-6 text-indigo-600"/></div>
+                            <span className="font-bold text-sm">Por Número de Equipos</span>
+                            <span className="text-[10px] text-text-secondary">Ej: Crea 5 equipos fijos</span>
+                        </button>
+                        
+                        <button 
+                             onClick={() => {
+                                const val = window.prompt("¿Cuántos integrantes por equipo?");
+                                if (val) handleAutoGenerate({ type: 'size', value: parseInt(val) });
+                            }}
+                            className="p-6 border-2 border-border-color rounded-2xl hover:border-indigo-500 hover:bg-indigo-50 transition-all flex flex-col items-center gap-3 group"
+                        >
+                            <div className="bg-white p-3 rounded-full shadow-sm group-hover:scale-110 transition-transform"><Icon name="users" className="w-6 h-6 text-indigo-600"/></div>
+                            <span className="font-bold text-sm">Por Tamaño de Equipo</span>
+                            <span className="text-[10px] text-text-secondary">Ej: Equipos de 4 personas</span>
+                        </button>
+                    </div>
+                    
+                    <div className="flex justify-end pt-4 border-t border-border-color">
+                        <Button variant="secondary" onClick={() => setGeneratorOpen(false)}>Cancelar</Button>
+                    </div>
+                </div>
+            </Modal>
 
             <ConfirmationModal
                 isOpen={!!confirmDeleteTeam}
@@ -410,7 +468,7 @@ const TeamsManager: React.FC<{ group: Group }> = ({ group }) => {
                 confirmText="Disolver"
             >
                 <p>¿Seguro que deseas disolver el equipo <strong>"{confirmDeleteTeam}"</strong>?</p>
-                <p className="text-xs mt-2 text-text-secondary">Los integrantes volverán a estar sin equipo asignado y se borrarán sus notas.</p>
+                <p className="text-xs mt-2 text-text-secondary">Los integrantes volverán a estar sin equipo asignado.</p>
             </ConfirmationModal>
         </div>
     );
