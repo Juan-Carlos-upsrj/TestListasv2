@@ -78,6 +78,9 @@ const appReducer = (state: AppState, action: AppAction): AppState => {
         const loadedSettings = loadedState.settings;
         const migratedSettings = { ...defaultState.settings, ...loadedSettings };
 
+        // CRITICAL FIX: Force theme to 'classic' (light) and ignore any 'dark' preference from previous versions
+        migratedSettings.theme = 'classic';
+
         // Migration from boolean to string mode
         if (typeof (migratedSettings as any).showAbbreviationInSidebar !== 'undefined') {
             if (!(migratedSettings as any).showAbbreviationInSidebar) {
@@ -88,9 +91,6 @@ const appReducer = (state: AppState, action: AppAction): AppState => {
             delete (migratedSettings as any).showAbbreviationInSidebar;
         }
 
-        if ((migratedSettings.theme as any) === 'iaev' || (migratedSettings.theme as any) === 'custom') {
-            migratedSettings.theme = 'classic';
-        }
         if (!migratedSettings.mobileUpdateUrl) {
             migratedSettings.mobileUpdateUrl = defaultState.settings.mobileUpdateUrl;
         }

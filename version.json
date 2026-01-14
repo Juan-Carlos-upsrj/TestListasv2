@@ -1,6 +1,6 @@
 
 {
-  "version": "1.4.3",
-  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v1.4.3/app-debug.apk",
-  "notes": "¡Versión 1.4.3! La sección de equipos ahora solo muestra los equipos que tienen integrantes en el grupo que estás visualizando actualmente."
+  "version": "1.4.4",
+  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v1.4.4/app-debug.apk",
+  "notes": "¡Versión 1.4.4! Corrección crítica: Se ha forzado el tema claro en todas las plataformas para solucionar errores de visualización en algunos equipos."
 }

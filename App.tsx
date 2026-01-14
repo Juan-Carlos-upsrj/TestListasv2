@@ -33,14 +33,10 @@ const App: React.FC = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   useEffect(() => {
-    // Simple Theme management (Dark/Light only)
-    const root = document.documentElement;
-    if (settings.theme === 'dark') {
-      root.classList.add('dark');
-    } else {
-      root.classList.remove('dark');
-    }
-  }, [settings.theme]);
+    // CRITICAL FIX: Explicitly remove 'dark' class to revert to light theme
+    // and ensure no residual classes from previous versions interfere.
+    document.documentElement.classList.remove('dark');
+  }, []); // Only once on mount
 
 
   useEffect(() => {
