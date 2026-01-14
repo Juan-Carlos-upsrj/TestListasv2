@@ -96,9 +96,9 @@ export const GroupForm: React.FC<{ group?: Group; existingGroups?: Group[]; onSa
         <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
                 <div className="col-span-2 sm:col-span-1"><label className="block text-xs font-medium mb-1">Nombre</label><input type="text" value={name} onChange={e => setName(e.target.value)} required className="w-full p-2 border border-border-color rounded-md bg-surface text-sm focus:ring-2 focus:ring-primary"/></div>
-                <div className="col-span-2 sm:col-span-1"><label className="block text-xs font-medium mb-1">Cuatrimestre</label><input type="text" placeholder="Ej. 5º" value={quarter} onChange={e => setQuarter(e.target.value)} className="w-full p-2 border border-border-color rounded-md bg-surface text-sm focus:ring-2 focus:ring-primary"/></div>
-                <div className="col-span-2 sm:col-span-1"><label className="block text-xs font-medium mb-1">Materia</label><input type="text" value={subject} onChange={e => setSubject(e.target.value)} required className="w-full p-2 border border-border-color rounded-md bg-surface text-sm focus:ring-2 focus:ring-primary"/></div>
-                <div className="col-span-2 sm:col-span-1"><label className="block text-xs font-medium mb-1">Abrev. Materia</label><input type="text" value={subjectShortName} onChange={e => setSubjectShortName(e.target.value)} maxLength={8} className="w-full p-2 border border-border-color rounded-md bg-surface text-sm focus:ring-2 focus:ring-primary font-bold"/></div>
+                <div className="col-span-2 sm:col-span-1"><label className="block text-xs font-medium mb-1">Cuatrimestre</label><input type="text" placeholder="Ej. 5º" value={quarter} onChange={e => setQuarter(e.target.value)} className="mt-1 w-full p-2 border border-border-color rounded-md bg-surface text-sm focus:ring-2 focus:ring-primary"/></div>
+                <div className="col-span-2 sm:col-span-1"><label className="block text-xs font-medium mb-1">Materia</label><input type="text" value={subject} onChange={e => setSubject(e.target.value)} required className="mt-1 w-full p-2 border border-border-color rounded-md bg-surface text-sm focus:ring-2 focus:ring-primary"/></div>
+                <div className="col-span-2 sm:col-span-1"><label className="block text-xs font-medium mb-1">Abrev. Materia</label><input type="text" value={subjectShortName} onChange={e => setSubjectShortName(e.target.value)} maxLength={8} className="mt-1 w-full p-2 border border-border-color rounded-md bg-surface text-sm focus:ring-2 focus:ring-primary font-bold"/></div>
             </div>
             <div><label className="block text-xs font-medium mb-2">Días</label><div className="flex flex-wrap gap-1.5">{DAYS_OF_WEEK.map(day => (<button type="button" key={day} onClick={() => handleDayToggle(day)} className={`px-2.5 py-1 rounded-full text-[11px] font-semibold transition-colors ${classDays.includes(day) ? 'bg-primary text-primary-text' : 'bg-surface-secondary hover:bg-border-color'}`}>{day}</button>))}</div></div>
             <div><label className="block text-xs font-medium mb-2">Color</label><div className="flex flex-wrap gap-2.5">{GROUP_COLORS.map(c => (<button type="button" key={c.name} onClick={() => setColor(c.name)} className={`w-7 h-7 rounded-full ${c.bg} transition-transform hover:scale-110 ${color === c.name ? 'ring-2 ring-offset-2 ring-primary ring-offset-surface' : ''}`}/>))}</div></div>
@@ -166,23 +166,26 @@ const TeamsManager: React.FC<{ group: Group }> = ({ group }) => {
     const [isTeamsModalOpen, setTeamsModalOpen] = useState(false);
     const [isMigrateModalOpen, setMigrateModalOpen] = useState(false);
 
-    // NUEVO: Estados para reemplazo de window.prompt y window.confirm
+    // --- REEMPLAZO DE PROMPTS Y CONFIRMS ---
     const [isNameModalOpen, setNameModalOpen] = useState(false);
     const [nameModalTitle, setNameModalTitle] = useState('');
     const [nameInputValue, setNameInputValue] = useState('');
     const [nameModalAction, setNameModalAction] = useState<'create' | 'rename'>('create');
     const [teamToDelete, setTeamToDelete] = useState<{name: string, isCoyote: boolean} | null>(null);
+    const [teamToConvert, setTeamToConvert] = useState<{name: string, isCoyote: boolean} | null>(null);
     
+    // --- GENERADOR ALEATORIO ---
+    const [isRandomModalOpen, setRandomModalOpen] = useState(false);
+    const [randomSize, setRandomSize] = useState(4);
+
     // Estado para equipos que se acaban de crear y no tienen alumnos aún
     const [tempTeams, setTempTeams] = useState<string[]>([]);
 
     useEffect(() => {
-        // Resetear equipos temporales cuando cambia el modo o el grupo para evitar fugas de estado
         setTempTeams([]);
         setSelectedTeam(null);
     }, [isCoyoteMode, group.id]);
 
-    // Notas del equipo actual
     const currentNote = useMemo(() => {
         if (!selectedTeam) return '';
         return isCoyoteMode ? (coyoteTeamNotes[selectedTeam] || '') : (teamNotes[selectedTeam] || '');
@@ -218,8 +221,6 @@ const TeamsManager: React.FC<{ group: Group }> = ({ group }) => {
 
     const existingTeams = useMemo(() => {
         const teamsMap = new Map<string, number>();
-        
-        // 1. Equipos con integrantes reales
         if (isCoyoteMode) {
             studentsList.forEach(item => {
                 const tc = item.student?.teamCoyote;
@@ -231,12 +232,7 @@ const TeamsManager: React.FC<{ group: Group }> = ({ group }) => {
                 if (t) teamsMap.set(t, (teamsMap.get(t) || 0) + 1);
             });
         }
-        
-        // 2. Integrar equipos temporales (vacíos)
-        tempTeams.forEach(t => {
-            if (!teamsMap.has(t)) teamsMap.set(t, 0);
-        });
-
+        tempTeams.forEach(t => { if (!teamsMap.has(t)) teamsMap.set(t, 0); });
         return Array.from(teamsMap.entries()).sort((a,b) => a[0].localeCompare(b[0]));
     }, [studentsList, isCoyoteMode, tempTeams]);
 
@@ -256,55 +252,34 @@ const TeamsManager: React.FC<{ group: Group }> = ({ group }) => {
 
     const handleAssign = (studentId: string, assign: boolean) => {
         if (!selectedTeam) {
-            dispatch({ type: 'ADD_TOAST', payload: { message: 'Primero selecciona un equipo a la izquierda.', type: 'info' } });
+            dispatch({ type: 'ADD_TOAST', payload: { message: 'Primero selecciona un equipo.', type: 'info' } });
             return;
         }
-        
         if (assign && isCoyoteMode) {
             const teamCount = existingTeams.find(t => t[0] === selectedTeam)?.[1] || 0;
             if (teamCount >= 4) {
-                dispatch({ type: 'ADD_TOAST', payload: { message: 'Los equipos Coyote tienen un límite de 4 integrantes.', type: 'error' } });
+                dispatch({ type: 'ADD_TOAST', payload: { message: 'Límite de 4 integrantes alcanzado.', type: 'error' } });
                 return;
             }
         }
-
-        dispatch({ 
-            type: 'ASSIGN_STUDENT_TEAM', 
-            payload: { 
-                studentId, 
-                teamName: assign ? selectedTeam : undefined, 
-                isCoyote: isCoyoteMode 
-            } 
-        });
-        
-        // Si el equipo deja de estar vacío, quitarlo de temporales
+        dispatch({ type: 'ASSIGN_STUDENT_TEAM', payload: { studentId, teamName: assign ? selectedTeam : undefined, isCoyote: isCoyoteMode } });
         if (assign) setTempTeams(prev => prev.filter(t => t !== selectedTeam));
     };
 
     const handleMigrateTeam = (baseTeamName: string, memberIds: string[]) => {
         if (!selectedTeam) return;
-        
         const currentCount = existingTeams.find(t => t[0] === selectedTeam)?.[1] || 0;
         const availableSlots = 4 - currentCount;
-        
         if (memberIds.length > availableSlots) {
-            dispatch({ type: 'ADD_TOAST', payload: { message: `Falta espacio: ${memberIds.length} integrantes y solo quedan ${availableSlots} lugares.`, type: 'error' } });
+            dispatch({ type: 'ADD_TOAST', payload: { message: `Falta espacio: ${memberIds.length} integrantes vs ${availableSlots} lugares.`, type: 'error' } });
             return;
         }
-
-        memberIds.forEach(sid => {
-            dispatch({ 
-                type: 'ASSIGN_STUDENT_TEAM', 
-                payload: { studentId: sid, teamName: selectedTeam, isCoyote: true } 
-            });
-        });
-
+        memberIds.forEach(sid => dispatch({ type: 'ASSIGN_STUDENT_TEAM', payload: { studentId: sid, teamName: selectedTeam, isCoyote: true } }));
         setTempTeams(prev => prev.filter(t => t !== selectedTeam));
-        dispatch({ type: 'ADD_TOAST', payload: { message: `Equipo "${baseTeamName}" migrado con éxito a "${selectedTeam}".`, type: 'success' } });
+        dispatch({ type: 'ADD_TOAST', payload: { message: `Equipo migrado con éxito.`, type: 'success' } });
         setMigrateModalOpen(false);
     };
 
-    // REEMPLAZO DE PROMPTS
     const openCreateTeamModal = () => {
         setNameModalTitle(`Nuevo Equipo ${isCoyoteMode ? 'Coyote' : 'Base'}`);
         setNameInputValue('');
@@ -312,41 +287,23 @@ const TeamsManager: React.FC<{ group: Group }> = ({ group }) => {
         setNameModalOpen(true);
     };
 
-    const openRenameTeamModal = () => {
-        if (!selectedTeam) return;
-        setNameModalTitle(`Renombrar "${selectedTeam}"`);
-        setNameInputValue(selectedTeam);
-        setNameModalAction('rename');
-        setNameModalOpen(true);
-    };
-
     const handleNameModalSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         const trimmed = nameInputValue.trim();
         if (!trimmed) return;
-
         if (nameModalAction === 'create') {
             if (existingTeams.some(t => t[0].toLowerCase() === trimmed.toLowerCase())) {
-                dispatch({ type: 'ADD_TOAST', payload: { message: 'Este equipo ya existe.', type: 'info' } });
                 setSelectedTeam(trimmed);
             } else {
                 setTempTeams(prev => [...prev, trimmed]);
                 setSelectedTeam(trimmed);
-                dispatch({ type: 'ADD_TOAST', payload: { message: `Equipo "${trimmed}" listo para asignar alumnos.`, type: 'success' } });
             }
         } else {
-            if (trimmed === selectedTeam) {
-                setNameModalOpen(false);
-                return;
+            if (trimmed !== selectedTeam) {
+                dispatch({ type: 'RENAME_TEAM', payload: { oldName: selectedTeam!, newName: trimmed, isCoyote: isCoyoteMode } });
+                setTempTeams(prev => prev.map(t => t === selectedTeam ? trimmed : t));
+                setSelectedTeam(trimmed);
             }
-            if (existingTeams.some(t => t[0].toLowerCase() === trimmed.toLowerCase() && t[0] !== selectedTeam)) {
-                dispatch({ type: 'ADD_TOAST', payload: { message: 'El nombre ya está en uso por otro equipo.', type: 'error' } });
-                return;
-            }
-            dispatch({ type: 'RENAME_TEAM', payload: { oldName: selectedTeam!, newName: trimmed, isCoyote: isCoyoteMode } });
-            setTempTeams(prev => prev.map(t => t === selectedTeam ? trimmed : t));
-            setSelectedTeam(trimmed);
-            dispatch({ type: 'ADD_TOAST', payload: { message: 'Equipo renombrado correctamente.', type: 'success' } });
         }
         setNameModalOpen(false);
     };
@@ -360,201 +317,104 @@ const TeamsManager: React.FC<{ group: Group }> = ({ group }) => {
         }
     };
 
+    const executeConvertTeam = () => {
+        if (teamToConvert) {
+            dispatch({ type: 'CONVERT_TEAM_TYPE', payload: { teamName: teamToConvert.name, fromCoyote: teamToConvert.isCoyote, groupId: group.id } });
+            setCoyoteMode(!teamToConvert.isCoyote);
+            setSelectedTeam(teamToConvert.name);
+            dispatch({ type: 'ADD_TOAST', payload: { message: `Equipo convertido a ${!teamToConvert.isCoyote ? 'Coyote' : 'Base'}.`, type: 'success' } });
+            setTeamToConvert(null);
+        }
+    };
+
+    const executeRandomTeams = () => {
+        dispatch({ type: 'GENERATE_RANDOM_TEAMS', payload: { groupId: group.id, maxTeamSize: randomSize } });
+        setRandomModalOpen(false);
+        dispatch({ type: 'ADD_TOAST', payload: { message: 'Equipos generados aleatoriamente.', type: 'success' } });
+    };
+
     return (
         <>
             <Button size="sm" onClick={() => setTeamsModalOpen(true)} className="!p-1.5" title="Gestión de Equipos">
                 <Icon name="users" className="w-5 h-5"/>
             </Button>
 
-            <Modal 
-                isOpen={isTeamsModalOpen} 
-                onClose={() => setTeamsModalOpen(false)} 
-                title={`Gestor de Equipos - ${group.name}`}
-                size="6xl"
-            >
+            <Modal isOpen={isTeamsModalOpen} onClose={() => setTeamsModalOpen(false)} title={`Gestor de Equipos - ${group.name}`} size="6xl">
                 <div className="flex flex-col h-[78vh]">
-                    {/* Selector de Modo */}
                     <div className="flex items-center justify-center mb-6 shrink-0">
                         <div className="bg-surface-secondary p-1.5 rounded-2xl flex border border-border-color shadow-inner scale-90 sm:scale-100">
-                            <button 
-                                onClick={() => { setCoyoteMode(false); }}
-                                className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${!isCoyoteMode ? 'bg-white shadow-md text-indigo-700' : 'text-text-secondary opacity-60'}`}
-                            >
-                                <Icon name="users" className="w-4 h-4"/> Equipos Base
-                            </button>
-                            <button 
-                                onClick={() => { setCoyoteMode(true); }}
-                                className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${isCoyoteMode ? 'bg-orange-100 shadow-md text-orange-800' : 'text-text-secondary opacity-60'}`}
-                            >
-                                <Icon name="dog" className="w-4 h-4"/> Equipos Coyote
-                            </button>
+                            <button onClick={() => setCoyoteMode(false)} className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${!isCoyoteMode ? 'bg-white shadow-md text-indigo-700' : 'text-text-secondary opacity-60'}`}><Icon name="users" className="w-4 h-4"/> Equipos Base</button>
+                            <button onClick={() => setCoyoteMode(true)} className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${isCoyoteMode ? 'bg-orange-100 shadow-md text-orange-800' : 'text-text-secondary opacity-60'}`}><Icon name="dog" className="w-4 h-4"/> Equipos Coyote</button>
                         </div>
                     </div>
 
                     <div className="flex-1 grid grid-cols-1 md:grid-cols-12 gap-6 overflow-hidden">
-                        {/* PANEL IZQUIERDO: EQUIPOS */}
                         <div className="md:col-span-4 lg:col-span-3 flex flex-col bg-surface-secondary/50 rounded-2xl border border-border-color p-4 overflow-hidden shadow-sm">
                             <div className="flex items-center justify-between mb-4">
                                 <h3 className="font-black text-[10px] uppercase tracking-widest text-text-secondary">Equipos Activos</h3>
-                                <button 
-                                    onClick={openCreateTeamModal}
-                                    className="p-1.5 bg-primary text-white rounded-lg hover:bg-primary-hover shadow-md active:scale-95 transition-all"
-                                    title="Crear Nuevo Equipo"
-                                >
-                                    <Icon name="plus" className="w-4 h-4"/>
-                                </button>
+                                <div className="flex gap-1">
+                                    {!isCoyoteMode && (
+                                        <button onClick={() => setRandomModalOpen(true)} className="p-1.5 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600 shadow-md active:scale-95 transition-all" title="Generar Aleatorios"><Icon name="camera" className="w-4 h-4" /></button>
+                                    )}
+                                    <button onClick={openCreateTeamModal} className="p-1.5 bg-primary text-white rounded-lg hover:bg-primary-hover shadow-md active:scale-95 transition-all" title="Crear Nuevo Equipo"><Icon name="plus" className="w-4 h-4"/></button>
+                                </div>
                             </div>
-                            
                             <div className="flex-1 overflow-y-auto space-y-2 custom-scrollbar pr-1">
-                                {existingTeams.length > 0 ? (
-                                    existingTeams.map(([name, count]) => (
-                                        <button
-                                            key={name}
-                                            onClick={() => setSelectedTeam(name)}
-                                            className={`w-full p-4 rounded-xl border-2 text-left transition-all flex items-center justify-between group ${
-                                                selectedTeam === name 
-                                                ? (isCoyoteMode ? 'bg-orange-50 border-orange-500 shadow-md' : 'bg-indigo-50 border-indigo-500 shadow-md')
-                                                : 'bg-surface border-transparent hover:border-border-color shadow-sm'
-                                            }`}
-                                        >
-                                            <div className="min-w-0 flex-1">
-                                                <p className={`font-bold text-sm truncate ${selectedTeam === name ? (isCoyoteMode ? 'text-orange-900' : 'text-indigo-900') : ''}`}>{name}</p>
-                                                <div className="flex items-center gap-1.5 mt-0.5 opacity-60">
-                                                    <Icon name="users" className="w-3 h-3"/>
-                                                    <span className="text-[10px] font-bold uppercase">{count} {isCoyoteMode ? '/ 4' : 'Integrantes'}</span>
-                                                </div>
-                                            </div>
-                                            <button 
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    setTeamToDelete({name, isCoyote: isCoyoteMode});
-                                                }}
-                                                className="p-1.5 text-accent-red hover:bg-rose-100 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
-                                            >
-                                                <Icon name="trash-2" className="w-3.5 h-3.5"/>
-                                            </button>
-                                        </button>
-                                    ))
-                                ) : (
-                                    <div className="text-center py-10 opacity-30">
-                                        <p className="text-[10px] font-black uppercase tracking-widest">Sin equipos en esta vista</p>
-                                        <p className="text-[9px] mt-2 italic">Crea uno con el botón "+" de arriba para comenzar.</p>
-                                    </div>
-                                )}
+                                {existingTeams.length > 0 ? existingTeams.map(([name, count]) => (
+                                    <button key={name} onClick={() => setSelectedTeam(name)} className={`w-full p-4 rounded-xl border-2 text-left transition-all flex items-center justify-between group ${selectedTeam === name ? (isCoyoteMode ? 'bg-orange-50 border-orange-500 shadow-md' : 'bg-indigo-50 border-indigo-500 shadow-md') : 'bg-surface border-transparent hover:border-border-color shadow-sm'}`}>
+                                        <div className="min-w-0 flex-1">
+                                            <p className={`font-bold text-sm truncate ${selectedTeam === name ? (isCoyoteMode ? 'text-orange-900' : 'text-indigo-900') : ''}`}>{name}</p>
+                                            <div className="flex items-center gap-1.5 mt-0.5 opacity-60"><Icon name="users" className="w-3 h-3"/><span className="text-[10px] font-bold uppercase">{count} {isCoyoteMode ? '/ 4' : 'Alumnos'}</span></div>
+                                        </div>
+                                        <button onClick={(e) => { e.stopPropagation(); setTeamToDelete({name, isCoyote: isCoyoteMode}); }} className="p-1.5 text-accent-red hover:bg-rose-100 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"><Icon name="trash-2" className="w-3.5 h-3.5"/></button>
+                                    </button>
+                                )) : <div className="text-center py-10 opacity-30"><p className="text-[10px] font-black uppercase tracking-widest">Sin equipos</p></div>}
                             </div>
                         </div>
 
-                        {/* PANEL DERECHO: DETALLE Y ALUMNOS */}
                         <div className="md:col-span-8 lg:col-span-9 flex flex-col overflow-hidden">
                             {!selectedTeam ? (
-                                <div className="h-full flex flex-col items-center justify-center bg-slate-50/50 rounded-2xl border-2 border-dashed border-border-color opacity-50 p-8 text-center">
-                                    <Icon name="arrow-left" className="w-12 h-12 mb-4 text-slate-300 animate-pulse"/>
-                                    <h4 className="text-xl font-black text-slate-400">Selecciona un equipo</h4>
-                                    <p className="text-sm text-slate-400 mt-2">Para asignar alumnos o escribir notas, debes elegir un equipo del panel izquierdo o crear uno nuevo.</p>
-                                </div>
+                                <div className="h-full flex flex-col items-center justify-center bg-slate-50/50 rounded-2xl border-2 border-dashed border-border-color opacity-50 p-8 text-center"><Icon name="arrow-left" className="w-12 h-12 mb-4 text-slate-300 animate-pulse"/><h4 className="text-xl font-black text-slate-400">Selecciona un equipo</h4><p className="text-sm text-slate-400 mt-2">Para asignar alumnos o escribir notas.</p></div>
                             ) : (
                                 <div className="flex flex-col h-full overflow-hidden animate-in fade-in slide-in-from-bottom-2">
-                                    {/* Cabecera del Equipo Seleccionado */}
                                     <div className={`p-4 rounded-2xl border-2 mb-4 flex flex-col sm:flex-row items-center justify-between gap-4 ${isCoyoteMode ? 'bg-orange-50/50 border-orange-200' : 'bg-indigo-50/50 border-indigo-200'}`}>
                                         <div className="flex items-center gap-3">
-                                            <div className={`p-2 rounded-xl text-white ${isCoyoteMode ? 'bg-orange-600' : 'bg-indigo-600'}`}>
-                                                <Icon name={isCoyoteMode ? "dog" : "users"} className="w-5 h-5"/>
-                                            </div>
-                                            <div>
-                                                <h4 className="text-lg font-black">{selectedTeam}</h4>
-                                                <p className="text-[10px] font-bold uppercase opacity-60">{isCoyoteMode ? 'Equipo Inter-Grupal' : 'Equipo Local'}</p>
-                                            </div>
+                                            <div className={`p-2 rounded-xl text-white ${isCoyoteMode ? 'bg-orange-600' : 'bg-indigo-600'}`}><Icon name={isCoyoteMode ? "dog" : "users"} className="w-5 h-5"/></div>
+                                            <div><h4 className="text-lg font-black">{selectedTeam}</h4><p className="text-[10px] font-bold uppercase opacity-60">{isCoyoteMode ? 'Equipo Inter-Grupal' : 'Equipo Local'}</p></div>
                                         </div>
                                         <div className="flex gap-2 w-full sm:w-auto">
-                                            {isCoyoteMode && (
-                                                <Button 
-                                                    size="sm" 
-                                                    onClick={() => setMigrateModalOpen(true)} 
-                                                    className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-md flex-1 sm:flex-none"
-                                                >
-                                                    <Icon name="copy" className="w-4 h-4"/> Importar de Equipo Base
-                                                </Button>
-                                            )}
-                                            <button 
-                                                onClick={openRenameTeamModal}
-                                                className="p-2 bg-white border border-border-color rounded-xl hover:bg-slate-50 transition-colors shadow-sm"
-                                                title="Renombrar"
-                                            >
-                                                <Icon name="edit-3" className="w-4 h-4"/>
-                                            </button>
+                                            {isCoyoteMode && (<Button size="sm" onClick={() => setMigrateModalOpen(true)} className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-md flex-1 sm:flex-none"><Icon name="copy" className="w-4 h-4"/> Importar Base</Button>)}
+                                            <button onClick={() => setTeamToConvert({name: selectedTeam, isCoyote: isCoyoteMode})} className="p-2 bg-white border border-border-color rounded-xl hover:bg-slate-50 transition-colors shadow-sm" title={`Convertir a ${isCoyoteMode ? 'Equipo Local (Base)' : 'Equipo Inter-Grupal (Coyote)'}`}><Icon name="file-spreadsheet" className="w-4 h-4 text-primary"/></button>
+                                            <button onClick={() => { setNameModalTitle(`Renombrar "${selectedTeam}"`); setNameInputValue(selectedTeam); setNameModalAction('rename'); setNameModalOpen(true); }} className="p-2 bg-white border border-border-color rounded-xl hover:bg-slate-50 transition-colors shadow-sm" title="Renombrar"><Icon name="edit-3" className="w-4 h-4"/></button>
                                         </div>
                                     </div>
 
-                                    {/* Notas del Equipo */}
                                     <div className="mb-4">
-                                        <label className="text-[10px] font-black uppercase tracking-widest text-text-secondary mb-1 block">Notas y Observaciones del Equipo</label>
-                                        <textarea 
-                                            value={currentNote}
-                                            onChange={(e) => handleNoteChange(e.target.value)}
-                                            placeholder="Escribe aquí notas sobre el desempeño, tareas pendientes o acuerdos de este equipo..."
-                                            className="w-full p-3 text-sm border-2 border-border-color rounded-xl bg-surface focus:ring-2 focus:ring-primary focus:border-primary min-h-[80px] shadow-inner transition-all"
-                                        />
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-text-secondary mb-1 block">Notas y Observaciones</label>
+                                        <textarea value={currentNote} onChange={(e) => handleNoteChange(e.target.value)} placeholder="Notas sobre el desempeño del equipo..." className="w-full p-3 text-sm border-2 border-border-color rounded-xl bg-surface focus:ring-2 focus:ring-primary focus:border-primary min-h-[80px] shadow-inner transition-all"/>
                                     </div>
 
-                                    {/* Buscador y Filtros */}
                                     <div className="mb-4">
                                         <div className="relative">
-                                            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400">
-                                                <Icon name="search" className="h-4 w-4"/>
-                                            </div>
-                                            <input 
-                                                type="text" 
-                                                value={searchTerm}
-                                                onChange={e => setSearchTerm(e.target.value)}
-                                                placeholder={`Buscar alumnos para unir al equipo...`}
-                                                className="w-full pl-10 pr-4 py-2.5 border-2 border-border-color rounded-xl bg-surface focus:ring-2 focus:ring-primary text-sm shadow-sm transition-all"
-                                            />
+                                            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400"><Icon name="search" className="h-4 w-4"/></div>
+                                            <input type="text" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} placeholder={`Buscar alumnos...`} className="w-full pl-10 pr-4 py-2.5 border-2 border-border-color rounded-xl bg-surface focus:ring-2 focus:ring-primary text-sm shadow-sm transition-all"/>
                                         </div>
                                     </div>
 
-                                    {/* Tabla de Alumnos */}
                                     <div className="flex-1 overflow-y-auto custom-scrollbar border-2 border-border-color rounded-2xl bg-surface shadow-inner">
                                         <table className="w-full text-left text-sm border-separate border-spacing-0">
-                                            <thead className="sticky top-0 bg-slate-50/95 backdrop-blur-sm z-10">
-                                                <tr className="text-text-secondary uppercase tracking-widest text-[9px] font-black">
-                                                    <th className="p-4 w-16 border-b border-border-color text-center">Incl.</th>
-                                                    <th className="p-4 border-b border-border-color">Nombre</th>
-                                                    <th className="p-4 border-b border-border-color">Grupo</th>
-                                                    <th className="p-4 border-b border-border-color text-center">Estado</th>
-                                                </tr>
-                                            </thead>
+                                            <thead className="sticky top-0 bg-slate-50/95 backdrop-blur-sm z-10"><tr className="text-text-secondary uppercase tracking-widest text-[9px] font-black"><th className="p-4 w-16 border-b border-border-color text-center">Incl.</th><th className="p-4 border-b border-border-color">Nombre</th><th className="p-4 border-b border-border-color">Grupo</th><th className="p-4 border-b border-border-color text-center">Estado</th></tr></thead>
                                             <tbody className="divide-y divide-border-color/50">
                                                 {filteredStudents.map(({student, gName}) => {
                                                     const isInThisTeam = (isCoyoteMode ? student?.teamCoyote : student?.team) === selectedTeam;
                                                     const otherTeamName = (isCoyoteMode ? student?.teamCoyote : student?.team);
                                                     const hasOtherTeam = otherTeamName && !isInThisTeam;
-
                                                     return (
                                                         <tr key={`${student?.id}-${gName}`} className={`transition-all ${isInThisTeam ? 'bg-indigo-50/30' : 'hover:bg-slate-50'}`}>
-                                                            <td className="p-4 text-center">
-                                                                <input 
-                                                                    type="checkbox"
-                                                                    checked={isInThisTeam}
-                                                                    onChange={(e) => handleAssign(student.id, e.target.checked)}
-                                                                    className={`h-5 w-5 rounded border-2 border-slate-300 focus:ring-primary cursor-pointer transition-all ${isCoyoteMode ? 'text-orange-600' : 'text-indigo-600'}`}
-                                                                />
-                                                            </td>
-                                                            <td className="p-4">
-                                                                <p className={`font-bold ${isInThisTeam ? 'text-primary' : 'text-text-primary'}`}>{student?.name || 'Alumno sin nombre'}</p>
-                                                                <p className="text-[9px] font-bold opacity-40 uppercase">{student?.matricula || '-'}</p>
-                                                            </td>
-                                                            <td className="p-4">
-                                                                <span className={`px-2 py-1 rounded font-black text-[9px] tracking-tighter ${gName === group.name ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-200 text-slate-600'}`}>
-                                                                    {gName}
-                                                                </span>
-                                                            </td>
-                                                            <td className="p-4 text-center">
-                                                                {isInThisTeam ? (
-                                                                    <span className="text-[9px] font-black uppercase text-accent-green-dark bg-accent-green-light px-2 py-0.5 rounded border border-accent-green-dark/20">Miembro</span>
-                                                                ) : hasOtherTeam ? (
-                                                                    <span className="text-[9px] font-black uppercase text-slate-400 bg-slate-100 px-2 py-0.5 rounded border border-slate-200" title={`En: ${otherTeamName}`}>{otherTeamName}</span>
-                                                                ) : <span className="text-[9px] text-slate-300 italic">Libre</span>}
-                                                            </td>
+                                                            <td className="p-4 text-center"><input type="checkbox" checked={isInThisTeam} onChange={(e) => handleAssign(student.id, e.target.checked)} className={`h-5 w-5 rounded border-2 border-slate-300 focus:ring-primary cursor-pointer transition-all ${isCoyoteMode ? 'text-orange-600' : 'text-indigo-600'}`}/></td>
+                                                            <td className="p-4"><p className={`font-bold ${isInThisTeam ? 'text-primary' : 'text-text-primary'}`}>{student?.name}</p><p className="text-[9px] font-bold opacity-40 uppercase">{student?.matricula || '-'}</p></td>
+                                                            <td className="p-4"><span className={`px-2 py-1 rounded font-black text-[9px] tracking-tighter ${gName === group.name ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-200 text-slate-600'}`}>{gName}</span></td>
+                                                            <td className="p-4 text-center">{isInThisTeam ? <span className="text-[9px] font-black uppercase text-accent-green-dark bg-accent-green-light px-2 py-0.5 rounded border border-accent-green-dark/20">Miembro</span> : hasOtherTeam ? <span className="text-[9px] font-black uppercase text-slate-400 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">{otherTeamName}</span> : <span className="text-[9px] text-slate-300 italic">Libre</span>}</td>
                                                         </tr>
                                                     );
                                                 })}
@@ -567,80 +427,47 @@ const TeamsManager: React.FC<{ group: Group }> = ({ group }) => {
                     </div>
                 </div>
 
-                {/* MODAL DE MIGRACIÓN */}
-                <Modal 
-                    isOpen={isMigrateModalOpen} 
-                    onClose={() => setMigrateModalOpen(false)} 
-                    title={`Convertir equipo base a "${selectedTeam}"`}
-                    size="md"
-                >
+                {/* MODALES AUXILIARES */}
+                <Modal isOpen={isMigrateModalOpen} onClose={() => setMigrateModalOpen(false)} title={`Importar equipo base a Coyote`} size="md">
                     <div className="space-y-4">
-                        <div className="bg-indigo-50 p-4 rounded-xl border border-indigo-100 flex items-start gap-3">
-                            <Icon name="info" className="w-5 h-5 text-indigo-600 shrink-0 mt-0.5"/>
-                            <p className="text-xs text-indigo-800 font-medium">Esto moverá a todos los alumnos de un equipo base (del grupo local) al equipo Coyote seleccionado actualmente.</p>
-                        </div>
+                        <p className="text-xs text-indigo-800 font-medium bg-indigo-50 p-3 rounded-xl border border-indigo-100">Esto moverá a todos los alumnos de un equipo local al equipo Coyote seleccionado.</p>
                         <div className="max-h-[50vh] overflow-y-auto space-y-2 pr-2 custom-scrollbar">
-                            {allBaseTeamsForQuarter.length > 0 ? allBaseTeamsForQuarter.map(([tName, members]) => (
-                                <button
-                                    key={tName}
-                                    onClick={() => handleMigrateTeam(tName, members)}
-                                    className="w-full p-4 bg-surface border-2 border-border-color rounded-xl flex items-center justify-between hover:bg-indigo-50 hover:border-indigo-300 transition-all group"
-                                >
-                                    <div className="text-left">
-                                        <p className="font-extrabold text-sm text-text-primary group-hover:text-indigo-900">{tName}</p>
-                                        <p className="text-[10px] font-bold text-text-secondary opacity-60 uppercase">{members.length} Alumnos</p>
-                                    </div>
-                                    <div className="bg-indigo-100 p-2 rounded-lg text-indigo-600 opacity-0 group-hover:opacity-100 transition-all scale-75 group-hover:scale-100">
-                                        <Icon name="arrow-right" className="w-4 h-4" />
-                                    </div>
+                            {allBaseTeamsForQuarter.map(([tName, members]) => (
+                                <button key={tName} onClick={() => handleMigrateTeam(tName, members)} className="w-full p-4 bg-surface border-2 border-border-color rounded-xl flex items-center justify-between hover:bg-indigo-50 hover:border-indigo-300 transition-all group">
+                                    <div className="text-left"><p className="font-extrabold text-sm group-hover:text-indigo-900">{tName}</p><p className="text-[10px] font-bold opacity-60 uppercase">{members.length} Alumnos</p></div>
+                                    <Icon name="arrow-right" className="w-4 h-4 text-indigo-600 opacity-0 group-hover:opacity-100 transition-all" />
                                 </button>
-                            )) : (
-                                <div className="text-center py-10 opacity-40">
-                                    <p className="text-xs font-bold uppercase">No hay equipos base disponibles en este grupo.</p>
-                                </div>
-                            )}
+                            ))}
                         </div>
                     </div>
                 </Modal>
 
-                {/* MODAL PARA NOMBRE DE EQUIPO (Reemplaza window.prompt) */}
-                <Modal 
-                    isOpen={isNameModalOpen} 
-                    onClose={() => setNameModalOpen(false)} 
-                    title={nameModalTitle}
-                    size="sm"
-                >
+                <Modal isOpen={isNameModalOpen} onClose={() => setNameModalOpen(false)} title={nameModalTitle} size="sm">
                     <form onSubmit={handleNameModalSubmit} className="space-y-4">
-                        <div>
-                            <label className="block text-xs font-bold uppercase text-text-secondary mb-1">Nombre del Equipo</label>
-                            <input 
-                                type="text" 
-                                autoFocus
-                                value={nameInputValue}
-                                onChange={e => setNameInputValue(e.target.value)}
-                                className="w-full p-2 border-2 border-border-color rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none"
-                                placeholder="Ej: Equipo Alfa"
-                            />
-                        </div>
-                        <div className="flex justify-end gap-2">
-                            <Button variant="secondary" type="button" onClick={() => setNameModalOpen(false)}>Cancelar</Button>
-                            <Button type="submit">Aceptar</Button>
-                        </div>
+                        <input type="text" autoFocus value={nameInputValue} onChange={e => setNameInputValue(e.target.value)} className="w-full p-2 border-2 border-border-color rounded-xl focus:ring-2 focus:ring-primary outline-none" placeholder="Nombre del Equipo"/>
+                        <div className="flex justify-end gap-2"><Button variant="secondary" type="button" onClick={() => setNameModalOpen(false)}>Cancelar</Button><Button type="submit">Aceptar</Button></div>
                     </form>
                 </Modal>
 
-                {/* MODAL PARA ELIMINAR EQUIPO (Reemplaza window.confirm) */}
-                <ConfirmationModal
-                    isOpen={!!teamToDelete}
-                    onClose={() => setTeamToDelete(null)}
-                    onConfirm={executeDeleteTeam}
-                    title="Disolver Equipo"
-                    variant="danger"
-                    confirmText="Disolver"
-                >
-                    ¿Estás seguro de que quieres disolver el equipo <strong>"{teamToDelete?.name}"</strong>? 
-                    <p className="mt-2 text-xs opacity-70">Los alumnos quedarán libres pero no se borrarán sus datos personales.</p>
+                <ConfirmationModal isOpen={!!teamToDelete} onClose={() => setTeamToDelete(null)} onConfirm={executeDeleteTeam} title="Disolver Equipo" variant="danger" confirmText="Disolver">
+                    ¿Estás seguro de disolver el equipo <strong>"{teamToDelete?.name}"</strong>? Los alumnos quedarán libres.
                 </ConfirmationModal>
+
+                <ConfirmationModal isOpen={!!teamToConvert} onClose={() => setTeamToConvert(null)} onConfirm={executeConvertTeam} title="Cambiar Tipo de Equipo" confirmText="Convertir">
+                    ¿Deseas convertir <strong>"{teamToConvert?.name}"</strong> a un equipo <strong>{!teamToConvert?.isCoyote ? 'Coyote (Inter-Grupal)' : 'Base (Local)'}</strong>? 
+                    <p className="mt-2 text-xs opacity-70">Las notas y alumnos se conservarán siempre que pertenezcan al grupo actual.</p>
+                </ConfirmationModal>
+
+                <Modal isOpen={isRandomModalOpen} onClose={() => setRandomModalOpen(false)} title="Generador Aleatorio de Equipos" size="sm">
+                    <div className="space-y-4">
+                        <p className="text-xs text-text-secondary">Se crearán equipos automáticamente con los alumnos que aún no tienen asignación.</p>
+                        <div>
+                            <label className="block text-xs font-black uppercase text-text-secondary mb-1">Integrantes por equipo</label>
+                            <input type="number" min="2" max="10" value={randomSize} onChange={e => setRandomSize(parseInt(e.target.value))} className="w-full p-2 border-2 border-border-color rounded-xl"/>
+                        </div>
+                        <div className="flex justify-end gap-2"><Button variant="secondary" onClick={() => setRandomModalOpen(false)}>Cancelar</Button><Button onClick={executeRandomTeams}>Generar</Button></div>
+                    </div>
+                </Modal>
             </Modal>
         </>
     );

@@ -189,8 +189,10 @@ export type AppAction =
   | { type: 'RESTORE_ARCHIVE'; payload: string } 
   | { type: 'DELETE_ARCHIVE'; payload: string } 
   | { type: 'TRANSITION_SEMESTER'; payload: { newGroups: Group[]; newSettings: Partial<Settings> } }
-  | { type: 'RENAME_TEAM'; payload: { oldName: string, newName: string, isCoyote: boolean } } // ACTUALIZADO
-  | { type: 'DELETE_TEAM'; payload: { teamName: string, isCoyote: boolean } } // ACTUALIZADO
-  | { type: 'UPDATE_TEAM_NOTE'; payload: { teamName: string, note: string, isCoyote: boolean } } // ACTUALIZADO
-  | { type: 'ASSIGN_STUDENT_TEAM'; payload: { studentId: string, teamName: string | undefined, isCoyote: boolean } } // ACTUALIZADO
-  | { type: 'SET_TEACHER_SCHEDULE'; payload: TeacherClass[] }; 
+  | { type: 'RENAME_TEAM'; payload: { oldName: string, newName: string, isCoyote: boolean } } 
+  | { type: 'DELETE_TEAM'; payload: { teamName: string, isCoyote: boolean } } 
+  | { type: 'UPDATE_TEAM_NOTE'; payload: { teamName: string, note: string, isCoyote: boolean } } 
+  | { type: 'ASSIGN_STUDENT_TEAM'; payload: { studentId: string, teamName: string | undefined, isCoyote: boolean } }
+  | { type: 'CONVERT_TEAM_TYPE'; payload: { teamName: string, fromCoyote: boolean, groupId: string } } // NUEVO
+  | { type: 'GENERATE_RANDOM_TEAMS'; payload: { groupId: string, maxTeamSize: number } } // NUEVO
+  | { type: 'SET_TEACHER_SCHEDULE'; payload: TeacherClass[] };

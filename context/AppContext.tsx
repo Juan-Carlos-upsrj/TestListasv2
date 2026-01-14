@@ -132,7 +132,6 @@ const appReducer = (state: AppState, action: AppAction): AppState => {
 
         // 3. INTENTO: Dentro de cada objeto de Grupo (v1.6.0 y anteriores)
         loadedGroups.forEach((g: any) => {
-            // Nota: iteramos sobre todas las propiedades del grupo para encontrar objetos que parezcan mapas de notas
             Object.entries(g).forEach(([key, val]) => {
                 if (val && typeof val === 'object' && !Array.isArray(val)) {
                     const isNoteKey = key.toLowerCase().includes('note') || key.toLowerCase().includes('nota');
@@ -456,6 +455,84 @@ const appReducer = (state: AppState, action: AppAction): AppState => {
                     return s;
                 })
             }))
+        };
+    }
+    case 'CONVERT_TEAM_TYPE': {
+        const { teamName, fromCoyote, groupId } = action.payload;
+        const sourceNotes = fromCoyote ? state.coyoteTeamNotes : state.teamNotes;
+        const targetNotes = fromCoyote ? state.teamNotes : state.coyoteTeamNotes;
+        const note = (sourceNotes || {})[teamName] || '';
+        
+        // 1. Mover la nota
+        const newSourceNotes = { ...(sourceNotes || {}) };
+        delete newSourceNotes[teamName];
+        const newTargetNotes = { ...(targetNotes || {}), [teamName]: note };
+
+        // 2. Mover los alumnos
+        return {
+            ...state,
+            teamNotes: fromCoyote ? newTargetNotes : newSourceNotes,
+            coyoteTeamNotes: fromCoyote ? newSourceNotes : newTargetNotes,
+            groups: state.groups.map(g => {
+                // Si movemos DE Coyote A Base, solo aplica al grupo actual
+                if (fromCoyote && g.id !== groupId) {
+                    return {
+                        ...g,
+                        students: g.students.map(s => s.teamCoyote === teamName ? { ...s, teamCoyote: undefined } : s)
+                    };
+                }
+                
+                // Actualizar asignaciones
+                return {
+                    ...g,
+                    students: g.students.map(s => {
+                        if (fromCoyote && s.teamCoyote === teamName) {
+                            return { ...s, teamCoyote: undefined, team: teamName };
+                        }
+                        if (!fromCoyote && s.team === teamName) {
+                            return { ...s, team: undefined, teamCoyote: teamName };
+                        }
+                        return s;
+                    })
+                };
+            })
+        };
+    }
+    case 'GENERATE_RANDOM_TEAMS': {
+        const { groupId, maxTeamSize } = action.payload;
+        const currentGroup = state.groups.find(g => g.id === groupId);
+        if (!currentGroup) return state;
+
+        // Filtrar alumnos sin equipo base
+        const studentsWithoutTeam = currentGroup.students.filter(s => !s.team);
+        if (studentsWithoutTeam.length === 0) return state;
+
+        // Shuffle
+        const shuffled = [...studentsWithoutTeam].sort(() => Math.random() - 0.5);
+        
+        const updatedStudents = [...currentGroup.students];
+        let teamCounter = 1;
+
+        // Encontrar el nombre de equipo más alto existente para no chocar
+        const baseTeams = new Set<string>();
+        currentGroup.students.forEach(s => { if(s.team) baseTeams.add(s.team); });
+        
+        while (baseTeams.has(`Equipo ${teamCounter}`)) {
+            teamCounter++;
+        }
+
+        for (let i = 0; i < shuffled.length; i += maxTeamSize) {
+            const teamName = `Equipo ${teamCounter++}`;
+            const chunk = shuffled.slice(i, i + maxTeamSize);
+            chunk.forEach(s => {
+                const idx = updatedStudents.findIndex(st => st.id === s.id);
+                if (idx !== -1) updatedStudents[idx] = { ...updatedStudents[idx], team: teamName };
+            });
+        }
+
+        return {
+            ...state,
+            groups: state.groups.map(g => g.id === groupId ? { ...g, students: updatedStudents } : g)
         };
     }
     case 'SET_TEACHER_SCHEDULE':
