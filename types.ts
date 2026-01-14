@@ -79,6 +79,8 @@ export interface Settings {
   apiUrl: string;
   apiKey: string;
   mobileUpdateUrl: string; // URL for version.json
+  enableReminders: boolean; // NUEVO
+  reminderTime: number;    // NUEVO (minutos)
 }
 
 export type ActiveView = 'dashboard' | 'groups' | 'attendance' | 'grades' | 'reports' | 'calendar';
@@ -135,6 +137,30 @@ export interface AppState {
   teacherSchedule?: TeacherClass[]; // NUEVO: Para seguimiento de alertas
 }
 
+// Added missing types to resolve import errors across the application
+export interface MobileUpdateInfo {
+  version: string;
+  url: string;
+  notes: string;
+}
+
+export interface MotivationalQuote {
+  text: string;
+  author: string;
+  icon?: string;
+  image?: string;
+}
+
+export interface Professor {
+  name: string;
+  birthdate: string; // MM-DD
+}
+
+export interface GroupReportSummary {
+  monthlyAttendance: { [monthYear: string]: number };
+  evaluationAverages: { [evaluationId: string]: number };
+}
+
 export type AppAction =
   | { type: 'SET_INITIAL_STATE'; payload: Partial<AppState> }
   | { type: 'SET_VIEW'; payload: ActiveView }
@@ -166,61 +192,3 @@ export type AppAction =
   | { type: 'UPDATE_TEAM_NOTE'; payload: { teamName: string, note: string } } 
   | { type: 'ASSIGN_STUDENT_TEAM'; payload: { studentId: string, teamName: string | undefined } }
   | { type: 'SET_TEACHER_SCHEDULE'; payload: TeacherClass[] }; // NUEVO
-
-export interface Professor {
-    name: string;
-    birthdate: string;
-}
-
-export interface MotivationalQuote {
-    text: string;
-    author: string;
-    icon?: string;
-    image?: string;
-}
-
-export type StudentStatus = 'Destacado' | 'Regular' | 'En Riesgo';
-
-export interface ReportMonthlyAttendance {
-    [monthYear: string]: { 
-        percentage: number;
-        present: number;
-        totalClasses: number;
-    }
-}
-
-export interface ReportData {
-  student: Student;
-  status: StudentStatus;
-  totalAttendancePercentage: number;
-  totalGradeAverage: string | number;
-  p1AttendancePercentage: number;
-  p1GradeAverage: string | number;
-  p2AttendancePercentage: number;
-  p2GradeAverage: string | number;
-  monthlyAttendance: ReportMonthlyAttendance;
-  grades: { [evaluationId: string]: number | null };
-}
-
-export interface GroupMonthlyAttendance {
-    [monthYear: string]: number; 
-}
-
-export interface GroupEvaluationAverages {
-    [evaluationId: string]: {
-        name: string;
-        average: number;
-        maxScore: number;
-    };
-}
-
-export interface GroupReportSummary {
-    monthlyAttendance: GroupMonthlyAttendance;
-    evaluationAverages: GroupEvaluationAverages;
-}
-
-export interface MobileUpdateInfo {
-    version: string;
-    url: string;
-    notes?: string;
-}

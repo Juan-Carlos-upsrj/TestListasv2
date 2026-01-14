@@ -35,6 +35,8 @@ const defaultState: AppState = {
     apiUrl: '',
     apiKey: '',
     mobileUpdateUrl: 'https://github.com/Juan-Carlos-upsrj/TestListas', 
+    enableReminders: true,
+    reminderTime: 20,
   },
   activeView: 'dashboard',
   selectedGroupId: null,
@@ -92,6 +94,11 @@ const appReducer = (state: AppState, action: AppAction): AppState => {
 
         if (!migratedSettings.mobileUpdateUrl) {
             migratedSettings.mobileUpdateUrl = defaultState.settings.mobileUpdateUrl;
+        }
+        
+        if (typeof migratedSettings.enableReminders === 'undefined') {
+            migratedSettings.enableReminders = defaultState.settings.enableReminders;
+            migratedSettings.reminderTime = defaultState.settings.reminderTime;
         }
 
         return {

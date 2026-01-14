@@ -39,9 +39,9 @@ const App: React.FC = () => {
     }
   }, []);
 
-  // Lógica de Alerta de Próxima Clase (15-20 min antes)
+  // Lógica de Alerta de Próxima Clase (Configurable)
   useEffect(() => {
-    if (!teacherSchedule || teacherSchedule.length === 0) return;
+    if (!teacherSchedule || teacherSchedule.length === 0 || !settings.enableReminders) return;
 
     const checkSchedule = () => {
       const now = new Date();
@@ -58,8 +58,11 @@ const App: React.FC = () => {
         const diff = classStartInMins - currentTimeInMins;
         const notificationKey = `${clase.id}-${now.toDateString()}`;
 
-        // Si faltan entre 15 y 20 minutos
-        if (diff >= 15 && diff <= 20 && !notifiedClassesRef.current.has(notificationKey)) {
+        // Usar el tiempo configurado en settings
+        const reminderTime = settings.reminderTime || 20;
+
+        // Si faltan exactamente o menos que el tiempo configurado (pero más de 0)
+        if (diff > 0 && diff <= reminderTime && !notifiedClassesRef.current.has(notificationKey)) {
           if (Notification.permission === "granted") {
             new Notification("🍎 Próxima Clase", {
               body: `Faltan ${diff} min para: ${clase.subjectName} (${clase.groupName})`,
@@ -74,7 +77,7 @@ const App: React.FC = () => {
     checkSchedule();
     const interval = setInterval(checkSchedule, 60000); // Revisar cada minuto
     return () => clearInterval(interval);
-  }, [teacherSchedule]);
+  }, [teacherSchedule, settings.enableReminders, settings.reminderTime]);
 
 
   useEffect(() => {

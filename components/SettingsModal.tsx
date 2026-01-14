@@ -320,21 +320,47 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                          <legend className="px-2 font-semibold">Visualización y Alertas</legend>
                          <div className="space-y-4">
                             <div className="flex items-center justify-between">
-                                <label htmlFor="showMatricula" className="font-medium">Mostrar Columna de Matrícula</label>
+                                <label htmlFor="showMatricula" className="font-medium text-sm">Mostrar Columna de Matrícula</label>
                                 <input type="checkbox" id="showMatricula" name="showMatricula" checked={settings.showMatricula} onChange={handleChange} className="h-5 w-5 rounded text-primary focus:ring-primary" />
                             </div>
                             <div className="flex items-center justify-between">
-                                <label htmlFor="showTeamsInGrades" className="font-medium">Mostrar Equipos en Calificaciones</label>
+                                <label htmlFor="showTeamsInGrades" className="font-medium text-sm">Mostrar Equipos en Calificaciones</label>
                                 <input type="checkbox" id="showTeamsInGrades" name="showTeamsInGrades" checked={settings.showTeamsInGrades} onChange={handleChange} className="h-5 w-5 rounded text-primary focus:ring-primary" />
                             </div>
-                            <div>
+                            
+                            {/* NUEVOS CONTROLES DE ALERTA */}
+                            <div className="pt-2 border-t border-border-color space-y-3">
+                                <div className="flex items-center justify-between">
+                                    <label htmlFor="enableReminders" className="font-bold text-sm text-indigo-600">Habilitar Recordatorios de Clase</label>
+                                    <input type="checkbox" id="enableReminders" name="enableReminders" checked={settings.enableReminders} onChange={handleChange} className="h-5 w-5 rounded text-indigo-600 focus:ring-indigo-500" />
+                                </div>
+                                {settings.enableReminders && (
+                                    <div className="flex items-center justify-between animate-in fade-in slide-in-from-top-1 duration-200">
+                                        <label htmlFor="reminderTime" className="text-xs font-medium text-text-secondary">Anticipación del recordatorio (minutos):</label>
+                                        <div className="flex items-center gap-2">
+                                            <input 
+                                                type="number" 
+                                                id="reminderTime" 
+                                                name="reminderTime" 
+                                                value={settings.reminderTime} 
+                                                onChange={handleChange} 
+                                                min="1" max="120"
+                                                className="w-16 p-1 text-center border border-border-color rounded bg-surface focus:ring-1 focus:ring-primary text-sm"
+                                            />
+                                            <span className="text-xs text-text-secondary font-bold">min</span>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="pt-2 border-t border-border-color">
                                 <label htmlFor="sidebarGroupDisplayMode" className="block text-sm font-medium mb-1">Visualización de Grupos Rápidos</label>
                                 <select 
                                     id="sidebarGroupDisplayMode" 
                                     name="sidebarGroupDisplayMode" 
                                     value={settings.sidebarGroupDisplayMode} 
                                     onChange={handleChange}
-                                    className="w-full p-2 border border-border-color rounded-md bg-surface focus:ring-2 focus:ring-primary"
+                                    className="w-full p-2 border border-border-color rounded-md bg-surface focus:ring-2 focus:ring-primary text-sm"
                                 >
                                     <option value="name">Solo Nombre (6A)</option>
                                     <option value="name-abbrev">Nombre + Abreviatura (6A - MAT)</option>
@@ -343,7 +369,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                             </div>
                             <div>
                                 <label htmlFor="lowAttendanceThreshold" className="block text-sm font-medium">Umbral de Asistencia Baja (%)</label>
-                                <input type="number" id="lowAttendanceThreshold" name="lowAttendanceThreshold" value={settings.lowAttendanceThreshold} onChange={handleChange} min="0" max="100" className="mt-1 w-full p-2 border border-border-color rounded-md bg-surface focus:ring-2 focus:ring-primary" />
+                                <input type="number" id="lowAttendanceThreshold" name="lowAttendanceThreshold" value={settings.lowAttendanceThreshold} onChange={handleChange} min="0" max="100" className="mt-1 w-full p-2 border border-border-color rounded-md bg-surface focus:ring-2 focus:ring-primary text-sm" />
                                 <p className="text-xs text-text-secondary mt-1">Se marcarán en reportes los alumnos con asistencia por debajo de este porcentaje.</p>
                           </div>
                          </div>
