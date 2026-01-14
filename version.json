@@ -1,6 +1,6 @@
 
 {
-  "version": "1.6.8",
-  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v1.6.8/app-debug.apk",
-  "notes": "¡Versión 1.6.8! Se han eliminado las llamadas a window.prompt() y confirm() nativos, reemplazándolos con modales personalizados para garantizar compatibilidad total en Android y entornos donde los cuadros de diálogo nativos están bloqueados. Mejoras en la estabilidad del Gestor de Equipos."
+  "version": "1.6.9",
+  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v1.6.9/app-debug.apk",
+  "notes": "¡Versión 1.6.9! Se ha implementado un sistema de rescate de notas de equipos. Si tenías notas guardadas en versiones anteriores que desaparecieron, esta actualización intentará recuperarlas automáticamente buscándolas dentro de los archivos de grupos individuales y migrándolas al sistema global."
 }

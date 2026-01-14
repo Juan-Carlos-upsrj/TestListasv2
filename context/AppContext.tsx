@@ -99,9 +99,28 @@ const appReducer = (state: AppState, action: AppAction): AppState => {
         const migratedSettings = { ...defaultState.settings, ...loadedSettings };
         migratedSettings.theme = 'classic';
 
-        // HIDRATACIÓN SEGURA DE NOTAS
-        const teamNotes = loadedState.teamNotes || (loadedState as any).teamsNotes || (loadedState as any).notasEquipos || {};
-        const coyoteTeamNotes = loadedState.coyoteTeamNotes || (loadedState as any).notasCoyote || {};
+        // HIDRATACIÓN SEGURA DE NOTAS (Rescate profundo)
+        // 1. Intentar obtener de la raíz del estado (nombres modernos y legados)
+        let recoveredTeamNotes = loadedState.teamNotes || (loadedState as any).teamsNotes || (loadedState as any).notasEquipos || (loadedState as any).team_notes || {};
+        let recoveredCoyoteNotes = loadedState.coyoteTeamNotes || (loadedState as any).notasCoyote || (loadedState as any).coyote_notes || {};
+
+        // 2. Intentar rescatar notas que hayan quedado atrapadas dentro de los objetos de Grupo individualmente
+        loadedGroups.forEach((g: any) => {
+            // Notas de equipos base dentro del grupo
+            if (g.teamNotes && typeof g.teamNotes === 'object') {
+                recoveredTeamNotes = { ...g.teamNotes, ...recoveredTeamNotes };
+            }
+            if (g.teamsNotes && typeof g.teamsNotes === 'object') {
+                recoveredTeamNotes = { ...g.teamsNotes, ...recoveredTeamNotes };
+            }
+            // Notas de equipos coyote dentro del grupo
+            if (g.coyoteTeamNotes && typeof g.coyoteTeamNotes === 'object') {
+                recoveredCoyoteNotes = { ...g.coyoteTeamNotes, ...recoveredCoyoteNotes };
+            }
+            if (g.notasCoyote && typeof g.notasCoyote === 'object') {
+                recoveredCoyoteNotes = { ...g.notasCoyote, ...recoveredCoyoteNotes };
+            }
+        });
 
         return {
             groups: migratedGroups,
@@ -115,8 +134,8 @@ const appReducer = (state: AppState, action: AppAction): AppState => {
             selectedGroupId: loadedState.selectedGroupId ?? null,
             toasts: [],
             archives: Array.isArray(loadedState.archives) ? loadedState.archives : [],
-            teamNotes: teamNotes,
-            coyoteTeamNotes: coyoteTeamNotes,
+            teamNotes: recoveredTeamNotes,
+            coyoteTeamNotes: recoveredCoyoteNotes,
             teacherSchedule: loadedState.teacherSchedule ?? [], 
         };
     }
