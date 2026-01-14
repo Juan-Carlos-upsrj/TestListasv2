@@ -59,7 +59,6 @@ const appReducer = (state: AppState, action: AppAction): AppState => {
             return {
                 ...group,
                 students: (group.students || []).filter(Boolean).map((s: any) => {
-                    // Rescatar equipos de cualquier propiedad posible de versiones anteriores
                     const legacyTeam = s.team || s.equipo || s.equipoBase || s.teamName || s.equipo_nombre;
                     const legacyCoyote = s.teamCoyote || s.equipoCoyote || s.coyoteTeam || s.equipo_coyote;
                     
@@ -99,28 +98,63 @@ const appReducer = (state: AppState, action: AppAction): AppState => {
         const migratedSettings = { ...defaultState.settings, ...loadedSettings };
         migratedSettings.theme = 'classic';
 
-        // HIDRATACIÓN SEGURA DE NOTAS (Rescate profundo)
-        // 1. Intentar obtener de la raíz del estado (nombres modernos y legados)
-        let recoveredTeamNotes = loadedState.teamNotes || (loadedState as any).teamsNotes || (loadedState as any).notasEquipos || (loadedState as any).team_notes || {};
-        let recoveredCoyoteNotes = loadedState.coyoteTeamNotes || (loadedState as any).notasCoyote || (loadedState as any).coyote_notes || {};
+        // --- SISTEMA DE RESCATE PROFUNDO DE NOTAS 1.7.0 ---
+        
+        let recoveredTeamNotes: Record<string, string> = {};
+        let recoveredCoyoteNotes: Record<string, string> = {};
 
-        // 2. Intentar rescatar notas que hayan quedado atrapadas dentro de los objetos de Grupo individualmente
-        loadedGroups.forEach((g: any) => {
-            // Notas de equipos base dentro del grupo
-            if (g.teamNotes && typeof g.teamNotes === 'object') {
-                recoveredTeamNotes = { ...g.teamNotes, ...recoveredTeamNotes };
-            }
-            if (g.teamsNotes && typeof g.teamsNotes === 'object') {
-                recoveredTeamNotes = { ...g.teamsNotes, ...recoveredTeamNotes };
-            }
-            // Notas de equipos coyote dentro del grupo
-            if (g.coyoteTeamNotes && typeof g.coyoteTeamNotes === 'object') {
-                recoveredCoyoteNotes = { ...g.coyoteTeamNotes, ...recoveredCoyoteNotes };
-            }
-            if (g.notasCoyote && typeof g.notasCoyote === 'object') {
-                recoveredCoyoteNotes = { ...g.notasCoyote, ...recoveredCoyoteNotes };
+        // 1. INTENTO: LocalStorage (algunas versiones antiguas guardaban aquí)
+        try {
+            const lsTeam = localStorage.getItem('teamNotes');
+            const lsCoyote = localStorage.getItem('coyoteTeamNotes');
+            const lsLegacy = localStorage.getItem('notasEquipos');
+            if (lsTeam) recoveredTeamNotes = { ...recoveredTeamNotes, ...JSON.parse(lsTeam) };
+            if (lsCoyote) recoveredCoyoteNotes = { ...recoveredCoyoteNotes, ...JSON.parse(lsCoyote) };
+            if (lsLegacy) recoveredTeamNotes = { ...recoveredTeamNotes, ...JSON.parse(lsLegacy) };
+        } catch (e) { console.warn("Error leyendo notas de localStorage", e); }
+
+        // 2. INTENTO: Raíz del estado cargado (todas las variantes posibles de nombre)
+        const possibleRoots = [
+            'teamNotes', 'teamsNotes', 'notasEquipos', 'team_notes', 'notas_equipos', 'legacyTeamNotes',
+            'coyoteTeamNotes', 'notasCoyote', 'coyote_notes', 'legacyCoyoteNotes'
+        ];
+        
+        possibleRoots.forEach(key => {
+            const data = (loadedState as any)[key];
+            if (data && typeof data === 'object') {
+                if (key.toLowerCase().includes('coyote')) {
+                    recoveredCoyoteNotes = { ...recoveredCoyoteNotes, ...data };
+                } else {
+                    recoveredTeamNotes = { ...recoveredTeamNotes, ...data };
+                }
             }
         });
+
+        // 3. INTENTO: Dentro de cada objeto de Grupo (v1.6.0 y anteriores)
+        loadedGroups.forEach((g: any) => {
+            // Nota: iteramos sobre todas las propiedades del grupo para encontrar objetos que parezcan mapas de notas
+            Object.entries(g).forEach(([key, val]) => {
+                if (val && typeof val === 'object' && !Array.isArray(val)) {
+                    const isNoteKey = key.toLowerCase().includes('note') || key.toLowerCase().includes('nota');
+                    if (isNoteKey) {
+                        if (key.toLowerCase().includes('coyote')) {
+                            recoveredCoyoteNotes = { ...recoveredCoyoteNotes, ...(val as any) };
+                        } else {
+                            recoveredTeamNotes = { ...recoveredTeamNotes, ...(val as any) };
+                        }
+                    }
+                }
+            });
+        });
+
+        // 4. LIMPIEZA: Asegurar que las llaves (nombres de equipos) no tengan espacios accidentales
+        const cleanNotes = (notes: Record<string, string>) => {
+            const cleaned: Record<string, string> = {};
+            Object.entries(notes).forEach(([k, v]) => {
+                if (k && v && typeof v === 'string') cleaned[k.trim()] = v;
+            });
+            return cleaned;
+        };
 
         return {
             groups: migratedGroups,
@@ -134,8 +168,8 @@ const appReducer = (state: AppState, action: AppAction): AppState => {
             selectedGroupId: loadedState.selectedGroupId ?? null,
             toasts: [],
             archives: Array.isArray(loadedState.archives) ? loadedState.archives : [],
-            teamNotes: recoveredTeamNotes,
-            coyoteTeamNotes: recoveredCoyoteNotes,
+            teamNotes: cleanNotes(recoveredTeamNotes),
+            coyoteTeamNotes: cleanNotes(recoveredCoyoteNotes),
             teacherSchedule: loadedState.teacherSchedule ?? [], 
         };
     }

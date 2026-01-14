@@ -1,6 +1,6 @@
 
 {
-  "version": "1.6.9",
-  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v1.6.9/app-debug.apk",
-  "notes": "¡Versión 1.6.9! Se ha implementado un sistema de rescate de notas de equipos. Si tenías notas guardadas en versiones anteriores que desaparecieron, esta actualización intentará recuperarlas automáticamente buscándolas dentro de los archivos de grupos individuales y migrándolas al sistema global."
+  "version": "1.7.0",
+  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v1.7.0/app-debug.apk",
+  "notes": "¡Versión 1.7.0! Actualización crítica de recuperación de datos. Se ha implementado un sistema de rescate profundo que escanea tanto localStorage como estructuras de datos heredadas dentro de cada grupo para recuperar notas de equipos perdidas en migraciones previas. Mayor estabilidad en la persistencia de datos."
 }
