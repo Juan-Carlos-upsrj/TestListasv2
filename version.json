@@ -1,6 +1,6 @@
 
 {
-  "version": "1.4.6",
-  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v1.4.6/app-debug.apk",
-  "notes": "¡Versión 1.4.6! Corrección de errores de compilación de TypeScript para permitir el empaquetado del programa."
+  "version": "1.4.7",
+  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v1.4.7/app-debug.apk",
+  "notes": "¡Versión 1.4.7! Ahora puedes gestionar tu horario de forma manual: añade, edita o elimina clases directamente desde el modal de horario."
 }

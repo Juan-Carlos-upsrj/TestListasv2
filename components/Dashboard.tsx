@@ -2,23 +2,35 @@
 import React, { useContext, useMemo, useState } from 'react';
 import { Responsive, WidthProvider } from 'react-grid-layout';
 import { AppContext } from '../context/AppContext';
-import { Group, AttendanceStatus, TeacherClass } from '../types';
+import { Group, AttendanceStatus, TeacherClass, DayOfWeek } from '../types';
 import Icon from './icons/Icon';
 import BirthdayCelebration from './BirthdayCelebration';
 import { PROFESSOR_BIRTHDAYS, GROUP_COLORS, DAYS_OF_WEEK } from '../constants';
 import Modal from './common/Modal';
 import AttendanceTaker from './AttendanceTaker';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { syncAttendanceData, syncScheduleData } from '../services/syncService';
 import Button from './common/Button';
 import SemesterTransitionModal from './SemesterTransitionModal';
+import { v4 as uuidv4 } from 'uuid';
 
 const ResponsiveGridLayout = WidthProvider(Responsive);
 
 // --- COMPONENTE HORARIO ---
 
 const TeacherScheduleModal: React.FC<{ schedule: TeacherClass[], isOpen: boolean, onClose: () => void }> = ({ schedule, isOpen, onClose }) => {
-    // Agrupar por día y ordenar por hora
+    const { dispatch } = useContext(AppContext);
+    const [isEditing, setIsEditing] = useState(false);
+    
+    // Formulario para nueva clase
+    const [newClass, setNewClass] = useState<Partial<TeacherClass>>({
+        day: 'Lunes',
+        startTime: 7,
+        duration: 1,
+        subjectName: '',
+        groupName: ''
+    });
+
     const scheduleByDay = useMemo(() => {
         const map: Record<string, TeacherClass[]> = {};
         DAYS_OF_WEEK.forEach(d => map[d] = []);
@@ -29,54 +41,172 @@ const TeacherScheduleModal: React.FC<{ schedule: TeacherClass[], isOpen: boolean
 
     const formatTime = (hour: number) => `${hour}:00`;
 
-    return (
-        <Modal isOpen={isOpen} onClose={onClose} title="Mi Horario Docente" size="xl">
-            <div className="space-y-6 max-h-[70vh] overflow-y-auto custom-scrollbar pr-2">
-                {DAYS_OF_WEEK.map(day => {
-                    const classes = scheduleByDay[day];
-                    if (classes.length === 0) return null;
+    const handleAddClass = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!newClass.subjectName || !newClass.groupName) return;
+        
+        const completeClass: TeacherClass = {
+            id: uuidv4(),
+            day: (newClass.day as DayOfWeek) || 'Lunes',
+            startTime: Number(newClass.startTime) || 7,
+            duration: Number(newClass.duration) || 1,
+            subjectName: newClass.subjectName,
+            groupName: newClass.groupName
+        };
 
-                    return (
-                        <div key={day} className="space-y-2">
-                            <h4 className="text-sm font-bold text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full inline-block">{day}</h4>
-                            <div className="grid grid-cols-1 gap-2">
-                                {classes.map((c, i) => {
-                                    const nextClass = classes[i + 1];
-                                    const hasRecess = nextClass && (nextClass.startTime > c.startTime + c.duration);
-                                    
-                                    return (
-                                        <React.Fragment key={c.id}>
-                                            <div className="flex items-center gap-4 bg-white border border-slate-200 p-3 rounded-xl shadow-sm hover:border-primary transition-colors">
-                                                <div className="bg-slate-100 p-2 rounded-lg text-center min-w-[70px]">
-                                                    <p className="text-[10px] font-bold text-slate-500 uppercase">Inicio</p>
-                                                    <p className="text-sm font-bold text-primary">{formatTime(c.startTime)}</p>
-                                                </div>
-                                                <div className="flex-1 min-w-0">
-                                                    <p className="font-bold text-sm truncate">{c.subjectName}</p>
-                                                    <p className="text-xs text-text-secondary truncate">{c.groupName}</p>
-                                                </div>
-                                                <div className="text-right">
-                                                    <p className="text-[10px] font-bold text-slate-400 uppercase">Duración</p>
-                                                    <p className="text-xs font-bold text-slate-600">{c.duration}h</p>
-                                                </div>
-                                            </div>
-                                            {hasRecess && (
-                                                <div className="flex items-center gap-2 px-4 py-1.5 bg-amber-50/50 border border-dashed border-amber-200 rounded-lg text-amber-700">
-                                                    <Icon name="cake" className="w-3.5 h-3.5" />
-                                                    <span className="text-[10px] font-bold uppercase tracking-wider">Receso Académico</span>
-                                                </div>
-                                            )}
-                                        </React.Fragment>
-                                    );
-                                })}
+        dispatch({ type: 'SET_TEACHER_SCHEDULE', payload: [...schedule, completeClass] });
+        setNewClass({ ...newClass, subjectName: '', groupName: '' });
+    };
+
+    const handleDeleteClass = (id: string) => {
+        dispatch({ type: 'SET_TEACHER_SCHEDULE', payload: schedule.filter(c => c.id !== id) });
+    };
+
+    return (
+        <Modal 
+            isOpen={isOpen} 
+            onClose={onClose} 
+            title="Mi Horario Docente" 
+            size="xl"
+            footer={
+                <div className="flex justify-between w-full">
+                    <Button variant="secondary" size="sm" onClick={() => setIsEditing(!isEditing)}>
+                        <Icon name={isEditing ? "calendar" : "settings"} className="w-4 h-4" />
+                        {isEditing ? "Ver Horario" : "Gestionar Clases"}
+                    </Button>
+                    <Button variant="secondary" size="sm" onClick={onClose}>Cerrar</Button>
+                </div>
+            }
+        >
+            <div className="space-y-6 max-h-[60vh] overflow-y-auto custom-scrollbar pr-2">
+                
+                {isEditing && (
+                    <motion.div 
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="bg-slate-50 p-4 rounded-xl border border-slate-200 mb-6"
+                    >
+                        <h4 className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
+                            <Icon name="plus" className="w-4 h-4" /> Agregar Clase Manual
+                        </h4>
+                        <form onSubmit={handleAddClass} className="grid grid-cols-1 sm:grid-cols-12 gap-3">
+                            <div className="sm:col-span-4">
+                                <label className="text-[10px] font-bold uppercase text-slate-400">Día</label>
+                                <select 
+                                    className="w-full p-2 text-sm border border-slate-300 rounded-lg bg-white"
+                                    value={newClass.day}
+                                    onChange={e => setNewClass({...newClass, day: e.target.value as DayOfWeek})}
+                                >
+                                    {DAYS_OF_WEEK.map(d => <option key={d} value={d}>{d}</option>)}
+                                </select>
                             </div>
-                        </div>
-                    );
-                })}
+                            <div className="sm:col-span-4">
+                                <label className="text-[10px] font-bold uppercase text-slate-400">Inicio (Hora)</label>
+                                <input 
+                                    type="number" min="7" max="22"
+                                    className="w-full p-2 text-sm border border-slate-300 rounded-lg bg-white"
+                                    value={newClass.startTime}
+                                    onChange={e => setNewClass({...newClass, startTime: parseInt(e.target.value)})}
+                                />
+                            </div>
+                            <div className="sm:col-span-4">
+                                <label className="text-[10px] font-bold uppercase text-slate-400">Duración (Horas)</label>
+                                <input 
+                                    type="number" min="1" max="5"
+                                    className="w-full p-2 text-sm border border-slate-300 rounded-lg bg-white"
+                                    value={newClass.duration}
+                                    onChange={e => setNewClass({...newClass, duration: parseInt(e.target.value)})}
+                                />
+                            </div>
+                            <div className="sm:col-span-5">
+                                <label className="text-[10px] font-bold uppercase text-slate-400">Materia</label>
+                                <input 
+                                    type="text" placeholder="Ej. Matemáticas"
+                                    className="w-full p-2 text-sm border border-slate-300 rounded-lg bg-white"
+                                    value={newClass.subjectName}
+                                    onChange={e => setNewClass({...newClass, subjectName: e.target.value})}
+                                />
+                            </div>
+                            <div className="sm:col-span-5">
+                                <label className="text-[10px] font-bold uppercase text-slate-400">Grupo</label>
+                                <input 
+                                    type="text" placeholder="Ej. 6A"
+                                    className="w-full p-2 text-sm border border-slate-300 rounded-lg bg-white"
+                                    value={newClass.groupName}
+                                    onChange={e => setNewClass({...newClass, groupName: e.target.value})}
+                                />
+                            </div>
+                            <div className="sm:col-span-2 flex items-end">
+                                <Button type="submit" size="sm" className="w-full !py-2.5">Añadir</Button>
+                            </div>
+                        </form>
+                    </motion.div>
+                )}
+
+                <AnimatePresence mode="wait">
+                    {DAYS_OF_WEEK.map(day => {
+                        const classes = scheduleByDay[day];
+                        if (classes.length === 0) return null;
+
+                        return (
+                            <motion.div 
+                                layout
+                                key={day} 
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                className="space-y-2"
+                            >
+                                <h4 className="text-sm font-bold text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full inline-block">{day}</h4>
+                                <div className="grid grid-cols-1 gap-2">
+                                    {classes.map((c, i) => {
+                                        const nextClass = classes[i + 1];
+                                        const hasRecess = nextClass && (nextClass.startTime > c.startTime + c.duration);
+                                        
+                                        return (
+                                            <React.Fragment key={c.id}>
+                                                <div className="flex items-center gap-4 bg-white border border-slate-200 p-3 rounded-xl shadow-sm hover:border-primary transition-colors group">
+                                                    <div className="bg-slate-100 p-2 rounded-lg text-center min-w-[70px]">
+                                                        <p className="text-[10px] font-bold text-slate-500 uppercase">Inicio</p>
+                                                        <p className="text-sm font-bold text-primary">{formatTime(c.startTime)}</p>
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <p className="font-bold text-sm truncate">{c.subjectName}</p>
+                                                        <p className="text-xs text-text-secondary truncate">{c.groupName}</p>
+                                                    </div>
+                                                    <div className="text-right flex items-center gap-3">
+                                                        <div>
+                                                            <p className="text-[10px] font-bold text-slate-400 uppercase">Duración</p>
+                                                            <p className="text-xs font-bold text-slate-600">{c.duration}h</p>
+                                                        </div>
+                                                        {isEditing && (
+                                                            <button 
+                                                                onClick={() => handleDeleteClass(c.id)}
+                                                                className="p-2 text-slate-300 hover:text-accent-red hover:bg-rose-50 rounded-lg transition-all"
+                                                            >
+                                                                <Icon name="trash-2" className="w-4 h-4" />
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                                {hasRecess && !isEditing && (
+                                                    <div className="flex items-center gap-2 px-4 py-1.5 bg-amber-50/50 border border-dashed border-amber-200 rounded-lg text-amber-700">
+                                                        <Icon name="cake" className="w-3.5 h-3.5" />
+                                                        <span className="text-[10px] font-bold uppercase tracking-wider">Receso Académico</span>
+                                                    </div>
+                                                )}
+                                            </React.Fragment>
+                                        );
+                                    })}
+                                </div>
+                            </motion.div>
+                        );
+                    })}
+                </AnimatePresence>
+                
                 {schedule.length === 0 && (
                     <div className="text-center py-10 opacity-40">
                         <Icon name="calendar" className="w-16 h-16 mx-auto mb-2" />
-                        <p>No hay horario cargado. Pulsa el botón "Horario" en el Dashboard para sincronizar.</p>
+                        <p>No hay horario cargado. Pulsa el botón "Horario" en el Dashboard para sincronizar o usa el modo gestión para añadir clases manualmente.</p>
                     </div>
                 )}
             </div>
@@ -229,7 +359,7 @@ const Dashboard: React.FC = () => {
     const [isTakerOpen, setTakerOpen] = useState(false);
     const [attendanceGroup, setAttendanceGroup] = useState<Group | null>(null);
     const [isTransitionOpen, setTransitionOpen] = useState(false);
-    const [isScheduleOpen, setScheduleOpen] = useState(false); // NUEVO
+    const [isScheduleOpen, setScheduleOpen] = useState(false); 
     const [today, setToday] = useState(new Date());
     const [birthdayPerson, setBirthdayPerson] = useState<string | null>(null);
 
