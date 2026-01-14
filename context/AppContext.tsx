@@ -102,6 +102,10 @@ const appReducer = (state: AppState, action: AppAction): AppState => {
             migratedSettings.reminderTime = defaultState.settings.reminderTime;
         }
 
+        // HIDRATACIÓN SEGURA DE NOTAS (Evita pérdida de datos)
+        const teamNotes = loadedState.teamNotes || (loadedState as any).teamsNotes || {};
+        const coyoteTeamNotes = loadedState.coyoteTeamNotes || {};
+
         return {
             groups: migratedGroups,
             attendance: loadedState.attendance ?? defaultState.attendance,
@@ -114,8 +118,8 @@ const appReducer = (state: AppState, action: AppAction): AppState => {
             selectedGroupId: loadedState.selectedGroupId ?? null,
             toasts: [],
             archives: Array.isArray(loadedState.archives) ? loadedState.archives : [],
-            teamNotes: loadedState.teamNotes ?? {},
-            coyoteTeamNotes: loadedState.coyoteTeamNotes ?? {},
+            teamNotes: teamNotes,
+            coyoteTeamNotes: coyoteTeamNotes,
             teacherSchedule: loadedState.teacherSchedule ?? [], 
         };
     }

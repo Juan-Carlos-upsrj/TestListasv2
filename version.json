@@ -1,6 +1,6 @@
 
 {
-  "version": "1.6.0",
-  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v1.6.0/app-debug.apk",
-  "notes": "¡Versión 1.6.0! Restauración de botones de gestión, reparación del sistema de equipos Coyote con soporte para notas y centrado inteligente de modales."
+  "version": "1.6.1",
+  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v1.6.1/app-debug.apk",
+  "notes": "¡Versión 1.6.1! Corrección de error crítico de build (TypeScript) y refuerzo en la hidratación de notas de equipos para prevenir pérdida de datos."
 }
