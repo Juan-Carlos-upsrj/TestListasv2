@@ -1,6 +1,6 @@
 
 {
-  "version": "1.5.8",
-  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v1.5.8/app-debug.apk",
-  "notes": "¡Versión 1.5.8! Centrado inteligente de modales según el sidebar y nueva función de migración mágica de Equipos Base a Coyote."
+  "version": "1.6.0",
+  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v1.6.0/app-debug.apk",
+  "notes": "¡Versión 1.6.0! Restauración de botones de gestión, reparación del sistema de equipos Coyote con soporte para notas y centrado inteligente de modales."
 }

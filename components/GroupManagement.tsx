@@ -1,5 +1,5 @@
 
-import React, { useContext, useState, useMemo } from 'react';
+import React, { useContext, useState, useMemo, useEffect } from 'react';
 import { AppContext } from '../context/AppContext';
 import { Group, Student, DayOfWeek, EvaluationType } from '../types';
 import { v4 as uuidv4 } from 'uuid';
@@ -133,7 +133,7 @@ const StudentForm: React.FC<{ student?: Student; currentGroup?: Group; allGroups
 
 const TeamsManager: React.FC<{ group: Group }> = ({ group }) => {
     const { state, dispatch } = useContext(AppContext);
-    const { groups } = state;
+    const { groups, teamNotes = {}, coyoteTeamNotes = {} } = state;
     
     const [isCoyoteMode, setCoyoteMode] = useState(false);
     const [selectedTeam, setSelectedTeam] = useState<string | null>(null);
@@ -141,7 +141,18 @@ const TeamsManager: React.FC<{ group: Group }> = ({ group }) => {
     const [isTeamsModalOpen, setTeamsModalOpen] = useState(false);
     const [isMigrateModalOpen, setMigrateModalOpen] = useState(false);
 
-    // Context-aware student list
+    // Notas del equipo actual
+    const currentNote = useMemo(() => {
+        if (!selectedTeam) return '';
+        return isCoyoteMode ? (coyoteTeamNotes[selectedTeam] || '') : (teamNotes[selectedTeam] || '');
+    }, [selectedTeam, isCoyoteMode, teamNotes, coyoteTeamNotes]);
+
+    const handleNoteChange = (val: string) => {
+        if (!selectedTeam) return;
+        dispatch({ type: 'UPDATE_TEAM_NOTE', payload: { teamName: selectedTeam, note: val, isCoyote: isCoyoteMode } });
+    };
+
+    // Alumnos del contexto actual (Grupo o Cuatrimestre completo)
     const studentsList = useMemo(() => {
         if (isCoyoteMode) {
             const allQuarterStudents: {student: Student, gName: string}[] = [];
@@ -198,7 +209,10 @@ const TeamsManager: React.FC<{ group: Group }> = ({ group }) => {
     }, [groups, group.quarter]);
 
     const handleAssign = (studentId: string, assign: boolean) => {
-        if (!selectedTeam) return;
+        if (!selectedTeam) {
+            dispatch({ type: 'ADD_TOAST', payload: { message: 'Primero selecciona un equipo a la izquierda.', type: 'info' } });
+            return;
+        }
         
         if (assign && isCoyoteMode) {
             const teamCount = existingTeams.find(t => t[0] === selectedTeam)?.[1] || 0;
@@ -225,7 +239,7 @@ const TeamsManager: React.FC<{ group: Group }> = ({ group }) => {
         const availableSlots = 4 - currentCount;
         
         if (memberIds.length > availableSlots) {
-            dispatch({ type: 'ADD_TOAST', payload: { message: `No hay espacio suficiente. Se necesitan ${memberIds.length} lugares y solo quedan ${availableSlots}.`, type: 'error' } });
+            dispatch({ type: 'ADD_TOAST', payload: { message: `Falta espacio: ${memberIds.length} integrantes y solo quedan ${availableSlots} lugares.`, type: 'error' } });
             return;
         }
 
@@ -236,12 +250,12 @@ const TeamsManager: React.FC<{ group: Group }> = ({ group }) => {
             });
         });
 
-        dispatch({ type: 'ADD_TOAST', payload: { message: `Equipo "${baseTeamName}" migrado con éxito a "${selectedTeam}".`, type: 'success' } });
+        dispatch({ type: 'ADD_TOAST', payload: { message: `Equipo "${baseTeamName}" migrado con éxito.`, type: 'success' } });
         setMigrateModalOpen(false);
     };
 
     const handleCreateTeam = () => {
-        const name = window.prompt(`Nuevo equipo ${isCoyoteMode ? 'Coyote' : 'Base'}:`);
+        const name = window.prompt(`Nombre del nuevo equipo ${isCoyoteMode ? 'Coyote' : 'Base'}:`);
         if (name && name.trim()) setSelectedTeam(name.trim());
     };
 
@@ -249,15 +263,15 @@ const TeamsManager: React.FC<{ group: Group }> = ({ group }) => {
         <div className="mt-8 pt-8 border-t border-border-color">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
                 <div className="flex items-center gap-3">
-                    <div className={`${isCoyoteMode ? 'bg-orange-800' : 'bg-indigo-600'} p-2 rounded-lg text-white transition-colors`}>
+                    <div className={`${isCoyoteMode ? 'bg-orange-800' : 'bg-indigo-600'} p-2 rounded-xl text-white transition-all shadow-lg`}>
                         <Icon name={isCoyoteMode ? "dog" : "users"} className="w-6 h-6"/>
                     </div>
                     <div>
-                        <h2 className="text-2xl font-bold">Gestión de Equipos</h2>
-                        <p className="text-sm text-text-secondary">Organiza integrantes para proyectos y evaluaciones.</p>
+                        <h2 className="text-2xl font-black tracking-tight">Gestión de Equipos</h2>
+                        <p className="text-xs text-text-secondary font-medium uppercase tracking-widest opacity-70">Organización Avanzada de Grupos</p>
                     </div>
                 </div>
-                <Button onClick={() => setTeamsModalOpen(true)} className="bg-primary">
+                <Button onClick={() => setTeamsModalOpen(true)} className="bg-primary shadow-lg shadow-primary/20">
                     <Icon name="layout" className="w-4 h-4" /> Abrir Gestor Avanzado
                 </Button>
             </div>
@@ -268,196 +282,240 @@ const TeamsManager: React.FC<{ group: Group }> = ({ group }) => {
                 title={`Gestor de Equipos - ${group.name}`}
                 size="6xl"
             >
-                <div className="flex flex-col h-[75vh]">
-                    <div className="flex items-center justify-center mb-8 shrink-0">
-                        <div className="bg-surface-secondary p-1.5 rounded-2xl flex border border-border-color shadow-inner">
+                <div className="flex flex-col h-[78vh]">
+                    {/* Selector de Modo */}
+                    <div className="flex items-center justify-center mb-6 shrink-0">
+                        <div className="bg-surface-secondary p-1.5 rounded-2xl flex border border-border-color shadow-inner scale-90 sm:scale-100">
                             <button 
                                 onClick={() => { setCoyoteMode(false); setSelectedTeam(null); }}
-                                className={`flex items-center gap-3 px-10 py-3 rounded-xl text-base font-bold transition-all ${!isCoyoteMode ? 'bg-white shadow-lg text-indigo-700 scale-105' : 'text-text-secondary opacity-60'}`}
+                                className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${!isCoyoteMode ? 'bg-white shadow-md text-indigo-700' : 'text-text-secondary opacity-60'}`}
                             >
-                                <Icon name="users" className="w-5 h-5"/> Equipos Base
+                                <Icon name="users" className="w-4 h-4"/> Equipos Base
                             </button>
                             <button 
                                 onClick={() => { setCoyoteMode(true); setSelectedTeam(null); }}
-                                className={`flex items-center gap-3 px-10 py-3 rounded-xl text-base font-bold transition-all ${isCoyoteMode ? 'bg-orange-100 shadow-lg text-orange-800 scale-105' : 'text-text-secondary opacity-60'}`}
+                                className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${isCoyoteMode ? 'bg-orange-100 shadow-md text-orange-800' : 'text-text-secondary opacity-60'}`}
                             >
-                                <Icon name="dog" className="w-5 h-5"/> Equipos Coyote
+                                <Icon name="dog" className="w-4 h-4"/> Equipos Coyote
                             </button>
                         </div>
                     </div>
 
                     <div className="flex-1 grid grid-cols-1 md:grid-cols-12 gap-6 overflow-hidden">
-                        <div className="md:col-span-4 lg:col-span-3 flex flex-col bg-surface-secondary/50 rounded-2xl border border-border-color p-5 overflow-hidden shadow-sm">
-                            <div className="flex items-center justify-between mb-5">
-                                <h3 className="font-extrabold text-[10px] uppercase tracking-widest text-text-secondary">Equipos Activos</h3>
-                                <div className="flex gap-2">
-                                    {isCoyoteMode && selectedTeam && (
-                                        <button 
-                                            onClick={() => setMigrateModalOpen(true)}
-                                            className="p-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-all shadow-md active:scale-95"
-                                            title="Migrar desde Equipo Base"
-                                        >
-                                            <Icon name="copy" className="w-4 h-4"/>
-                                        </button>
-                                    )}
-                                    <button 
-                                        onClick={handleCreateTeam}
-                                        className="p-2 bg-primary text-white rounded-xl hover:bg-primary-hover transition-all shadow-md active:scale-95"
-                                        title="Crear Equipo"
-                                    >
-                                        <Icon name="plus" className="w-4 h-4"/>
-                                    </button>
-                                </div>
+                        {/* PANEL IZQUIERDO: EQUIPOS */}
+                        <div className="md:col-span-4 lg:col-span-3 flex flex-col bg-surface-secondary/50 rounded-2xl border border-border-color p-4 overflow-hidden shadow-sm">
+                            <div className="flex items-center justify-between mb-4">
+                                <h3 className="font-black text-[10px] uppercase tracking-widest text-text-secondary">Equipos Activos</h3>
+                                <button 
+                                    onClick={handleCreateTeam}
+                                    className="p-1.5 bg-primary text-white rounded-lg hover:bg-primary-hover shadow-md active:scale-95 transition-all"
+                                >
+                                    <Icon name="plus" className="w-4 h-4"/>
+                                </button>
                             </div>
                             
-                            <div className="flex-1 overflow-y-auto space-y-3 custom-scrollbar pr-2">
+                            <div className="flex-1 overflow-y-auto space-y-2 custom-scrollbar pr-1">
                                 {existingTeams.length > 0 ? (
                                     existingTeams.map(([name, count]) => (
                                         <button
                                             key={name}
                                             onClick={() => setSelectedTeam(name)}
-                                            className={`w-full p-4 rounded-2xl border-2 text-left transition-all flex items-center justify-between group ${
+                                            className={`w-full p-4 rounded-xl border-2 text-left transition-all flex items-center justify-between group ${
                                                 selectedTeam === name 
                                                 ? (isCoyoteMode ? 'bg-orange-50 border-orange-500 shadow-md' : 'bg-indigo-50 border-indigo-500 shadow-md')
                                                 : 'bg-surface border-transparent hover:border-border-color shadow-sm'
                                             }`}
                                         >
                                             <div className="min-w-0 flex-1">
-                                                <p className={`font-bold text-sm lg:text-base truncate ${selectedTeam === name ? (isCoyoteMode ? 'text-orange-900' : 'text-indigo-900') : ''}`}>{name}</p>
-                                                <div className="flex items-center gap-2 mt-1">
-                                                    {isCoyoteMode && <Icon name="footprints" className="w-3.5 h-3.5 text-orange-600"/>}
-                                                    <span className={`text-[10px] font-extrabold uppercase tracking-tight ${count > (isCoyoteMode ? 4 : 10) ? 'text-accent-red' : 'text-text-secondary opacity-70'}`}>
-                                                        {count} {isCoyoteMode ? '/ 4' : 'Alumnos'}
-                                                    </span>
+                                                <p className={`font-bold text-sm truncate ${selectedTeam === name ? (isCoyoteMode ? 'text-orange-900' : 'text-indigo-900') : ''}`}>{name}</p>
+                                                <div className="flex items-center gap-1.5 mt-0.5 opacity-60">
+                                                    <Icon name="users" className="w-3 h-3"/>
+                                                    <span className="text-[10px] font-bold uppercase">{count} {isCoyoteMode ? '/ 4' : 'Integrantes'}</span>
                                                 </div>
                                             </div>
-                                            <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity ml-2">
-                                                <button 
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        if (confirm(`¿Disolver equipo "${name}"?`)) {
-                                                            dispatch({ type: 'DELETE_TEAM', payload: { teamName: name, isCoyote: isCoyoteMode } });
-                                                            if (selectedTeam === name) setSelectedTeam(null);
-                                                        }
-                                                    }}
-                                                    className="p-1.5 text-accent-red hover:bg-rose-100 rounded-lg"
-                                                >
-                                                    <Icon name="trash-2" className="w-4 h-4"/>
-                                                </button>
-                                            </div>
+                                            <button 
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    if (confirm(`¿Disolver equipo "${name}"?`)) {
+                                                        dispatch({ type: 'DELETE_TEAM', payload: { teamName: name, isCoyote: isCoyoteMode } });
+                                                        if (selectedTeam === name) setSelectedTeam(null);
+                                                    }
+                                                }}
+                                                className="p-1.5 text-accent-red hover:bg-rose-100 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                                            >
+                                                <Icon name="trash-2" className="w-3.5 h-3.5"/>
+                                            </button>
                                         </button>
                                     ))
                                 ) : (
-                                    <div className="text-center py-16 opacity-30">
-                                        <Icon name="users" className="w-12 h-12 mx-auto mb-3"/>
-                                        <p className="text-xs font-bold uppercase">Sin equipos</p>
+                                    <div className="text-center py-10 opacity-30">
+                                        <p className="text-[10px] font-black uppercase">Sin equipos definidos</p>
                                     </div>
                                 )}
                             </div>
                         </div>
 
+                        {/* PANEL DERECHO: DETALLE Y ALUMNOS */}
                         <div className="md:col-span-8 lg:col-span-9 flex flex-col overflow-hidden">
-                            <div className="mb-6 space-y-4">
-                                <div className="relative">
-                                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400">
-                                        <Icon name="search" className="h-5 w-5"/>
-                                    </div>
-                                    <input 
-                                        type="text" 
-                                        value={searchTerm}
-                                        onChange={e => setSearchTerm(e.target.value)}
-                                        placeholder={`Buscar en ${isCoyoteMode ? 'todo el cuatrimestre ' + group.quarter : 'el grupo ' + group.name}...`}
-                                        className="w-full pl-11 pr-4 py-3.5 border border-border-color rounded-2xl bg-surface focus:ring-2 focus:ring-primary text-base shadow-sm"
-                                    />
+                            {!selectedTeam ? (
+                                <div className="h-full flex flex-col items-center justify-center bg-slate-50/50 rounded-2xl border-2 border-dashed border-border-color opacity-50 p-8 text-center">
+                                    <Icon name="arrow-left" className="w-12 h-12 mb-4 text-slate-300 animate-pulse"/>
+                                    <h4 className="text-xl font-black text-slate-400">Selecciona un equipo</h4>
+                                    <p className="text-sm text-slate-400 mt-2">Para asignar alumnos o escribir notas, debes elegir un equipo del panel izquierdo.</p>
                                 </div>
-                                {isCoyoteMode && (
-                                    <div className="bg-orange-50/80 p-3 rounded-2xl border border-orange-100 flex items-center gap-3">
-                                        <div className="bg-orange-100 p-1.5 rounded-lg text-orange-600"><Icon name="info" className="w-5 h-5"/></div>
-                                        <p className="text-xs text-orange-900 font-bold">Modo Coyote Activo: Reclutando entre todos los grupos de <strong>{group.quarter} cuatrimestre</strong>.</p>
+                            ) : (
+                                <div className="flex flex-col h-full overflow-hidden animate-in fade-in slide-in-from-bottom-2">
+                                    {/* Cabecera del Equipo Seleccionado */}
+                                    <div className={`p-4 rounded-2xl border-2 mb-4 flex flex-col sm:flex-row items-center justify-between gap-4 ${isCoyoteMode ? 'bg-orange-50/50 border-orange-200' : 'bg-indigo-50/50 border-indigo-200'}`}>
+                                        <div className="flex items-center gap-3">
+                                            <div className={`p-2 rounded-xl text-white ${isCoyoteMode ? 'bg-orange-600' : 'bg-indigo-600'}`}>
+                                                <Icon name={isCoyoteMode ? "dog" : "users"} className="w-5 h-5"/>
+                                            </div>
+                                            <div>
+                                                <h4 className="text-lg font-black">{selectedTeam}</h4>
+                                                <p className="text-[10px] font-bold uppercase opacity-60">{isCoyoteMode ? 'Equipo Inter-Grupal' : 'Equipo Local'}</p>
+                                            </div>
+                                        </div>
+                                        <div className="flex gap-2 w-full sm:w-auto">
+                                            {isCoyoteMode && (
+                                                <Button 
+                                                    size="sm" 
+                                                    onClick={() => setMigrateModalOpen(true)} 
+                                                    className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-md flex-1 sm:flex-none"
+                                                >
+                                                    <Icon name="copy" className="w-4 h-4"/> Importar de Base
+                                                </Button>
+                                            )}
+                                            <button 
+                                                onClick={() => {
+                                                    const newName = window.prompt("Nuevo nombre:", selectedTeam);
+                                                    if (newName && newName.trim() && newName !== selectedTeam) {
+                                                        dispatch({ type: 'RENAME_TEAM', payload: { oldName: selectedTeam, newName: newName.trim(), isCoyote: isCoyoteMode } });
+                                                        setSelectedTeam(newName.trim());
+                                                    }
+                                                }}
+                                                className="p-2 bg-white border border-border-color rounded-xl hover:bg-slate-50 transition-colors shadow-sm"
+                                                title="Renombrar"
+                                            >
+                                                <Icon name="edit-3" className="w-4 h-4"/>
+                                            </button>
+                                        </div>
                                     </div>
-                                )}
-                            </div>
 
-                            <div className="flex-1 overflow-y-auto custom-scrollbar border border-border-color rounded-2xl bg-surface shadow-sm">
-                                {!selectedTeam ? (
-                                    <div className="h-full flex flex-col items-center justify-center opacity-40 p-10">
-                                        <Icon name="arrow-left" className="w-16 h-16 mb-4 text-slate-400 animate-pulse"/>
-                                        <h4 className="text-xl font-bold">Selecciona un equipo a la izquierda</h4>
+                                    {/* Notas del Equipo */}
+                                    <div className="mb-4">
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-text-secondary mb-1 block">Notas y Observaciones</label>
+                                        <textarea 
+                                            value={currentNote}
+                                            onChange={(e) => handleNoteChange(e.target.value)}
+                                            placeholder="Escribe aquí metas del equipo, faltas recurrentes o notas de proyectos..."
+                                            className="w-full p-3 text-sm border-2 border-border-color rounded-xl bg-surface focus:ring-2 focus:ring-primary focus:border-primary min-h-[80px] shadow-inner transition-all"
+                                        />
                                     </div>
-                                ) : (
-                                    <table className="w-full text-left text-sm">
-                                        <thead className="sticky top-0 bg-slate-50/95 backdrop-blur-sm z-10">
-                                            <tr className="text-text-secondary uppercase tracking-widest text-[10px] font-black">
-                                                <th className="p-4 w-16 border-b border-border-color text-center">Incl.</th>
-                                                <th className="p-4 border-b border-border-color">Nombre Alumno</th>
-                                                <th className="p-4 border-b border-border-color">Grupo Origen</th>
-                                                <th className="p-4 border-b border-border-color text-center">Equipo Actual</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-border-color/30 text-xs">
-                                            {filteredStudents.map(({student, gName}) => {
-                                                const isInSelectedTeam = (isCoyoteMode ? student.teamCoyote : student.team) === selectedTeam;
-                                                const currentOtherTeam = (isCoyoteMode ? student.teamCoyote : student.team);
-                                                return (
-                                                    <tr key={`${student.id}-${gName}`} className={`transition-all ${isInSelectedTeam ? 'bg-indigo-50/40' : 'hover:bg-slate-50'}`}>
-                                                        <td className="p-4 text-center">
-                                                            <input 
-                                                                type="checkbox"
-                                                                checked={isInSelectedTeam}
-                                                                onChange={(e) => handleAssign(student.id, e.target.checked)}
-                                                                className={`h-6 w-6 rounded-lg border-2 border-slate-300 focus:ring-primary cursor-pointer transition-all ${isCoyoteMode ? 'text-orange-600' : 'text-indigo-600'}`}
-                                                            />
-                                                        </td>
-                                                        <td className="p-4">
-                                                            <p className={`font-bold ${isInSelectedTeam ? 'text-primary' : ''}`}>{student.name}</p>
-                                                            <p className="text-[10px] opacity-60 uppercase">{student.matricula}</p>
-                                                        </td>
-                                                        <td className="p-4">
-                                                            <span className={`px-3 py-1 rounded-full font-black text-[9px] tracking-tighter ${gName === group.name ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-200 text-slate-600'}`}>
-                                                                {gName}
-                                                            </span>
-                                                        </td>
-                                                        <td className="p-4 text-center">
-                                                            {currentOtherTeam ? (
-                                                                <span className={`font-black text-[10px] px-2 py-0.5 rounded ${isInSelectedTeam ? 'bg-primary text-white' : 'text-slate-400 bg-slate-100'}`}>
-                                                                    {currentOtherTeam}
+
+                                    {/* Buscador y Filtros */}
+                                    <div className="mb-4">
+                                        <div className="relative">
+                                            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400">
+                                                <Icon name="search" className="h-4 w-4"/>
+                                            </div>
+                                            <input 
+                                                type="text" 
+                                                value={searchTerm}
+                                                onChange={e => setSearchTerm(e.target.value)}
+                                                placeholder={`Buscar alumnos...`}
+                                                className="w-full pl-10 pr-4 py-2.5 border-2 border-border-color rounded-xl bg-surface focus:ring-2 focus:ring-primary text-sm shadow-sm transition-all"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {/* Tabla de Alumnos */}
+                                    <div className="flex-1 overflow-y-auto custom-scrollbar border-2 border-border-color rounded-2xl bg-surface shadow-inner">
+                                        <table className="w-full text-left text-sm border-separate border-spacing-0">
+                                            <thead className="sticky top-0 bg-slate-50/95 backdrop-blur-sm z-10">
+                                                <tr className="text-text-secondary uppercase tracking-widest text-[9px] font-black">
+                                                    <th className="p-4 w-16 border-b border-border-color text-center">Incl.</th>
+                                                    <th className="p-4 border-b border-border-color">Nombre</th>
+                                                    <th className="p-4 border-b border-border-color">Grupo</th>
+                                                    <th className="p-4 border-b border-border-color text-center">Estado</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-border-color/50">
+                                                {filteredStudents.map(({student, gName}) => {
+                                                    const isInThisTeam = (isCoyoteMode ? student.teamCoyote : student.team) === selectedTeam;
+                                                    const otherTeamName = (isCoyoteMode ? student.teamCoyote : student.team);
+                                                    const hasOtherTeam = otherTeamName && !isInThisTeam;
+
+                                                    return (
+                                                        <tr key={`${student.id}-${gName}`} className={`transition-all ${isInThisTeam ? 'bg-indigo-50/30' : 'hover:bg-slate-50'}`}>
+                                                            <td className="p-4 text-center">
+                                                                <input 
+                                                                    type="checkbox"
+                                                                    checked={isInThisTeam}
+                                                                    onChange={(e) => handleAssign(student.id, e.target.checked)}
+                                                                    className={`h-5 w-5 rounded border-2 border-slate-300 focus:ring-primary cursor-pointer transition-all ${isCoyoteMode ? 'text-orange-600' : 'text-indigo-600'}`}
+                                                                />
+                                                            </td>
+                                                            <td className="p-4">
+                                                                <p className={`font-bold ${isInThisTeam ? 'text-primary' : 'text-text-primary'}`}>{student.name}</p>
+                                                                <p className="text-[9px] font-bold opacity-40 uppercase">{student.matricula}</p>
+                                                            </td>
+                                                            <td className="p-4">
+                                                                <span className={`px-2 py-1 rounded font-black text-[9px] tracking-tighter ${gName === group.name ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-200 text-slate-600'}`}>
+                                                                    {gName}
                                                                 </span>
-                                                            ) : <span className="text-slate-300 italic">- Ninguno -</span>}
-                                                        </td>
-                                                    </tr>
-                                                );
-                                            })}
-                                        </tbody>
-                                    </table>
-                                )}
-                            </div>
+                                                            </td>
+                                                            <td className="p-4 text-center">
+                                                                {isInThisTeam ? (
+                                                                    <span className="text-[9px] font-black uppercase text-accent-green-dark bg-accent-green-light px-2 py-0.5 rounded">Miembro</span>
+                                                                ) : hasOtherTeam ? (
+                                                                    <span className="text-[9px] font-black uppercase text-slate-400 bg-slate-100 px-2 py-0.5 rounded" title={`En: ${otherTeamName}`}>{otherTeamName}</span>
+                                                                ) : <span className="text-[9px] text-slate-300 italic">Libre</span>}
+                                                            </td>
+                                                        </tr>
+                                                    );
+                                                })}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>
 
-                {/* MODAL DE MIGRACIÓN RÁPIDA */}
+                {/* MODAL DE MIGRACIÓN */}
                 <Modal 
                     isOpen={isMigrateModalOpen} 
                     onClose={() => setMigrateModalOpen(false)} 
-                    title={`Migrar equipo a "${selectedTeam}"`}
+                    title={`Migrar equipo base a "${selectedTeam}"`}
                     size="md"
                 >
                     <div className="space-y-4">
-                        <p className="text-sm text-text-secondary">Selecciona un equipo base para mover a todos sus integrantes:</p>
+                        <div className="bg-indigo-50 p-4 rounded-xl border border-indigo-100 flex items-start gap-3">
+                            <Icon name="info" className="w-5 h-5 text-indigo-600 shrink-0 mt-0.5"/>
+                            <p className="text-xs text-indigo-800 font-medium">Esto moverá a todos los alumnos de un equipo base (del grupo local) al equipo Coyote seleccionado.</p>
+                        </div>
                         <div className="max-h-[50vh] overflow-y-auto space-y-2 pr-2 custom-scrollbar">
-                            {allBaseTeamsForQuarter.map(([tName, members]) => (
+                            {allBaseTeamsForQuarter.length > 0 ? allBaseTeamsForQuarter.map(([tName, members]) => (
                                 <button
                                     key={tName}
                                     onClick={() => handleMigrateTeam(tName, members)}
-                                    className="w-full p-4 bg-surface border border-border-color rounded-xl flex items-center justify-between hover:bg-indigo-50 hover:border-indigo-300 transition-all group"
+                                    className="w-full p-4 bg-surface border-2 border-border-color rounded-xl flex items-center justify-between hover:bg-indigo-50 hover:border-indigo-300 transition-all group"
                                 >
                                     <div className="text-left">
-                                        <p className="font-bold text-sm text-text-primary group-hover:text-indigo-900">{tName}</p>
-                                        <p className="text-[10px] text-text-secondary">{members.length} Integrantes</p>
+                                        <p className="font-extrabold text-sm text-text-primary group-hover:text-indigo-900">{tName}</p>
+                                        <p className="text-[10px] font-bold text-text-secondary opacity-60 uppercase">{members.length} Alumnos</p>
                                     </div>
-                                    <Icon name="arrow-right" className="w-5 h-5 text-indigo-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                    <div className="bg-indigo-100 p-2 rounded-lg text-indigo-600 opacity-0 group-hover:opacity-100 transition-all scale-75 group-hover:scale-100">
+                                        <Icon name="arrow-right" className="w-4 h-4" />
+                                    </div>
                                 </button>
-                            ))}
+                            )) : (
+                                <div className="text-center py-10 opacity-40">
+                                    <p className="text-xs font-bold uppercase">No hay equipos base disponibles</p>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </Modal>
@@ -557,65 +615,119 @@ const GroupManagement: React.FC = () => {
 
     return (
         <div className="h-full flex flex-col overflow-y-auto custom-scrollbar pr-2">
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-                <div className="lg:col-span-4 bg-surface p-4 rounded-xl shadow-sm border border-border-color flex flex-col overflow-hidden max-h-[300px] lg:max-h-full">
-                    <div className="flex justify-between items-center mb-3">
-                        <h2 className="text-lg font-bold">Mis Grupos</h2>
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <div className="lg:col-span-4 bg-surface p-5 rounded-2xl shadow-sm border border-border-color flex flex-col overflow-hidden max-h-[400px] lg:max-h-full">
+                    <div className="flex justify-between items-center mb-4">
+                        <h2 className="text-lg font-black uppercase tracking-tighter">Mis Grupos</h2>
                         <Button size="sm" onClick={() => { setEditingGroup(undefined); setGroupModalOpen(true); }} className="!p-1.5"><Icon name="plus" className="w-4 h-4"/></Button>
                     </div>
-                    <ul className="space-y-1.5 overflow-y-auto pr-1 flex-1 custom-scrollbar">
+                    <ul className="space-y-3 overflow-y-auto pr-1 flex-1 custom-scrollbar">
                        {groups.map(group => {
                             const isSelected = selectedGroupId === group.id;
                             return (
-                            <li key={group.id} onClick={() => dispatch({ type: 'SET_SELECTED_GROUP', payload: group.id })} className={`p-2.5 rounded-lg cursor-pointer transition-all border-l-4 ${isSelected ? 'bg-primary text-white border-transparent' : 'bg-surface-secondary hover:bg-border-color border-transparent'}`}>
-                               <div className="flex justify-between items-center">
-                                   <div className="min-w-0 flex-1"><p className="font-bold text-sm truncate">{group.name}</p><p className={`text-[10px] truncate ${isSelected ? 'opacity-80' : 'text-text-secondary'}`}>{group.subject}</p></div>
-                                   <div className={`flex gap-1.5 shrink-0 ml-2 ${isSelected ? 'text-white' : 'text-text-secondary'}`}>
-                                        <button onClick={(e) => { e.stopPropagation(); setConfirmDuplicate(group); }} className="p-1.5 hover:bg-black/10 rounded" title="Duplicar"><Icon name="copy" className="w-3.5 h-3.5"/></button>
-                                        <button onClick={(e) => { e.stopPropagation(); setEditingGroup(group); setGroupModalOpen(true); }} className="p-1.5 hover:bg-black/10 rounded" title="Editar"><Icon name="edit-3" className="w-3.5 h-3.5"/></button>
-                                        <button onClick={(e) => { e.stopPropagation(); setConfirmDeleteGroup({id: group.id, name: group.name}); }} className="p-1.5 hover:bg-red-500/20 text-accent-red rounded" title="Borrar"><Icon name="trash-2" className="w-3.5 h-3.5"/></button>
+                            <li key={group.id} onClick={() => dispatch({ type: 'SET_SELECTED_GROUP', payload: group.id })} className={`group/item p-4 rounded-xl cursor-pointer transition-all border-l-4 ${isSelected ? 'bg-primary text-white border-transparent shadow-lg shadow-primary/20 scale-[1.02]' : 'bg-surface-secondary/50 hover:bg-surface-secondary border-transparent'}`}>
+                               <div className="flex justify-between items-center gap-3">
+                                   <div className="min-w-0 flex-1">
+                                       <p className="font-black text-sm truncate leading-tight">{group.name}</p>
+                                       <p className={`text-[10px] font-bold truncate mt-0.5 uppercase tracking-wide ${isSelected ? 'opacity-80' : 'text-text-secondary opacity-60'}`}>{group.subject}</p>
+                                   </div>
+                                   <div className={`flex gap-1 shrink-0 ${isSelected ? 'text-white' : 'text-text-secondary opacity-80 sm:opacity-0 group-hover/item:opacity-100 transition-opacity'}`}>
+                                        <button onClick={(e) => { e.stopPropagation(); setConfirmDuplicate(group); }} className="p-1.5 hover:bg-white/20 rounded-lg" title="Duplicar"><Icon name="copy" className="w-4 h-4"/></button>
+                                        <button onClick={(e) => { e.stopPropagation(); setEditingGroup(group); setGroupModalOpen(true); }} className="p-1.5 hover:bg-white/20 rounded-lg" title="Editar"><Icon name="edit-3" className="w-4 h-4"/></button>
+                                        <button onClick={(e) => { e.stopPropagation(); setConfirmDeleteGroup({id: group.id, name: group.name}); }} className="p-1.5 hover:bg-red-500/20 text-accent-red rounded-lg" title="Borrar"><Icon name="trash-2" className="w-4 h-4"/></button>
                                    </div>
                                </div>
                            </li>
                            );
                         })}
+                        {groups.length === 0 && (
+                            <div className="text-center py-10 opacity-30">
+                                <Icon name="users" className="w-10 h-10 mx-auto mb-2"/>
+                                <p className="text-xs font-bold uppercase">Sin grupos</p>
+                            </div>
+                        )}
                     </ul>
                 </div>
 
-                <div className="lg:col-span-8 bg-surface p-4 rounded-xl shadow-sm border border-border-color flex flex-col overflow-hidden">
+                <div className="lg:col-span-8 bg-surface p-5 rounded-2xl shadow-sm border border-border-color flex flex-col overflow-hidden min-h-[400px]">
                    {selectedGroup ? (
                         <div className="flex flex-col h-full overflow-hidden">
-                            <div className="mb-4 space-y-3">
-                                <div className="flex items-center justify-between"><h2 className="text-xl font-bold truncate">{selectedGroup.name}</h2><div className="flex gap-2"><Button size="sm" variant="secondary" onClick={() => setBulkModalOpen(true)} className="!p-1.5"><Icon name="list-plus" className="w-4 h-4"/></Button><Button size="sm" onClick={() => { setEditingStudent(undefined); setStudentModalOpen(true); }} className="!p-1.5"><Icon name="user-plus" className="w-4 h-4"/></Button></div></div>
-                                <div className="relative"><div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400"><Icon name="search" className="h-4 w-4"/></div><input type="text" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} placeholder="Buscar alumno..." className="w-full pl-9 pr-3 py-1.5 border border-border-color rounded-md bg-surface text-sm focus:ring-1 focus:ring-primary"/></div>
+                            <div className="mb-5 space-y-4">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-3 min-w-0">
+                                        <div className={`w-3 h-8 rounded-full ${GROUP_COLORS.find(c => c.name === selectedGroup.color)?.bg || 'bg-primary'}`}></div>
+                                        <h2 className="text-2xl font-black truncate tracking-tighter">{selectedGroup.name}</h2>
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <Button size="sm" variant="secondary" onClick={() => setBulkModalOpen(true)} className="!p-1.5" title="Importar Lista"><Icon name="list-plus" className="w-5 h-5"/></Button>
+                                        <Button size="sm" onClick={() => { setEditingStudent(undefined); setStudentModalOpen(true); }} className="!p-1.5" title="Agregar Alumno"><Icon name="user-plus" className="w-5 h-5"/></Button>
+                                    </div>
+                                </div>
+                                <div className="relative">
+                                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                                        <Icon name="search" className="h-4 w-4"/>
+                                    </div>
+                                    <input 
+                                        type="text" 
+                                        value={searchTerm} 
+                                        onChange={e => setSearchTerm(e.target.value)} 
+                                        placeholder="Filtrar alumnos por nombre o matrícula..." 
+                                        className="w-full pl-10 pr-4 py-2 border-2 border-border-color rounded-xl bg-surface text-sm focus:ring-2 focus:ring-primary focus:border-primary transition-all"
+                                    />
+                                </div>
                             </div>
-                            <div className="overflow-auto flex-1 custom-scrollbar max-h-[400px]">
-                                <table className="w-full text-left text-xs">
-                                    <thead className="sticky top-0 bg-surface z-10"><tr className="border-b border-border-color text-text-secondary"><th className="p-2 w-8">#</th>{settings.showMatricula && <th className="p-2">Matrícula</th>}<th className="p-2">Nombre</th><th className="p-2">Equipo Base</th><th className="p-2">Coyote</th><th className="p-2 text-right">Acción</th></tr></thead>
-                                    <tbody>
+                            <div className="overflow-auto flex-1 custom-scrollbar border border-border-color rounded-xl">
+                                <table className="w-full text-left text-xs border-separate border-spacing-0">
+                                    <thead className="sticky top-0 bg-slate-50 z-10">
+                                        <tr className="border-b border-border-color text-text-secondary uppercase tracking-widest text-[9px] font-black">
+                                            <th className="p-3 w-10 text-center border-b border-border-color">#</th>
+                                            {settings.showMatricula && <th className="p-3 border-b border-border-color">Matrícula</th>}
+                                            <th className="p-3 border-b border-border-color">Nombre</th>
+                                            <th className="p-3 border-b border-border-color text-center">Equipo</th>
+                                            <th className="p-3 border-b border-border-color text-right">Acciones</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-border-color/40">
                                         {filteredStudents.map((s, i) => (
-                                            <tr key={s.id} className="border-b border-border-color/50 hover:bg-surface-secondary/40">
-                                                <td className="p-2 text-text-secondary font-medium">{i + 1}</td>
-                                                {settings.showMatricula && <td className="p-2 opacity-70">{s.matricula || '-'}</td>}
-                                                <td className="p-2 font-bold flex items-center gap-1.5 truncate">{s.name}{s.isRepeating && <span className="bg-rose-600 text-white text-[8px] font-bold px-1 rounded-full shrink-0">R</span>}</td>
-                                                <td className="p-2 truncate">
-                                                    <span className="text-[10px] bg-indigo-50 text-indigo-700 px-1.5 py-0.5 rounded font-bold">{s.team || '-'}</span>
+                                            <tr key={s.id} className="hover:bg-surface-secondary/40 transition-colors">
+                                                <td className="p-3 text-text-secondary font-black text-center">{i + 1}</td>
+                                                {settings.showMatricula && <td className="p-3 font-bold opacity-60 uppercase">{s.matricula || '-'}</td>}
+                                                <td className="p-3">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="font-bold text-text-primary">{s.name}</span>
+                                                        {s.isRepeating && <span className="bg-rose-600 text-white text-[8px] font-black px-1.5 py-0.5 rounded-full uppercase">R</span>}
+                                                    </div>
                                                 </td>
-                                                <td className="p-2 truncate">
-                                                    {s.teamCoyote && (
-                                                        <span className="text-[10px] bg-orange-100 text-orange-800 px-1.5 py-0.5 rounded font-bold border border-orange-200">
-                                                            <Icon name="dog" className="inline w-2.5 h-2.5 mr-0.5"/>{s.teamCoyote}
-                                                        </span>
-                                                    )}
+                                                <td className="p-3 text-center">
+                                                    <div className="flex flex-col gap-1 items-center">
+                                                        {s.team && <span className="text-[9px] bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-full font-black uppercase border border-indigo-100">Base: {s.team}</span>}
+                                                        {s.teamCoyote && (
+                                                            <span className="text-[9px] bg-orange-100 text-orange-800 px-2 py-0.5 rounded-full font-black uppercase border border-orange-200 flex items-center gap-1">
+                                                                <Icon name="dog" className="w-2.5 h-2.5"/> {s.teamCoyote}
+                                                            </span>
+                                                        )}
+                                                        {!s.team && !s.teamCoyote && <span className="text-slate-300 italic">-</span>}
+                                                    </div>
                                                 </td>
-                                                <td className="p-2 text-right whitespace-nowrap"><button onClick={() => { setEditingStudent(s); setStudentModalOpen(true); }} className="p-1.5 text-text-secondary hover:text-primary rounded"><Icon name="edit-3" className="w-3.5 h-3.5"/></button><button onClick={() => { setConfirmDeleteStudent({id: s.id, name: s.name}); }} className="p-1.5 text-accent-red hover:bg-accent-red-light rounded ml-1"><Icon name="trash-2" className="w-3.5 h-3.5"/></button></td>
+                                                <td className="p-3 text-right">
+                                                    <div className="flex justify-end gap-1">
+                                                        <button onClick={() => { setEditingStudent(s); setStudentModalOpen(true); }} className="p-1.5 text-text-secondary hover:text-primary hover:bg-primary/10 rounded-lg transition-all"><Icon name="edit-3" className="w-4 h-4"/></button>
+                                                        <button onClick={() => { setConfirmDeleteStudent({id: s.id, name: s.name}); }} className="p-1.5 text-accent-red hover:bg-rose-50 rounded-lg transition-all"><Icon name="trash-2" className="w-4 h-4"/></button>
+                                                    </div>
+                                                </td>
                                             </tr>
                                         ))}
                                     </tbody>
                                 </table>
                             </div>
                         </div>
-                   ) : (<div className="flex-1 flex flex-col items-center justify-center py-20 opacity-40"><Icon name="users" className="w-16 h-16"/><p className="mt-2 text-sm">Selecciona un grupo.</p></div>)}
+                   ) : (
+                        <div className="flex-1 flex flex-col items-center justify-center py-20 opacity-30">
+                            <Icon name="users" className="w-20 h-20 mb-4"/>
+                            <p className="text-lg font-black uppercase tracking-tighter">Selecciona un grupo</p>
+                            <p className="text-sm">Usa el panel de la izquierda para ver alumnos y equipos.</p>
+                        </div>
+                   )}
                 </div>
             </div>
 
@@ -637,24 +749,24 @@ const GroupManagement: React.FC = () => {
                         if (selectedGroupId) {
                             dispatch({ type: 'BULK_ADD_STUDENTS', payload: { groupId: selectedGroupId, students } });
                             setBulkModalOpen(false);
-                            dispatch({ type: 'ADD_TOAST', payload: { message: `${students.length} alumnos agregados.`, type: 'success' } });
+                            dispatch({ type: 'ADD_TOAST', payload: { message: `${students.length} alumnos agregados con éxito.`, type: 'success' } });
                         }
                     }} 
                     onCancel={() => setBulkModalOpen(false)} 
                 />
             </Modal>
 
-            {/* --- All Confirmation Modals for this view --- */}
+            {/* --- All Confirmation Modals --- */}
             <ConfirmationModal
                 isOpen={!!confirmDeleteGroup}
                 onClose={() => setConfirmDeleteGroup(null)}
                 onConfirm={deleteGroupAction}
                 title="Eliminar Grupo"
                 variant="danger"
-                confirmText="Eliminar"
+                confirmText="Eliminar permanentemente"
             >
-                ¿Estás seguro de que quieres eliminar el grupo <strong>"{confirmDeleteGroup?.name}"</strong>? 
-                <p className="mt-2 text-xs opacity-70">Se perderán todas las asistencias y calificaciones registradas de este grupo.</p>
+                ¿Estás seguro de que quieres eliminar <strong>"{confirmDeleteGroup?.name}"</strong>? 
+                <p className="mt-2 text-xs font-bold text-accent-red uppercase tracking-widest">¡Esta acción borrará todas las asistencias y calificaciones!</p>
             </ConfirmationModal>
 
             <ConfirmationModal
@@ -673,10 +785,10 @@ const GroupManagement: React.FC = () => {
                 onClose={() => setConfirmDuplicate(null)}
                 onConfirm={duplicateGroupAction}
                 title="Duplicar Grupo"
-                confirmText="Duplicar"
+                confirmText="Crear Copia"
             >
                 ¿Deseas crear una copia del grupo <strong>"{confirmDuplicate?.name}"</strong>? 
-                <p className="mt-2 text-xs opacity-70">Se copiará la lista de alumnos y criterios de evaluación, pero no el historial de asistencias.</p>
+                <p className="mt-2 text-xs opacity-70">Se copiará la lista de alumnos y la configuración de evaluación.</p>
             </ConfirmationModal>
 
             <ConfirmationModal
@@ -686,8 +798,8 @@ const GroupManagement: React.FC = () => {
                 title="Importar Criterios"
                 confirmText="Importar"
             >
-                ¿Deseas importar los criterios de evaluación del grupo <strong>"{confirmImportCriteria?.groupName}"</strong>?
-                <p className="mt-2 text-xs opacity-70">Esto reemplazará los criterios que hayas configurado en el formulario actual.</p>
+                ¿Importar criterios de <strong>"{confirmImportCriteria?.groupName}"</strong>?
+                <p className="mt-2 text-xs opacity-70">Esto reemplazará los pesos (%) del formulario actual.</p>
             </ConfirmationModal>
         </div>
     );
