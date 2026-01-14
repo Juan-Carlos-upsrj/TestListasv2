@@ -155,7 +155,7 @@ const StudentForm: React.FC<{ student?: Student; currentGroup?: Group; allGroups
     );
 };
 
-// --- TEAM MANAGEMENT COMPONENTS ---
+// --- TEAM MANAGEMENT COMPONENT ---
 
 const TeamsManager: React.FC<{ group: Group }> = ({ group }) => {
     const { state, dispatch } = useContext(AppContext);
@@ -288,21 +288,10 @@ const TeamsManager: React.FC<{ group: Group }> = ({ group }) => {
     };
 
     return (
-        <div className="mt-8 pt-8 border-t border-border-color">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-                <div className="flex items-center gap-3">
-                    <div className={`${isCoyoteMode ? 'bg-orange-800' : 'bg-indigo-600'} p-2 rounded-xl text-white transition-all shadow-lg`}>
-                        <Icon name={isCoyoteMode ? "dog" : "users"} className="w-6 h-6"/>
-                    </div>
-                    <div>
-                        <h2 className="text-2xl font-black tracking-tight">Gestión de Equipos</h2>
-                        <p className="text-xs text-text-secondary font-medium uppercase tracking-widest opacity-70">Organización Avanzada de Grupos</p>
-                    </div>
-                </div>
-                <Button onClick={() => setTeamsModalOpen(true)} className="bg-primary shadow-lg shadow-primary/20">
-                    <Icon name="layout" className="w-4 h-4" /> Abrir Gestor Avanzado
-                </Button>
-            </div>
+        <>
+            <Button size="sm" onClick={() => setTeamsModalOpen(true)} className="!p-1.5" title="Gestión de Equipos">
+                <Icon name="users" className="w-5 h-5"/>
+            </Button>
 
             <Modal 
                 isOpen={isTeamsModalOpen} 
@@ -549,7 +538,7 @@ const TeamsManager: React.FC<{ group: Group }> = ({ group }) => {
                     </div>
                 </Modal>
             </Modal>
-        </div>
+        </>
     );
 };
 
@@ -688,6 +677,7 @@ const GroupManagement: React.FC = () => {
                                         <h2 className="text-2xl font-black truncate tracking-tighter">{selectedGroup.name}</h2>
                                     </div>
                                     <div className="flex gap-2">
+                                        <TeamsManager group={selectedGroup} />
                                         <Button size="sm" variant="secondary" onClick={() => setBulkModalOpen(true)} className="!p-1.5" title="Importar Lista"><Icon name="list-plus" className="w-5 h-5"/></Button>
                                         <Button size="sm" onClick={() => { setEditingStudent(undefined); setStudentModalOpen(true); }} className="!p-1.5" title="Agregar Alumno"><Icon name="user-plus" className="w-5 h-5"/></Button>
                                     </div>
@@ -759,8 +749,6 @@ const GroupManagement: React.FC = () => {
                    )}
                 </div>
             </div>
-
-            {selectedGroup && <TeamsManager group={selectedGroup} />}
 
             <Modal isOpen={isGroupModalOpen} onClose={() => setGroupModalOpen(false)} title={editingGroup ? 'Editar Grupo' : 'Nuevo Grupo'} size="xl">
                 <GroupForm 
