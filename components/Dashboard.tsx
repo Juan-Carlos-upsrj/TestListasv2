@@ -32,11 +32,41 @@ const TeacherScheduleModal: React.FC<{ schedule: TeacherClass[], isOpen: boolean
         groupName: ''
     });
 
+    const formatTime = (hour: number) => {
+        const h = Math.floor(hour);
+        const m = Math.round((hour - h) * 60);
+        return `${h}:${m === 0 ? '00' : m}`;
+    };
+
     const scheduleByDay = useMemo(() => {
-        const map: Record<string, TeacherClass[]> = {};
+        const map: Record<string, (TeacherClass | { isFixedBreak: boolean; startTime: number; duration: number; label: string; id: string })[]> = {};
         DAYS_OF_WEEK.forEach(d => map[d] = []);
+        
         schedule.forEach(c => map[c.day]?.push(c));
-        Object.keys(map).forEach(d => map[d].sort((a, b) => a.startTime - b.startTime));
+        
+        // Agregar recesos fijos si el día tiene clases
+        Object.keys(map).forEach(day => {
+            if (map[day].length > 0) {
+                // Receso Mañana: 8:45 a 9:15 (8.75 a 9.25)
+                map[day].push({
+                    id: `fixed-break-morning-${day}`,
+                    isFixedBreak: true,
+                    startTime: 8.75,
+                    duration: 0.5,
+                    label: "Receso Comidita (Mañana)"
+                });
+                // Receso Tarde: 15:45 a 16:15 (15.75 a 16.25)
+                map[day].push({
+                    id: `fixed-break-afternoon-${day}`,
+                    isFixedBreak: true,
+                    startTime: 15.75,
+                    duration: 0.5,
+                    label: "Receso Comidita (Tarde)"
+                });
+            }
+            map[day].sort((a, b) => a.startTime - b.startTime);
+        });
+        
         return map;
     }, [schedule]);
 
@@ -54,8 +84,6 @@ const TeacherScheduleModal: React.FC<{ schedule: TeacherClass[], isOpen: boolean
         });
         return sessions;
     }, [groups, schedule]);
-
-    const formatTime = (hour: number) => `${hour}:00`;
 
     const handleAddManualClass = (e: React.FormEvent) => {
         e.preventDefault();
@@ -110,7 +138,7 @@ const TeacherScheduleModal: React.FC<{ schedule: TeacherClass[], isOpen: boolean
                 
                 {isEditing && (
                     <div className="space-y-6">
-                        {/* SECCIÓN 1: ASIGNACIÓN RÁPIDA (LO QUE PIDIÓ EL USUARIO) */}
+                        {/* SECCIÓN 1: ASIGNACIÓN RÁPIDA */}
                         <motion.div 
                             initial={{ opacity: 0, y: -10 }}
                             animate={{ opacity: 1, y: 0 }}
@@ -165,7 +193,7 @@ const TeacherScheduleModal: React.FC<{ schedule: TeacherClass[], isOpen: boolean
                             )}
                         </motion.div>
 
-                        {/* SECCIÓN 2: AGREGAR MANUAL (EXTRA) */}
+                        {/* SECCIÓN 2: AGREGAR MANUAL */}
                         <motion.div 
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
@@ -231,8 +259,8 @@ const TeacherScheduleModal: React.FC<{ schedule: TeacherClass[], isOpen: boolean
 
                 <AnimatePresence mode="wait">
                     {DAYS_OF_WEEK.map(day => {
-                        const classes = scheduleByDay[day];
-                        if (classes.length === 0) return null;
+                        const items = scheduleByDay[day];
+                        if (items.length === 0) return null;
 
                         return (
                             <motion.div 
@@ -244,10 +272,31 @@ const TeacherScheduleModal: React.FC<{ schedule: TeacherClass[], isOpen: boolean
                             >
                                 <h4 className="text-sm font-bold text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full inline-block">{day}</h4>
                                 <div className="grid grid-cols-1 gap-2">
-                                    {classes.map((c, i) => {
-                                        const nextClass = classes[i + 1];
-                                        const hasRecess = nextClass && (nextClass.startTime > c.startTime + c.duration);
+                                    {items.map((item, i) => {
+                                        // Detección de receso académico entre clases
+                                        const nextItem = items[i + 1];
+                                        const hasAcademicRecess = nextItem && (nextItem.startTime > item.startTime + item.duration);
                                         
+                                        if ('isFixedBreak' in item) {
+                                            return (
+                                                <div key={item.id} className="flex items-center gap-4 bg-rose-50/50 border border-rose-100 p-2 rounded-xl border-dashed">
+                                                    <div className="bg-rose-100 p-1.5 rounded-lg text-center min-w-[70px]">
+                                                        <p className="text-[8px] font-bold text-rose-500 uppercase">Hora</p>
+                                                        <p className="text-xs font-bold text-rose-600">{formatTime(item.startTime)}</p>
+                                                    </div>
+                                                    <div className="flex-1 min-w-0 flex items-center gap-2">
+                                                        <Icon name="cake" className="w-4 h-4 text-rose-500" />
+                                                        <p className="font-bold text-xs text-rose-700 uppercase tracking-tight">{item.label}</p>
+                                                    </div>
+                                                    <div className="text-right pr-2">
+                                                        <p className="text-[8px] font-bold text-rose-400 uppercase">Fin</p>
+                                                        <p className="text-xs font-bold text-rose-500">{formatTime(item.startTime + item.duration)}</p>
+                                                    </div>
+                                                </div>
+                                            );
+                                        }
+
+                                        const c = item as TeacherClass;
                                         return (
                                             <React.Fragment key={c.id}>
                                                 <div className="flex items-center gap-4 bg-white border border-slate-200 p-3 rounded-xl shadow-sm hover:border-primary transition-colors group">
@@ -274,7 +323,7 @@ const TeacherScheduleModal: React.FC<{ schedule: TeacherClass[], isOpen: boolean
                                                         )}
                                                     </div>
                                                 </div>
-                                                {hasRecess && !isEditing && (
+                                                {hasAcademicRecess && !isEditing && (
                                                     <div className="flex items-center gap-2 px-4 py-1.5 bg-amber-50/50 border border-dashed border-amber-200 rounded-lg text-amber-700">
                                                         <Icon name="cake" className="w-3.5 h-3.5" />
                                                         <span className="text-[10px] font-bold uppercase tracking-wider">Receso Académico</span>

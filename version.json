@@ -1,6 +1,6 @@
 
 {
-  "version": "1.4.9",
-  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v1.4.9/app-debug.apk",
-  "notes": "¡Versión 1.4.9! Corrección de errores de TypeScript relacionados con variables de estado no utilizadas para permitir el empaquetado del programa."
+  "version": "1.5.0",
+  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v1.5.0/app-debug.apk",
+  "notes": "¡Versión 1.5.0! Se han añadido recesos fijos de 'comidita' de 8:45 a 9:15 y de 15:45 a 16:15 en todos los días con carga académica."
 }
