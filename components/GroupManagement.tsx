@@ -170,9 +170,10 @@ const TeamsManager: React.FC<{ group: Group }> = ({ group }) => {
     const [tempTeams, setTempTeams] = useState<string[]>([]);
 
     useEffect(() => {
-        // Resetear equipos temporales cuando cambia el modo
+        // Resetear equipos temporales cuando cambia el modo o el grupo para evitar fugas de estado
         setTempTeams([]);
-    }, [isCoyoteMode]);
+        setSelectedTeam(null);
+    }, [isCoyoteMode, group.id]);
 
     // Notas del equipo actual
     const currentNote = useMemo(() => {
@@ -230,7 +231,7 @@ const TeamsManager: React.FC<{ group: Group }> = ({ group }) => {
         });
 
         return Array.from(teamsMap.entries()).sort((a,b) => a[0].localeCompare(b[0]));
-    }, [studentsList, group.students, isCoyoteMode, tempTeams]);
+    }, [studentsList, isCoyoteMode, tempTeams]);
 
     const allBaseTeamsForQuarter = useMemo(() => {
         const teamsMap = new Map<string, string[]>();
@@ -297,18 +298,55 @@ const TeamsManager: React.FC<{ group: Group }> = ({ group }) => {
     };
 
     const handleCreateTeam = () => {
-        const name = window.prompt(`Nombre del nuevo equipo ${isCoyoteMode ? 'Coyote' : 'Base'}:`);
-        if (name && name.trim()) {
-            const trimmedName = name.trim();
-            // Evitar duplicados
-            if (existingTeams.some(t => t[0].toLowerCase() === trimmedName.toLowerCase())) {
-                dispatch({ type: 'ADD_TOAST', payload: { message: 'Este nombre de equipo ya existe.', type: 'error' } });
-                setSelectedTeam(trimmedName);
-                return;
-            }
-            setTempTeams(prev => [...prev, trimmedName]);
-            setSelectedTeam(trimmedName);
+        const typeLabel = isCoyoteMode ? 'Coyote' : 'Base';
+        const name = window.prompt(`Ingresa el nombre para el nuevo equipo ${typeLabel}:`);
+        
+        if (name === null) return; // Cancelado
+
+        const trimmedName = name.trim();
+        if (!trimmedName) {
+            dispatch({ type: 'ADD_TOAST', payload: { message: 'El nombre no puede estar vacío.', type: 'error' } });
+            return;
         }
+
+        // Evitar duplicados en la vista actual
+        if (existingTeams.some(t => t[0].toLowerCase() === trimmedName.toLowerCase())) {
+            dispatch({ type: 'ADD_TOAST', payload: { message: 'Este equipo ya existe.', type: 'info' } });
+            setSelectedTeam(trimmedName);
+            return;
+        }
+
+        setTempTeams(prev => [...prev, trimmedName]);
+        setSelectedTeam(trimmedName);
+        dispatch({ type: 'ADD_TOAST', payload: { message: `Equipo "${trimmedName}" listo para asignar alumnos.`, type: 'success' } });
+    };
+
+    const handleRenameTeam = () => {
+        if (!selectedTeam) return;
+        
+        const newName = window.prompt(`Nuevo nombre para "${selectedTeam}":`, selectedTeam);
+        if (newName === null || newName.trim() === '' || newName.trim() === selectedTeam) return;
+
+        const trimmed = newName.trim();
+        
+        // Verificar si el nuevo nombre ya existe
+        if (existingTeams.some(t => t[0].toLowerCase() === trimmed.toLowerCase() && t[0] !== selectedTeam)) {
+            dispatch({ type: 'ADD_TOAST', payload: { message: 'El nombre ya está en uso por otro equipo.', type: 'error' } });
+            return;
+        }
+
+        // 1. Despachar cambio global (alumnos y notas)
+        dispatch({ 
+            type: 'RENAME_TEAM', 
+            payload: { oldName: selectedTeam, newName: trimmed, isCoyote: isCoyoteMode } 
+        });
+
+        // 2. Actualizar lista temporal local si el equipo estaba vacío
+        setTempTeams(prev => prev.map(t => t === selectedTeam ? trimmed : t));
+        
+        // 3. Actualizar selección
+        setSelectedTeam(trimmed);
+        dispatch({ type: 'ADD_TOAST', payload: { message: 'Equipo renombrado correctamente.', type: 'success' } });
     };
 
     return (
@@ -328,13 +366,13 @@ const TeamsManager: React.FC<{ group: Group }> = ({ group }) => {
                     <div className="flex items-center justify-center mb-6 shrink-0">
                         <div className="bg-surface-secondary p-1.5 rounded-2xl flex border border-border-color shadow-inner scale-90 sm:scale-100">
                             <button 
-                                onClick={() => { setCoyoteMode(false); setSelectedTeam(null); }}
+                                onClick={() => { setCoyoteMode(false); }}
                                 className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${!isCoyoteMode ? 'bg-white shadow-md text-indigo-700' : 'text-text-secondary opacity-60'}`}
                             >
                                 <Icon name="users" className="w-4 h-4"/> Equipos Base
                             </button>
                             <button 
-                                onClick={() => { setCoyoteMode(true); setSelectedTeam(null); }}
+                                onClick={() => { setCoyoteMode(true); }}
                                 className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${isCoyoteMode ? 'bg-orange-100 shadow-md text-orange-800' : 'text-text-secondary opacity-60'}`}
                             >
                                 <Icon name="dog" className="w-4 h-4"/> Equipos Coyote
@@ -431,15 +469,7 @@ const TeamsManager: React.FC<{ group: Group }> = ({ group }) => {
                                                 </Button>
                                             )}
                                             <button 
-                                                onClick={() => {
-                                                    const newName = window.prompt("Nuevo nombre:", selectedTeam);
-                                                    if (newName && newName.trim() && newName !== selectedTeam) {
-                                                        const trimmed = newName.trim();
-                                                        dispatch({ type: 'RENAME_TEAM', payload: { oldName: selectedTeam, newName: trimmed, isCoyote: isCoyoteMode } });
-                                                        setTempTeams(prev => prev.map(t => t === selectedTeam ? trimmed : t));
-                                                        setSelectedTeam(trimmed);
-                                                    }
-                                                }}
+                                                onClick={handleRenameTeam}
                                                 className="p-2 bg-white border border-border-color rounded-xl hover:bg-slate-50 transition-colors shadow-sm"
                                                 title="Renombrar"
                                             >
