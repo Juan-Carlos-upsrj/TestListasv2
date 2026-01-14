@@ -1,6 +1,6 @@
 
 {
-  "version": "1.4.2",
-  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v1.4.2/app-debug.apk",
-  "notes": "¡Versión 1.4.2! Ahora puedes añadir notas privadas en la sección de Equipos para llevar un mejor seguimiento de entregas y presentaciones."
+  "version": "1.4.3",
+  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v1.4.3/app-debug.apk",
+  "notes": "¡Versión 1.4.3! La sección de equipos ahora solo muestra los equipos que tienen integrantes en el grupo que estás visualizando actualmente."
 }

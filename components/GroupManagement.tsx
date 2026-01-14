@@ -147,13 +147,22 @@ const TeamsManager: React.FC<{ group: Group }> = ({ group }) => {
         group.students.filter(s => !s.team || s.team.trim() === ''),
     [group.students]);
 
-    // Aggregate ALL students from ALL groups to find cross-group team members
+    // Aggregate ALL students but FILTER results to only show teams present in the CURRENT group
     const teamsData = useMemo(() => {
+        // 1. Find all team names present in the current group
+        const relevantTeamNames = new Set<string>();
+        group.students.forEach(s => {
+            if (s.team && s.team.trim() !== '') {
+                relevantTeamNames.add(s.team);
+            }
+        });
+
         const teamsMap: { [name: string]: { members: { student: Student, groupName: string }[] } } = {};
         
+        // 2. Collect members only for those relevant teams
         groups.forEach(g => {
             g.students.forEach(s => {
-                if (s.team && s.team.trim() !== '') {
+                if (s.team && relevantTeamNames.has(s.team)) {
                     if (!teamsMap[s.team]) teamsMap[s.team] = { members: [] };
                     teamsMap[s.team].members.push({ student: s, groupName: g.name });
                 }
@@ -161,7 +170,7 @@ const TeamsManager: React.FC<{ group: Group }> = ({ group }) => {
         });
         
         return Object.entries(teamsMap).sort(([a], [b]) => a.localeCompare(b));
-    }, [groups]);
+    }, [groups, group]);
 
     const handleRenameTeam = (oldName: string, newName: string) => {
         if (!newName.trim() || oldName === newName) {
@@ -201,8 +210,8 @@ const TeamsManager: React.FC<{ group: Group }> = ({ group }) => {
                     <Icon name="users" className="w-6 h-6"/>
                 </div>
                 <div>
-                    <h2 className="text-2xl font-bold">Gestión Estratégica de Equipos</h2>
-                    <p className="text-sm text-text-secondary">Organiza integrantes y anota observaciones privadas sobre su desempeño.</p>
+                    <h2 className="text-2xl font-bold">Equipos del Grupo</h2>
+                    <p className="text-sm text-text-secondary">Visualiza integrantes y anota observaciones privadas para tu seguimiento.</p>
                 </div>
             </div>
 
