@@ -1,6 +1,6 @@
 
 {
-  "version": "1.6.1",
-  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v1.6.1/app-debug.apk",
-  "notes": "¡Versión 1.6.1! Corrección de error crítico de build (TypeScript) y refuerzo en la hidratación de notas de equipos para prevenir pérdida de datos."
+  "version": "1.6.2",
+  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v1.6.2/app-debug.apk",
+  "notes": "¡Versión 1.6.2! Rescate masivo de equipos antiguos, botones de grupo siempre visibles y reparación total del gestor de equipos inter-grupal."
 }

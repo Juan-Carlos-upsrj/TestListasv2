@@ -631,10 +631,10 @@ const GroupManagement: React.FC = () => {
                                        <p className="font-black text-sm truncate leading-tight">{group.name}</p>
                                        <p className={`text-[10px] font-bold truncate mt-0.5 uppercase tracking-wide ${isSelected ? 'opacity-80' : 'text-text-secondary opacity-60'}`}>{group.subject}</p>
                                    </div>
-                                   <div className={`flex gap-1 shrink-0 ${isSelected ? 'text-white' : 'text-text-secondary opacity-80 sm:opacity-0 group-hover/item:opacity-100 transition-opacity'}`}>
-                                        <button onClick={(e) => { e.stopPropagation(); setConfirmDuplicate(group); }} className="p-1.5 hover:bg-white/20 rounded-lg" title="Duplicar"><Icon name="copy" className="w-4 h-4"/></button>
-                                        <button onClick={(e) => { e.stopPropagation(); setEditingGroup(group); setGroupModalOpen(true); }} className="p-1.5 hover:bg-white/20 rounded-lg" title="Editar"><Icon name="edit-3" className="w-4 h-4"/></button>
-                                        <button onClick={(e) => { e.stopPropagation(); setConfirmDeleteGroup({id: group.id, name: group.name}); }} className="p-1.5 hover:bg-red-500/20 text-accent-red rounded-lg" title="Borrar"><Icon name="trash-2" className="w-4 h-4"/></button>
+                                   <div className={`flex gap-1 shrink-0 ${isSelected ? 'text-white' : 'text-text-secondary'}`}>
+                                        <button onClick={(e) => { e.stopPropagation(); setConfirmDuplicate(group); }} className="p-1.5 bg-white/10 hover:bg-white/20 rounded-lg transition-colors" title="Duplicar"><Icon name="copy" className="w-4 h-4"/></button>
+                                        <button onClick={(e) => { e.stopPropagation(); setEditingGroup(group); setGroupModalOpen(true); }} className="p-1.5 bg-white/10 hover:bg-white/20 rounded-lg transition-colors" title="Editar"><Icon name="edit-3" className="w-4 h-4"/></button>
+                                        <button onClick={(e) => { e.stopPropagation(); setConfirmDeleteGroup({id: group.id, name: group.name}); }} className="p-1.5 bg-red-500/10 hover:bg-red-500/20 text-accent-red rounded-lg transition-colors" title="Borrar"><Icon name="trash-2" className="w-4 h-4"/></button>
                                    </div>
                                </div>
                            </li>

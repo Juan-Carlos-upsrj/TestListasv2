@@ -52,10 +52,18 @@ const appReducer = (state: AppState, action: AppAction): AppState => {
     case 'SET_INITIAL_STATE': {
         const loadedState = action.payload || {};
         const loadedGroups: Group[] = (Array.isArray(loadedState.groups) ? loadedState.groups : []).filter(g => g && g.id);
+        
+        // MIGRACIÓN DE GRUPOS: Asegurar que no perdemos propiedades de los alumnos (como equipos)
         const migratedGroups = loadedGroups.map((group, index) => {
             const hasEvalTypes = group.evaluationTypes && group.evaluationTypes.partial1 && group.evaluationTypes.partial2;
             return {
                 ...group,
+                students: group.students.map(s => ({
+                    ...s,
+                    // Asegurar que conservamos los strings de equipo si existen
+                    team: s.team || (s as any).equipoBase || undefined,
+                    teamCoyote: s.teamCoyote || (s as any).equipoCoyote || undefined
+                })),
                 classDays: group.classDays || [],
                 color: group.color || GROUP_COLORS[index % GROUP_COLORS.length].name,
                 quarter: group.quarter || '', 
@@ -81,30 +89,11 @@ const appReducer = (state: AppState, action: AppAction): AppState => {
 
         const loadedSettings = loadedState.settings;
         const migratedSettings = { ...defaultState.settings, ...loadedSettings };
-
         migratedSettings.theme = 'classic';
 
-        if (typeof (migratedSettings as any).showAbbreviationInSidebar !== 'undefined') {
-            if (!(migratedSettings as any).showAbbreviationInSidebar) {
-                migratedSettings.sidebarGroupDisplayMode = 'name';
-            } else {
-                migratedSettings.sidebarGroupDisplayMode = 'name-abbrev';
-            }
-            delete (migratedSettings as any).showAbbreviationInSidebar;
-        }
-
-        if (!migratedSettings.mobileUpdateUrl) {
-            migratedSettings.mobileUpdateUrl = defaultState.settings.mobileUpdateUrl;
-        }
-        
-        if (typeof migratedSettings.enableReminders === 'undefined') {
-            migratedSettings.enableReminders = defaultState.settings.enableReminders;
-            migratedSettings.reminderTime = defaultState.settings.reminderTime;
-        }
-
-        // HIDRATACIÓN SEGURA DE NOTAS (Evita pérdida de datos)
-        const teamNotes = loadedState.teamNotes || (loadedState as any).teamsNotes || {};
-        const coyoteTeamNotes = loadedState.coyoteTeamNotes || {};
+        // HIDRATACIÓN SEGURA DE NOTAS (Evita pérdida de datos por cambio de nombre de propiedad)
+        const teamNotes = loadedState.teamNotes || (loadedState as any).teamsNotes || (loadedState as any).notasEquipos || {};
+        const coyoteTeamNotes = loadedState.coyoteTeamNotes || (loadedState as any).notasCoyote || {};
 
         return {
             groups: migratedGroups,
@@ -114,7 +103,7 @@ const appReducer = (state: AppState, action: AppAction): AppState => {
             calendarEvents: Array.isArray(loadedState.calendarEvents) ? loadedState.calendarEvents.filter(Boolean) : defaultState.calendarEvents,
             gcalEvents: Array.isArray(loadedState.gcalEvents) ? loadedState.gcalEvents.filter(Boolean) : defaultState.gcalEvents,
             settings: migratedSettings,
-            activeView: 'dashboard',
+            activeView: state.activeView, // Mantener la vista actual si se re-hidrata
             selectedGroupId: loadedState.selectedGroupId ?? null,
             toasts: [],
             archives: Array.isArray(loadedState.archives) ? loadedState.archives : [],
