@@ -26,7 +26,7 @@ const defaultState: AppState = {
     semesterEnd: fourMonthsLater.toISOString().split('T')[0],
     showMatricula: true,
     showTeamsInGrades: true,
-    sidebarGroupDisplayMode: 'name-abbrev', // New default
+    sidebarGroupDisplayMode: 'name-abbrev', 
     theme: 'classic', 
     lowAttendanceThreshold: 80,
     googleCalendarUrl: '',
@@ -40,7 +40,8 @@ const defaultState: AppState = {
   selectedGroupId: null,
   toasts: [],
   archives: [],
-  teamNotes: {}, // NEW
+  teamNotes: {},
+  teacherSchedule: [], // NUEVO
 };
 
 const appReducer = (state: AppState, action: AppAction): AppState => {
@@ -78,10 +79,8 @@ const appReducer = (state: AppState, action: AppAction): AppState => {
         const loadedSettings = loadedState.settings;
         const migratedSettings = { ...defaultState.settings, ...loadedSettings };
 
-        // CRITICAL FIX: Force theme to 'classic' (light) and ignore any 'dark' preference from previous versions
         migratedSettings.theme = 'classic';
 
-        // Migration from boolean to string mode
         if (typeof (migratedSettings as any).showAbbreviationInSidebar !== 'undefined') {
             if (!(migratedSettings as any).showAbbreviationInSidebar) {
                 migratedSettings.sidebarGroupDisplayMode = 'name';
@@ -108,6 +107,7 @@ const appReducer = (state: AppState, action: AppAction): AppState => {
             toasts: [],
             archives: Array.isArray(loadedState.archives) ? loadedState.archives : [],
             teamNotes: loadedState.teamNotes ?? {},
+            teacherSchedule: loadedState.teacherSchedule ?? [], // CARGAR
         };
     }
     case 'SET_VIEW':
@@ -254,18 +254,15 @@ const appReducer = (state: AppState, action: AppAction): AppState => {
         const updatedGrades = { ...state.grades };
         const updatedGroupGrades = { ...(updatedGrades[groupId] || {}) };
 
-        // 1. Base update for the specific student
         const studentGrades = { ...(updatedGroupGrades[studentId] || {}) };
         studentGrades[evaluationId] = score;
         updatedGroupGrades[studentId] = studentGrades;
 
-        // 2. Team Logic: If evaluation is team-based and student has a team
         if (evaluation?.isTeamBased && group) {
             const currentStudent = group.students.find(s => s.id === studentId);
             const teamName = currentStudent?.team;
             
             if (teamName) {
-                // Find all group students in the same team
                 group.students.forEach(s => {
                     if (s.team === teamName && s.id !== studentId) {
                         const otherStudentGrades = { ...(updatedGroupGrades[s.id] || {}) };
@@ -372,6 +369,8 @@ const appReducer = (state: AppState, action: AppAction): AppState => {
             }))
         };
     }
+    case 'SET_TEACHER_SCHEDULE': // NUEVO
+        return { ...state, teacherSchedule: action.payload };
     default:
       return state;
   }

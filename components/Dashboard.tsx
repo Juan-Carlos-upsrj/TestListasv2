@@ -1,18 +1,90 @@
+
 import React, { useContext, useMemo, useState } from 'react';
 import { Responsive, WidthProvider } from 'react-grid-layout';
 import { AppContext } from '../context/AppContext';
-import { Group, AttendanceStatus } from '../types';
+import { Group, AttendanceStatus, TeacherClass, DayOfWeek } from '../types';
 import Icon from './icons/Icon';
 import BirthdayCelebration from './BirthdayCelebration';
-import { PROFESSOR_BIRTHDAYS, GROUP_COLORS } from '../constants';
+import { PROFESSOR_BIRTHDAYS, GROUP_COLORS, DAYS_OF_WEEK } from '../constants';
 import Modal from './common/Modal';
 import AttendanceTaker from './AttendanceTaker';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { syncAttendanceData, syncScheduleData } from '../services/syncService';
 import Button from './common/Button';
 import SemesterTransitionModal from './SemesterTransitionModal';
 
 const ResponsiveGridLayout = WidthProvider(Responsive);
+
+// --- COMPONENTE HORARIO ---
+
+const TeacherScheduleModal: React.FC<{ schedule: TeacherClass[], isOpen: boolean, onClose: () => void }> = ({ schedule, isOpen, onClose }) => {
+    // Agrupar por día y ordenar por hora
+    const scheduleByDay = useMemo(() => {
+        const map: Record<string, TeacherClass[]> = {};
+        DAYS_OF_WEEK.forEach(d => map[d] = []);
+        schedule.forEach(c => map[c.day]?.push(c));
+        Object.keys(map).forEach(d => map[d].sort((a, b) => a.startTime - b.startTime));
+        return map;
+    }, [schedule]);
+
+    const formatTime = (hour: number) => `${hour}:00`;
+
+    return (
+        <Modal isOpen={isOpen} onClose={onClose} title="Mi Horario Docente" size="xl">
+            <div className="space-y-6 max-h-[70vh] overflow-y-auto custom-scrollbar pr-2">
+                {DAYS_OF_WEEK.map(day => {
+                    const classes = scheduleByDay[day];
+                    if (classes.length === 0) return null;
+
+                    return (
+                        <div key={day} className="space-y-2">
+                            <h4 className="text-sm font-bold text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full inline-block">{day}</h4>
+                            <div className="grid grid-cols-1 gap-2">
+                                {classes.map((c, i) => {
+                                    const nextClass = classes[i + 1];
+                                    const hasRecess = nextClass && (nextClass.startTime > c.startTime + c.duration);
+                                    
+                                    return (
+                                        <React.Fragment key={c.id}>
+                                            <div className="flex items-center gap-4 bg-white border border-slate-200 p-3 rounded-xl shadow-sm hover:border-primary transition-colors">
+                                                <div className="bg-slate-100 p-2 rounded-lg text-center min-w-[70px]">
+                                                    <p className="text-[10px] font-bold text-slate-500 uppercase">Inicio</p>
+                                                    <p className="text-sm font-bold text-primary">{formatTime(c.startTime)}</p>
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="font-bold text-sm truncate">{c.subjectName}</p>
+                                                    <p className="text-xs text-text-secondary truncate">{c.groupName}</p>
+                                                </div>
+                                                <div className="text-right">
+                                                    <p className="text-[10px] font-bold text-slate-400 uppercase">Duración</p>
+                                                    <p className="text-xs font-bold text-slate-600">{c.duration}h</p>
+                                                </div>
+                                            </div>
+                                            {hasRecess && (
+                                                <div className="flex items-center gap-2 px-4 py-1.5 bg-amber-50/50 border border-dashed border-amber-200 rounded-lg text-amber-700">
+                                                    <Icon name="cake" className="w-3.5 h-3.5" />
+                                                    <span className="text-[10px] font-bold uppercase tracking-wider">Receso Académico</span>
+                                                </div>
+                                            )}
+                                        </React.Fragment>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    );
+                })}
+                {schedule.length === 0 && (
+                    <div className="text-center py-10 opacity-40">
+                        <Icon name="calendar" className="w-16 h-16 mx-auto mb-2" />
+                        <p>No hay horario cargado. Pulsa el botón "Horario" en el Dashboard para sincronizar.</p>
+                    </div>
+                )}
+            </div>
+        </Modal>
+    );
+};
+
+// --- WIDGETS ---
 
 const WelcomeWidget: React.FC<{ dateString: string }> = ({ dateString }) => {
     const { state } = useContext(AppContext);
@@ -157,6 +229,7 @@ const Dashboard: React.FC = () => {
     const [isTakerOpen, setTakerOpen] = useState(false);
     const [attendanceGroup, setAttendanceGroup] = useState<Group | null>(null);
     const [isTransitionOpen, setTransitionOpen] = useState(false);
+    const [isScheduleOpen, setScheduleOpen] = useState(false); // NUEVO
     const [today, setToday] = useState(new Date());
     const [birthdayPerson, setBirthdayPerson] = useState<string | null>(null);
 
@@ -184,7 +257,7 @@ const Dashboard: React.FC = () => {
     };
 
     return (
-        <div className="max-w-[1400px] mx-auto">
+        <div className="max-w-[1400px] mx-auto relative h-full">
             <BirthdayCelebration name={birthdayPerson || ''} show={!!birthdayPerson} />
             <ResponsiveGridLayout layouts={layouts} breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }} cols={{ lg: 3, md: 3, sm: 2, xs: 1, xxs: 1 }} rowHeight={110} isDraggable={false} isResizable={false} margin={[12, 12]}>
                 <div key="welcome"><WidgetWrapper title=""><WelcomeWidget dateString={dateString} /></WidgetWrapper></div>
@@ -193,8 +266,22 @@ const Dashboard: React.FC = () => {
                 <div key="upcoming-events"><WidgetWrapper id="dashboard-upcoming-events" title="Próximos Eventos"><UpcomingEventsWidget /></WidgetWrapper></div>
                 <div key="quick-actions"><WidgetWrapper id="dashboard-quick-actions" title="Acciones"><QuickActionsWidget /></WidgetWrapper></div>
             </ResponsiveGridLayout>
+
+            {/* BOTÓN FLOTANTE HORARIO (ESQUINA INFERIOR DERECHA) */}
+            <motion.button
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+                onClick={() => setScheduleOpen(true)}
+                className="fixed bottom-10 right-10 z-[40] w-14 h-14 bg-indigo-600 text-white rounded-full shadow-2xl flex items-center justify-center hover:bg-indigo-700 transition-colors"
+                title="Ver mi horario completo"
+            >
+                <Icon name="calendar" className="w-6 h-6" />
+                <div className="absolute -top-1 -right-1 w-4 h-4 bg-accent-red rounded-full border-2 border-white animate-pulse" />
+            </motion.button>
+
             {attendanceGroup && (<Modal isOpen={isTakerOpen} onClose={() => setTakerOpen(false)} title={`Pase: ${attendanceGroup.name}`}><AttendanceTaker students={attendanceGroup.students} date={todayStr} groupAttendance={state.attendance[attendanceGroup.id] || {}} onStatusChange={(sid, s) => dispatch({ type: 'UPDATE_ATTENDANCE', payload: { groupId: attendanceGroup.id, studentId: sid, date: todayStr, status: s } })} onClose={() => setTakerOpen(false)}/></Modal>)}
             <SemesterTransitionModal isOpen={isTransitionOpen} onClose={() => setTransitionOpen(false)} />
+            <TeacherScheduleModal schedule={state.teacherSchedule || []} isOpen={isScheduleOpen} onClose={() => setScheduleOpen(false)} />
         </div>
     );
 };

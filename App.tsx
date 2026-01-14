@@ -1,5 +1,5 @@
 
-import React, { useContext, useEffect, useState } from 'react';
+import React, { useContext, useEffect, useState, useRef } from 'react';
 import { AppContext } from './context/AppContext';
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
@@ -20,23 +20,61 @@ import { MobileUpdateInfo } from './types';
 
 const App: React.FC = () => {
   const { state } = useContext(AppContext);
-  const { settings } = state;
+  const { settings, teacherSchedule } = state;
   const [isFriday, setIsFriday] = useState(false);
   const [isBirthday, setIsBirthday] = useState(false);
-  
-  // Desktop Updates
   const [updateAvailable, setUpdateAvailable] = useState(false);
-  
-  // Mobile Updates
   const [mobileUpdateInfo, setMobileUpdateInfo] = useState<MobileUpdateInfo | null>(null);
-  
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  
+  // Seguimiento de notificaciones enviadas para no repetir
+  const notifiedClassesRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
-    // CRITICAL FIX: Explicitly remove 'dark' class to revert to light theme
-    // and ensure no residual classes from previous versions interfere.
     document.documentElement.classList.remove('dark');
-  }, []); // Only once on mount
+    
+    // Solicitar permiso para notificaciones
+    if ("Notification" in window) {
+      Notification.requestPermission();
+    }
+  }, []);
+
+  // Lógica de Alerta de Próxima Clase (15-20 min antes)
+  useEffect(() => {
+    if (!teacherSchedule || teacherSchedule.length === 0) return;
+
+    const checkSchedule = () => {
+      const now = new Date();
+      const currentDayStr = now.toLocaleDateString('es-ES', { weekday: 'long' });
+      const currentHour = now.getHours();
+      const currentMin = now.getMinutes();
+      const currentTimeInMins = currentHour * 60 + currentMin;
+
+      // Buscar clases de hoy
+      const todaysClasses = teacherSchedule.filter(c => c.day.toLowerCase() === currentDayStr.toLowerCase());
+
+      todaysClasses.forEach(clase => {
+        const classStartInMins = clase.startTime * 60;
+        const diff = classStartInMins - currentTimeInMins;
+        const notificationKey = `${clase.id}-${now.toDateString()}`;
+
+        // Si faltan entre 15 y 20 minutos
+        if (diff >= 15 && diff <= 20 && !notifiedClassesRef.current.has(notificationKey)) {
+          if (Notification.permission === "granted") {
+            new Notification("🍎 Próxima Clase", {
+              body: `Faltan ${diff} min para: ${clase.subjectName} (${clase.groupName})`,
+              icon: "logo.png"
+            });
+            notifiedClassesRef.current.add(notificationKey);
+          }
+        }
+      });
+    };
+
+    checkSchedule();
+    const interval = setInterval(checkSchedule, 60000); // Revisar cada minuto
+    return () => clearInterval(interval);
+  }, [teacherSchedule]);
 
 
   useEffect(() => {
@@ -55,23 +93,18 @@ const App: React.FC = () => {
     return () => clearInterval(timer);
   }, []);
 
-  // Update listeners (Desktop & Mobile)
   useEffect(() => {
-    // 1. Desktop (Electron) check
     if (window.electronAPI) {
       window.electronAPI.onUpdateDownloaded(() => {
         setUpdateAvailable(true);
       });
     } 
-    // 2. Mobile (Web/Android) check
     else if (settings.mobileUpdateUrl) {
-       // Perform check once on mount (or when URL changes)
        checkForMobileUpdate(settings.mobileUpdateUrl, APP_VERSION)
          .then(info => {
              if (info) setMobileUpdateInfo(info);
          })
          .catch(err => {
-             // Silently fail on auto-check to avoid annoying the user on startup
              console.warn("Auto-update check failed:", err);
          });
     }
@@ -118,10 +151,8 @@ const App: React.FC = () => {
     <div className="flex h-screen bg-background text-text-primary font-sans relative">
       <BackgroundShapesV2 />
       
-      {/* Desktop Notification */}
       {updateAvailable && <UpdateNotification onUpdate={handleUpdate} />}
       
-      {/* Mobile/Manual Modal */}
       <MobileUpdateModal 
          isOpen={!!mobileUpdateInfo} 
          onClose={() => setMobileUpdateInfo(null)} 
@@ -130,7 +161,6 @@ const App: React.FC = () => {
       
       <Sidebar isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />
 
-      {/* Overlay for mobile */}
       <AnimatePresence>
         {isSidebarOpen && (
             <motion.div

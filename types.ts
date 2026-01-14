@@ -96,6 +96,15 @@ export interface Archive {
     data: AppState;
 }
 
+export interface TeacherClass {
+    id: string;
+    day: DayOfWeek;
+    startTime: number;
+    duration: number;
+    subjectName: string;
+    groupName: string;
+}
+
 export interface AppState {
   groups: Group[];
   attendance: {
@@ -122,7 +131,8 @@ export interface AppState {
   selectedGroupId: string | null;
   toasts: Toast[];
   archives: Archive[];
-  teamNotes?: { [teamName: string]: string }; // NEW: Storage for private team annotations
+  teamNotes?: { [teamName: string]: string }; 
+  teacherSchedule?: TeacherClass[]; // NUEVO: Para seguimiento de alertas
 }
 
 export type AppAction =
@@ -153,8 +163,9 @@ export type AppAction =
   | { type: 'TRANSITION_SEMESTER'; payload: { newGroups: Group[]; newSettings: Partial<Settings> } }
   | { type: 'RENAME_TEAM'; payload: { oldName: string, newName: string } }
   | { type: 'DELETE_TEAM'; payload: string }
-  | { type: 'UPDATE_TEAM_NOTE'; payload: { teamName: string, note: string } } // NEW ACTION
-  | { type: 'ASSIGN_STUDENT_TEAM'; payload: { studentId: string, teamName: string | undefined } };
+  | { type: 'UPDATE_TEAM_NOTE'; payload: { teamName: string, note: string } } 
+  | { type: 'ASSIGN_STUDENT_TEAM'; payload: { studentId: string, teamName: string | undefined } }
+  | { type: 'SET_TEACHER_SCHEDULE'; payload: TeacherClass[] }; // NUEVO
 
 export interface Professor {
     name: string;

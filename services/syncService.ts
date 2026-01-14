@@ -1,5 +1,5 @@
 
-import { AppState, AppAction, Group, DayOfWeek, AttendanceStatus } from '../types';
+import { AppState, AppAction, Group, DayOfWeek, AttendanceStatus, TeacherClass } from '../types';
 import { Dispatch } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { fetchHorarioCompleto } from './horarioService';
@@ -18,20 +18,11 @@ const checkSettings = (settings: AppState['settings'], dispatch: Dispatch<AppAct
     return true;
 };
 
-/**
- * Ensures the API URL points directly to the .php file, removing any
- * extra path segments that might have been saved in settings.
- * This prevents malformed URLs that cause 400 Bad Request errors.
- * @param apiUrl The raw API URL from settings.
- * @returns A cleaned URL object.
- */
 const getBaseApiUrl = (apiUrl: string): URL => {
     const url = new URL(apiUrl);
     const pathParts = url.pathname.split('/');
-    // Find the index of the part that contains '.php'
     const apiPhpIndex = pathParts.findIndex(p => p.includes('.php'));
     if (apiPhpIndex !== -1) {
-        // Reconstruct the pathname to end at the .php file
         url.pathname = pathParts.slice(0, apiPhpIndex + 1).join('/');
     }
     return url;
@@ -51,7 +42,6 @@ export const syncAttendanceData = async (state: AppState, dispatch: Dispatch<App
     dispatch({ type: 'ADD_TOAST', payload: { message: 'Comparando datos con el servidor...', type: 'info' } });
 
     try {
-        // 1. Obtener los registros existentes del servidor usando POST
         const fetchUrl = getBaseApiUrl(apiUrl);
         
         const serverResponse = await fetch(fetchUrl.toString(), {
@@ -68,9 +58,7 @@ export const syncAttendanceData = async (state: AppState, dispatch: Dispatch<App
 
         if (!serverResponse.ok) {
             const errorData = await serverResponse.json().catch(() => ({ message: serverResponse.statusText }));
-            // Handle case where server returns empty for no records, but not as an error
             if (serverResponse.status === 404 || (await serverResponse.text()).trim() === "") {
-                 // Assume no records exist and proceed
             } else {
                 throw new Error(`Error al obtener datos del servidor: ${errorData.message}`);
             }
@@ -79,15 +67,13 @@ export const syncAttendanceData = async (state: AppState, dispatch: Dispatch<App
         const serverData = await serverResponse.json().catch(() => null);
         const serverRecords: any[] = Array.isArray(serverData) ? serverData : [];
         
-        // 2. Crear un mapa para una búsqueda eficiente
-        const serverRecordsMap = new Map<string, string>(); // Key: 'alumno_id-fecha', Value: 'status'
+        const serverRecordsMap = new Map<string, string>(); 
         serverRecords.forEach(rec => {
             if (rec.alumno_id && rec.fecha) {
                 serverRecordsMap.set(`${rec.alumno_id}-${rec.fecha}`, rec.status);
             }
         });
 
-        // 3. Comparar y encontrar diferencias
         const recordsToSync: any[] = [];
         const groupsMap = new Map(groups.map(g => [g.id, g]));
 
@@ -101,12 +87,9 @@ export const syncAttendanceData = async (state: AppState, dispatch: Dispatch<App
                 if (!student) continue;
 
                 for (const [date, localStatus] of Object.entries(dateAttendances)) {
-                    // Ignorar si el modo es 'today' y la fecha no es hoy
                     if (syncScope === 'today' && date !== todayStr) {
                         continue;
                     }
-
-                    // Ignorar registros pendientes
                     if (localStatus === AttendanceStatus.Pending) {
                         continue;
                     }
@@ -114,7 +97,6 @@ export const syncAttendanceData = async (state: AppState, dispatch: Dispatch<App
                     const key = `${studentId}-${date}`;
                     const serverStatus = serverRecordsMap.get(key);
 
-                    // Sincronizar si el registro es nuevo O si el estado ha cambiado
                     if (!serverStatus || serverStatus !== localStatus) {
                         recordsToSync.push({
                             profesor_nombre: trimmedProfessorName,
@@ -131,7 +113,6 @@ export const syncAttendanceData = async (state: AppState, dispatch: Dispatch<App
             }
         }
 
-        // 4. Enviar solo las diferencias
         if (recordsToSync.length === 0) {
             dispatch({ type: 'ADD_TOAST', payload: { message: 'Tus datos ya están actualizados.', type: 'info' } });
             return;
@@ -179,27 +160,16 @@ export const syncGradesData = async (state: AppState, dispatch: Dispatch<AppActi
     try {
         const recordsToSync: any[] = [];
         
-        // Iterate through all groups
         for (const group of groups) {
             const groupId = group.id;
             const groupEvaluations = evaluations[groupId] || [];
             
-            // Iterate through students in the group
             for (const student of group.students) {
                 const studentId = student.id;
                 const studentGrades = grades[groupId]?.[studentId] || {};
                 const studentAttendance = attendance[groupId]?.[studentId] || {};
 
-                // Calculate Partial 1 Average
-                const p1Avg = calculatePartialAverage(
-                    group,
-                    1,
-                    groupEvaluations,
-                    studentGrades,
-                    settings,
-                    studentAttendance
-                );
-
+                const p1Avg = calculatePartialAverage(group, 1, groupEvaluations, studentGrades, settings, studentAttendance);
                 if (p1Avg !== null) {
                     recordsToSync.push({
                         profesor_nombre: trimmedProfessorName,
@@ -209,7 +179,7 @@ export const syncGradesData = async (state: AppState, dispatch: Dispatch<AppActi
                         alumno_id: studentId,
                         alumno_nombre: student.name,
                         alumno_matricula: student.matricula || '',
-                        evaluacion_id: 'PROMEDIO_P1', // ID fijo para el promedio
+                        evaluacion_id: 'PROMEDIO_P1', 
                         evaluacion_nombre: 'Promedio Parcial 1',
                         parcial: 1,
                         calificacion: Number(p1Avg.toFixed(2)),
@@ -217,16 +187,7 @@ export const syncGradesData = async (state: AppState, dispatch: Dispatch<AppActi
                     });
                 }
 
-                // Calculate Partial 2 Average
-                const p2Avg = calculatePartialAverage(
-                    group,
-                    2,
-                    groupEvaluations,
-                    studentGrades,
-                    settings,
-                    studentAttendance
-                );
-
+                const p2Avg = calculatePartialAverage(group, 2, groupEvaluations, studentGrades, settings, studentAttendance);
                 if (p2Avg !== null) {
                     recordsToSync.push({
                         profesor_nombre: trimmedProfessorName,
@@ -236,7 +197,7 @@ export const syncGradesData = async (state: AppState, dispatch: Dispatch<AppActi
                         alumno_id: studentId,
                         alumno_nombre: student.name,
                         alumno_matricula: student.matricula || '',
-                        evaluacion_id: 'PROMEDIO_P2', // ID fijo para el promedio
+                        evaluacion_id: 'PROMEDIO_P2', 
                         evaluacion_nombre: 'Promedio Parcial 2',
                         parcial: 2,
                         calificacion: Number(p2Avg.toFixed(2)),
@@ -244,9 +205,6 @@ export const syncGradesData = async (state: AppState, dispatch: Dispatch<AppActi
                     });
                 }
 
-                // --- INICIO CÓDIGO NUEVO PARA RECUPERACIÓN ---
-
-                // 1. Remedial Parcial 1
                 const remedialP1 = studentGrades['GRADE_REMEDIAL_P1'];
                 if (remedialP1 !== undefined && remedialP1 !== null) {
                     recordsToSync.push({
@@ -265,7 +223,6 @@ export const syncGradesData = async (state: AppState, dispatch: Dispatch<AppActi
                     });
                 }
 
-                // 2. Remedial Parcial 2
                 const remedialP2 = studentGrades['GRADE_REMEDIAL_P2'];
                 if (remedialP2 !== undefined && remedialP2 !== null) {
                     recordsToSync.push({
@@ -284,7 +241,6 @@ export const syncGradesData = async (state: AppState, dispatch: Dispatch<AppActi
                     });
                 }
 
-                // 3. Extraordinario
                 const gradeExtra = studentGrades['GRADE_EXTRA'];
                 if (gradeExtra !== undefined && gradeExtra !== null) {
                     recordsToSync.push({
@@ -303,7 +259,6 @@ export const syncGradesData = async (state: AppState, dispatch: Dispatch<AppActi
                     });
                 }
 
-                // 4. Especial
                 const gradeSpecial = studentGrades['GRADE_SPECIAL'];
                 if (gradeSpecial !== undefined && gradeSpecial !== null) {
                     recordsToSync.push({
@@ -321,7 +276,6 @@ export const syncGradesData = async (state: AppState, dispatch: Dispatch<AppActi
                         max_score: 10
                     });
                 }
-                // --- FIN CÓDIGO NUEVO ---
             }
         }
 
@@ -334,7 +288,6 @@ export const syncGradesData = async (state: AppState, dispatch: Dispatch<AppActi
 
         const syncUrl = getBaseApiUrl(apiUrl);
 
-        // Send data to server
         const syncResponse = await fetch(syncUrl.toString(), {
             method: 'POST',
             headers: {
@@ -364,7 +317,6 @@ export const syncGradesData = async (state: AppState, dispatch: Dispatch<AppActi
             }
         } else {
              const errorText = await syncResponse.text();
-             // Clean error message if it is HTML
              const cleanError = errorText.includes('<!DOCTYPE html>') ? 'Error interno del servidor (PHP)' : errorText;
              throw new Error(`Error del servidor: ${syncResponse.statusText} - ${cleanError.substring(0, 100)}...`);
         }
@@ -396,15 +348,15 @@ export const syncScheduleData = async (state: AppState, dispatch: Dispatch<AppAc
             return;
         }
 
+        // NUEVO: Guardar el horario crudo para seguimiento
+        dispatch({ type: 'SET_TEACHER_SCHEDULE', payload: horario });
+
         let gruposCreados = 0;
         let gruposActualizados = 0;
 
-        // A teacher can teach multiple subjects to the same group.
-        // We need to create a unique group in the app for each combination of [group name + subject name].
         const clasesPorGrupoUnico: { [uniqueName: string]: { subjectName: string; days: string[] } } = {};
 
         horario.forEach(clase => {
-            // The unique key for a class is its group name combined with the subject name.
             const uniqueGroupName = `${clase.groupName} - ${clase.subjectName}`;
 
             if (!clasesPorGrupoUnico[uniqueGroupName]) {
@@ -413,7 +365,6 @@ export const syncScheduleData = async (state: AppState, dispatch: Dispatch<AppAc
                     days: [],
                 };
             }
-            // Add the day to this unique group if it's not already there.
             if (!clasesPorGrupoUnico[uniqueGroupName].days.includes(clase.day)) {
                 clasesPorGrupoUnico[uniqueGroupName].days.push(clase.day);
             }
@@ -423,26 +374,22 @@ export const syncScheduleData = async (state: AppState, dispatch: Dispatch<AppAc
             const info = clasesPorGrupoUnico[uniqueGroupName];
             const diasDeClase = info.days;
             
-            // Check if a group with this exact unique name already exists.
             const grupoExistente = groups.find(g => g.name.toLowerCase() === uniqueGroupName.toLowerCase());
 
             if (grupoExistente) {
-                // If it exists, update its schedule.
                 dispatch({
                     type: 'SAVE_GROUP',
                     payload: { ...grupoExistente, classDays: diasDeClase as DayOfWeek[] }
                 });
                 gruposActualizados++;
             } else {
-                // If not, create a new group.
                 const nuevoGrupo: Group = {
                     id: uuidv4(),
-                    name: uniqueGroupName, // e.g., "6A - Cálculo"
+                    name: uniqueGroupName, 
                     subject: info.subjectName,
                     classDays: diasDeClase as DayOfWeek[],
                     students: [],
                     color: GROUP_COLORS[(groups.length + gruposCreados) % GROUP_COLORS.length].name,
-                    // FIX: Added default evaluationTypes to satisfy the Group type definition.
                     evaluationTypes: {
                         partial1: [{ id: uuidv4(), name: 'General', weight: 100 }],
                         partial2: [{ id: uuidv4(), name: 'General', weight: 100 }],

@@ -1,6 +1,6 @@
 
 {
-  "version": "1.4.4",
-  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v1.4.4/app-debug.apk",
-  "notes": "¡Versión 1.4.4! Corrección crítica: Se ha forzado el tema claro en todas las plataformas para solucionar errores de visualización en algunos equipos."
+  "version": "1.4.5",
+  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v1.4.5/app-debug.apk",
+  "notes": "¡Versión 1.4.5! Ahora puedes ver tu horario completo con recesos marcados y recibir notificaciones del sistema 15-20 min antes de tu próxima clase."
 }
