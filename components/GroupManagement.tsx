@@ -113,8 +113,34 @@ export const GroupForm: React.FC<{ group?: Group; existingGroups?: Group[]; onSa
 
 const StudentForm: React.FC<{ student?: Student; currentGroup?: Group; allGroups?: Group[]; onSave: (student: Student) => void; onCancel: () => void; }> = ({ student, currentGroup, allGroups = [], onSave, onCancel }) => {
     const [name, setName] = useState(student?.name || ''), [matricula, setMatricula] = useState(student?.matricula || ''), [nickname, setNickname] = useState(student?.nickname || ''), [isRepeating, setIsRepeating] = useState(student?.isRepeating || false), [team, setTeam] = useState(student?.team || '');
-    const suggestedTeams = useMemo(() => { if (!currentGroup || !currentGroup.quarter) return []; const teams = new Set<string>(); allGroups.forEach(g => { if (g.quarter === currentGroup.quarter) g.students.forEach(s => { if (s.team) teams.add(s.team); }); }); return Array.from(teams).sort(); }, [allGroups, currentGroup]);
-    const handleSubmit = (e: React.FormEvent) => { e.preventDefault(); if (!name) return; onSave({ ...student, id: student?.id || uuidv4(), name, matricula, nickname, isRepeating, team: team.trim() || undefined }); };
+    
+    const suggestedTeams = useMemo(() => { 
+        if (!currentGroup || !currentGroup.quarter) return []; 
+        const teams = new Set<string>(); 
+        allGroups.forEach(g => { 
+            if (g.quarter === currentGroup.quarter) g.students.forEach(s => { 
+                if (s.team) teams.add(s.team); 
+            }); 
+        }); 
+        return Array.from(teams).sort(); 
+    }, [allGroups, currentGroup]);
+
+    const handleSubmit = (e: React.FormEvent) => { 
+        e.preventDefault(); 
+        if (!name) return; 
+        
+        onSave({ 
+            ...student, 
+            id: student?.id || uuidv4(), 
+            name, 
+            matricula, 
+            nickname, 
+            isRepeating, 
+            // FIX: Si el campo está vacío, conservar el valor anterior si existía para evitar borrado accidental
+            team: team.trim() || student?.team || undefined 
+        }); 
+    };
+
     return (
         <form onSubmit={handleSubmit} className="space-y-4">
             <div><label className="block text-xs font-medium">Nombre Completo</label><input type="text" value={name} onChange={e => setName(e.target.value)} required className="mt-1 w-full p-2 border border-border-color rounded-md bg-surface text-sm focus:ring-2 focus:ring-primary"/></div>
@@ -180,14 +206,16 @@ const TeamsManager: React.FC<{ group: Group }> = ({ group }) => {
         const teamsMap = new Map<string, number>();
         if (isCoyoteMode) {
             studentsList.forEach(item => {
-                if (item.student.teamCoyote) {
-                    teamsMap.set(item.student.teamCoyote, (teamsMap.get(item.student.teamCoyote) || 0) + 1);
+                const tc = item.student.teamCoyote;
+                if (tc) {
+                    teamsMap.set(tc, (teamsMap.get(tc) || 0) + 1);
                 }
             });
         } else {
             group.students.forEach(s => {
-                if (s.team) {
-                    teamsMap.set(s.team, (teamsMap.get(s.team) || 0) + 1);
+                const t = s.team;
+                if (t) {
+                    teamsMap.set(t, (teamsMap.get(t) || 0) + 1);
                 }
             });
         }
@@ -250,7 +278,7 @@ const TeamsManager: React.FC<{ group: Group }> = ({ group }) => {
             });
         });
 
-        dispatch({ type: 'ADD_TOAST', payload: { message: `Equipo "${baseTeamName}" migrado con éxito.`, type: 'success' } });
+        dispatch({ type: 'ADD_TOAST', payload: { message: `Equipo "${baseTeamName}" migrado con éxito a "${selectedTeam}".`, type: 'success' } });
         setMigrateModalOpen(false);
     };
 
@@ -349,7 +377,8 @@ const TeamsManager: React.FC<{ group: Group }> = ({ group }) => {
                                     ))
                                 ) : (
                                     <div className="text-center py-10 opacity-30">
-                                        <p className="text-[10px] font-black uppercase">Sin equipos definidos</p>
+                                        <p className="text-[10px] font-black uppercase tracking-widest">Sin equipos en esta vista</p>
+                                        <p className="text-[9px] mt-2 italic">Crea uno o asigna un equipo a un alumno para que aparezca.</p>
                                     </div>
                                 )}
                             </div>
@@ -404,11 +433,11 @@ const TeamsManager: React.FC<{ group: Group }> = ({ group }) => {
 
                                     {/* Notas del Equipo */}
                                     <div className="mb-4">
-                                        <label className="text-[10px] font-black uppercase tracking-widest text-text-secondary mb-1 block">Notas y Observaciones</label>
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-text-secondary mb-1 block">Notas y Observaciones del Equipo</label>
                                         <textarea 
                                             value={currentNote}
                                             onChange={(e) => handleNoteChange(e.target.value)}
-                                            placeholder="Escribe aquí metas del equipo, faltas recurrentes o notas de proyectos..."
+                                            placeholder="Escribe aquí notas sobre el desempeño, tareas pendientes o acuerdos de este equipo..."
                                             className="w-full p-3 text-sm border-2 border-border-color rounded-xl bg-surface focus:ring-2 focus:ring-primary focus:border-primary min-h-[80px] shadow-inner transition-all"
                                         />
                                     </div>
@@ -467,9 +496,9 @@ const TeamsManager: React.FC<{ group: Group }> = ({ group }) => {
                                                             </td>
                                                             <td className="p-4 text-center">
                                                                 {isInThisTeam ? (
-                                                                    <span className="text-[9px] font-black uppercase text-accent-green-dark bg-accent-green-light px-2 py-0.5 rounded">Miembro</span>
+                                                                    <span className="text-[9px] font-black uppercase text-accent-green-dark bg-accent-green-light px-2 py-0.5 rounded border border-accent-green-dark/20">Miembro</span>
                                                                 ) : hasOtherTeam ? (
-                                                                    <span className="text-[9px] font-black uppercase text-slate-400 bg-slate-100 px-2 py-0.5 rounded" title={`En: ${otherTeamName}`}>{otherTeamName}</span>
+                                                                    <span className="text-[9px] font-black uppercase text-slate-400 bg-slate-100 px-2 py-0.5 rounded border border-slate-200" title={`En: ${otherTeamName}`}>{otherTeamName}</span>
                                                                 ) : <span className="text-[9px] text-slate-300 italic">Libre</span>}
                                                             </td>
                                                         </tr>
@@ -513,7 +542,7 @@ const TeamsManager: React.FC<{ group: Group }> = ({ group }) => {
                                 </button>
                             )) : (
                                 <div className="text-center py-10 opacity-40">
-                                    <p className="text-xs font-bold uppercase">No hay equipos base disponibles</p>
+                                    <p className="text-xs font-bold uppercase">No hay equipos base disponibles en este grupo.</p>
                                 </div>
                             )}
                         </div>
@@ -683,7 +712,7 @@ const GroupManagement: React.FC = () => {
                                             <th className="p-3 w-10 text-center border-b border-border-color">#</th>
                                             {settings.showMatricula && <th className="p-3 border-b border-border-color">Matrícula</th>}
                                             <th className="p-3 border-b border-border-color">Nombre</th>
-                                            <th className="p-3 border-b border-border-color text-center">Equipo</th>
+                                            <th className="p-3 border-b border-border-color text-center">Equipos</th>
                                             <th className="p-3 border-b border-border-color text-right">Acciones</th>
                                         </tr>
                                     </thead>
@@ -700,13 +729,13 @@ const GroupManagement: React.FC = () => {
                                                 </td>
                                                 <td className="p-3 text-center">
                                                     <div className="flex flex-col gap-1 items-center">
-                                                        {s.team && <span className="text-[9px] bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-full font-black uppercase border border-indigo-100">Base: {s.team}</span>}
+                                                        {s.team && <span className="text-[9px] bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-full font-black uppercase border border-indigo-200">Base: {s.team}</span>}
                                                         {s.teamCoyote && (
                                                             <span className="text-[9px] bg-orange-100 text-orange-800 px-2 py-0.5 rounded-full font-black uppercase border border-orange-200 flex items-center gap-1">
                                                                 <Icon name="dog" className="w-2.5 h-2.5"/> {s.teamCoyote}
                                                             </span>
                                                         )}
-                                                        {!s.team && !s.teamCoyote && <span className="text-slate-300 italic">-</span>}
+                                                        {!s.team && !s.teamCoyote && <span className="text-slate-300 italic">Libre</span>}
                                                     </div>
                                                 </td>
                                                 <td className="p-3 text-right">

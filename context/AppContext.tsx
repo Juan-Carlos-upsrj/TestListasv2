@@ -1,6 +1,6 @@
 
 import React, { createContext, useReducer, useEffect, ReactNode, Dispatch, useState } from 'react';
-import { AppState, AppAction, AttendanceStatus, Group, Evaluation, Archive } from '../types';
+import { AppState, AppAction, AttendanceStatus, Group, Evaluation, Archive, Student } from '../types';
 import { GROUP_COLORS } from '../constants';
 import { getState, saveState } from '../services/dbService';
 import { fetchGoogleCalendarEvents } from '../services/calendarService';
@@ -53,17 +53,22 @@ const appReducer = (state: AppState, action: AppAction): AppState => {
         const loadedState = action.payload || {};
         const loadedGroups: Group[] = (Array.isArray(loadedState.groups) ? loadedState.groups : []).filter(g => g && g.id);
         
-        // MIGRACIÓN DE GRUPOS: Asegurar que no perdemos propiedades de los alumnos (como equipos)
+        // MIGRACIÓN DE GRUPOS Y ALUMNOS: Rescate exhaustivo de equipos
         const migratedGroups = loadedGroups.map((group, index) => {
             const hasEvalTypes = group.evaluationTypes && group.evaluationTypes.partial1 && group.evaluationTypes.partial2;
             return {
                 ...group,
-                students: group.students.map(s => ({
-                    ...s,
-                    // Asegurar que conservamos los strings de equipo si existen
-                    team: s.team || (s as any).equipoBase || undefined,
-                    teamCoyote: s.teamCoyote || (s as any).equipoCoyote || undefined
-                })),
+                students: (group.students || []).map((s: any) => {
+                    // Rescatar equipos de cualquier propiedad posible de versiones anteriores
+                    const legacyTeam = s.team || s.equipo || s.equipoBase || s.teamName || s.equipo_nombre;
+                    const legacyCoyote = s.teamCoyote || s.equipoCoyote || s.coyoteTeam || s.equipo_coyote;
+                    
+                    return {
+                        ...s,
+                        team: legacyTeam || undefined,
+                        teamCoyote: legacyCoyote || undefined
+                    } as Student;
+                }),
                 classDays: group.classDays || [],
                 color: group.color || GROUP_COLORS[index % GROUP_COLORS.length].name,
                 quarter: group.quarter || '', 
@@ -91,7 +96,7 @@ const appReducer = (state: AppState, action: AppAction): AppState => {
         const migratedSettings = { ...defaultState.settings, ...loadedSettings };
         migratedSettings.theme = 'classic';
 
-        // HIDRATACIÓN SEGURA DE NOTAS (Evita pérdida de datos por cambio de nombre de propiedad)
+        // HIDRATACIÓN SEGURA DE NOTAS
         const teamNotes = loadedState.teamNotes || (loadedState as any).teamsNotes || (loadedState as any).notasEquipos || {};
         const coyoteTeamNotes = loadedState.coyoteTeamNotes || (loadedState as any).notasCoyote || {};
 
@@ -103,7 +108,7 @@ const appReducer = (state: AppState, action: AppAction): AppState => {
             calendarEvents: Array.isArray(loadedState.calendarEvents) ? loadedState.calendarEvents.filter(Boolean) : defaultState.calendarEvents,
             gcalEvents: Array.isArray(loadedState.gcalEvents) ? loadedState.gcalEvents.filter(Boolean) : defaultState.gcalEvents,
             settings: migratedSettings,
-            activeView: state.activeView, // Mantener la vista actual si se re-hidrata
+            activeView: state.activeView,
             selectedGroupId: loadedState.selectedGroupId ?? null,
             toasts: [],
             archives: Array.isArray(loadedState.archives) ? loadedState.archives : [],
@@ -358,7 +363,10 @@ const appReducer = (state: AppState, action: AppAction): AppState => {
                 students: g.students.map(s => {
                     const currentTeam = isCoyote ? s.teamCoyote : s.team;
                     if (currentTeam === teamName) {
-                        return { ...s, [isCoyote ? 'teamCoyote' : 'team']: undefined };
+                        const updatedStudent = { ...s };
+                        if (isCoyote) delete updatedStudent.teamCoyote;
+                        else delete updatedStudent.team;
+                        return updatedStudent;
                     }
                     return s;
                 })
@@ -382,7 +390,15 @@ const appReducer = (state: AppState, action: AppAction): AppState => {
             ...state,
             groups: state.groups.map(g => ({
                 ...g,
-                students: g.students.map(s => s.id === studentId ? { ...s, [isCoyote ? 'teamCoyote' : 'team']: teamName } : s)
+                students: g.students.map(s => {
+                    if (s.id === studentId) {
+                        const updated = { ...s };
+                        if (isCoyote) updated.teamCoyote = teamName;
+                        else updated.team = teamName;
+                        return updated;
+                    }
+                    return s;
+                })
             }))
         };
     }

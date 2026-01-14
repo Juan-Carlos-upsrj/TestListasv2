@@ -1,6 +1,6 @@
 
 {
-  "version": "1.6.2",
-  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v1.6.2/app-debug.apk",
-  "notes": "¡Versión 1.6.2! Rescate masivo de equipos antiguos, botones de grupo siempre visibles y reparación total del gestor de equipos inter-grupal."
+  "version": "1.6.3",
+  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v1.6.3/app-debug.apk",
+  "notes": "¡Versión 1.6.3! Rescate masivo de equipos antiguos mediante motor de migración inteligente, protección contra borrado accidental de equipos en formularios y visibilidad de equipos en tabla mejorada."
 }
