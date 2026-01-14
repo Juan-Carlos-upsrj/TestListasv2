@@ -165,6 +165,13 @@ const TeamsManager: React.FC<{ group: Group }> = ({ group }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [isTeamsModalOpen, setTeamsModalOpen] = useState(false);
     const [isMigrateModalOpen, setMigrateModalOpen] = useState(false);
+
+    // NUEVO: Estados para reemplazo de window.prompt y window.confirm
+    const [isNameModalOpen, setNameModalOpen] = useState(false);
+    const [nameModalTitle, setNameModalTitle] = useState('');
+    const [nameInputValue, setNameInputValue] = useState('');
+    const [nameModalAction, setNameModalAction] = useState<'create' | 'rename'>('create');
+    const [teamToDelete, setTeamToDelete] = useState<{name: string, isCoyote: boolean} | null>(null);
     
     // Estado para equipos que se acaban de crear y no tienen alumnos aún
     const [tempTeams, setTempTeams] = useState<string[]>([]);
@@ -297,56 +304,60 @@ const TeamsManager: React.FC<{ group: Group }> = ({ group }) => {
         setMigrateModalOpen(false);
     };
 
-    const handleCreateTeam = () => {
-        const typeLabel = isCoyoteMode ? 'Coyote' : 'Base';
-        const name = window.prompt(`Ingresa el nombre para el nuevo equipo ${typeLabel}:`);
-        
-        if (name === null) return; // Cancelado
-
-        const trimmedName = name.trim();
-        if (!trimmedName) {
-            dispatch({ type: 'ADD_TOAST', payload: { message: 'El nombre no puede estar vacío.', type: 'error' } });
-            return;
-        }
-
-        // Evitar duplicados en la vista actual
-        if (existingTeams.some(t => t[0].toLowerCase() === trimmedName.toLowerCase())) {
-            dispatch({ type: 'ADD_TOAST', payload: { message: 'Este equipo ya existe.', type: 'info' } });
-            setSelectedTeam(trimmedName);
-            return;
-        }
-
-        setTempTeams(prev => [...prev, trimmedName]);
-        setSelectedTeam(trimmedName);
-        dispatch({ type: 'ADD_TOAST', payload: { message: `Equipo "${trimmedName}" listo para asignar alumnos.`, type: 'success' } });
+    // REEMPLAZO DE PROMPTS
+    const openCreateTeamModal = () => {
+        setNameModalTitle(`Nuevo Equipo ${isCoyoteMode ? 'Coyote' : 'Base'}`);
+        setNameInputValue('');
+        setNameModalAction('create');
+        setNameModalOpen(true);
     };
 
-    const handleRenameTeam = () => {
+    const openRenameTeamModal = () => {
         if (!selectedTeam) return;
-        
-        const newName = window.prompt(`Nuevo nombre para "${selectedTeam}":`, selectedTeam);
-        if (newName === null || newName.trim() === '' || newName.trim() === selectedTeam) return;
+        setNameModalTitle(`Renombrar "${selectedTeam}"`);
+        setNameInputValue(selectedTeam);
+        setNameModalAction('rename');
+        setNameModalOpen(true);
+    };
 
-        const trimmed = newName.trim();
-        
-        // Verificar si el nuevo nombre ya existe
-        if (existingTeams.some(t => t[0].toLowerCase() === trimmed.toLowerCase() && t[0] !== selectedTeam)) {
-            dispatch({ type: 'ADD_TOAST', payload: { message: 'El nombre ya está en uso por otro equipo.', type: 'error' } });
-            return;
+    const handleNameModalSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        const trimmed = nameInputValue.trim();
+        if (!trimmed) return;
+
+        if (nameModalAction === 'create') {
+            if (existingTeams.some(t => t[0].toLowerCase() === trimmed.toLowerCase())) {
+                dispatch({ type: 'ADD_TOAST', payload: { message: 'Este equipo ya existe.', type: 'info' } });
+                setSelectedTeam(trimmed);
+            } else {
+                setTempTeams(prev => [...prev, trimmed]);
+                setSelectedTeam(trimmed);
+                dispatch({ type: 'ADD_TOAST', payload: { message: `Equipo "${trimmed}" listo para asignar alumnos.`, type: 'success' } });
+            }
+        } else {
+            if (trimmed === selectedTeam) {
+                setNameModalOpen(false);
+                return;
+            }
+            if (existingTeams.some(t => t[0].toLowerCase() === trimmed.toLowerCase() && t[0] !== selectedTeam)) {
+                dispatch({ type: 'ADD_TOAST', payload: { message: 'El nombre ya está en uso por otro equipo.', type: 'error' } });
+                return;
+            }
+            dispatch({ type: 'RENAME_TEAM', payload: { oldName: selectedTeam!, newName: trimmed, isCoyote: isCoyoteMode } });
+            setTempTeams(prev => prev.map(t => t === selectedTeam ? trimmed : t));
+            setSelectedTeam(trimmed);
+            dispatch({ type: 'ADD_TOAST', payload: { message: 'Equipo renombrado correctamente.', type: 'success' } });
         }
+        setNameModalOpen(false);
+    };
 
-        // 1. Despachar cambio global (alumnos y notas)
-        dispatch({ 
-            type: 'RENAME_TEAM', 
-            payload: { oldName: selectedTeam, newName: trimmed, isCoyote: isCoyoteMode } 
-        });
-
-        // 2. Actualizar lista temporal local si el equipo estaba vacío
-        setTempTeams(prev => prev.map(t => t === selectedTeam ? trimmed : t));
-        
-        // 3. Actualizar selección
-        setSelectedTeam(trimmed);
-        dispatch({ type: 'ADD_TOAST', payload: { message: 'Equipo renombrado correctamente.', type: 'success' } });
+    const executeDeleteTeam = () => {
+        if (teamToDelete) {
+            dispatch({ type: 'DELETE_TEAM', payload: { teamName: teamToDelete.name, isCoyote: teamToDelete.isCoyote } });
+            setTempTeams(prev => prev.filter(t => t !== teamToDelete.name));
+            if (selectedTeam === teamToDelete.name) setSelectedTeam(null);
+            setTeamToDelete(null);
+        }
     };
 
     return (
@@ -386,7 +397,7 @@ const TeamsManager: React.FC<{ group: Group }> = ({ group }) => {
                             <div className="flex items-center justify-between mb-4">
                                 <h3 className="font-black text-[10px] uppercase tracking-widest text-text-secondary">Equipos Activos</h3>
                                 <button 
-                                    onClick={handleCreateTeam}
+                                    onClick={openCreateTeamModal}
                                     className="p-1.5 bg-primary text-white rounded-lg hover:bg-primary-hover shadow-md active:scale-95 transition-all"
                                     title="Crear Nuevo Equipo"
                                 >
@@ -416,11 +427,7 @@ const TeamsManager: React.FC<{ group: Group }> = ({ group }) => {
                                             <button 
                                                 onClick={(e) => {
                                                     e.stopPropagation();
-                                                    if (confirm(`¿Disolver equipo "${name}"?`)) {
-                                                        dispatch({ type: 'DELETE_TEAM', payload: { teamName: name, isCoyote: isCoyoteMode } });
-                                                        setTempTeams(prev => prev.filter(t => t !== name));
-                                                        if (selectedTeam === name) setSelectedTeam(null);
-                                                    }
+                                                    setTeamToDelete({name, isCoyote: isCoyoteMode});
                                                 }}
                                                 className="p-1.5 text-accent-red hover:bg-rose-100 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
                                             >
@@ -469,7 +476,7 @@ const TeamsManager: React.FC<{ group: Group }> = ({ group }) => {
                                                 </Button>
                                             )}
                                             <button 
-                                                onClick={handleRenameTeam}
+                                                onClick={openRenameTeamModal}
                                                 className="p-2 bg-white border border-border-color rounded-xl hover:bg-slate-50 transition-colors shadow-sm"
                                                 title="Renombrar"
                                             >
@@ -595,6 +602,45 @@ const TeamsManager: React.FC<{ group: Group }> = ({ group }) => {
                         </div>
                     </div>
                 </Modal>
+
+                {/* MODAL PARA NOMBRE DE EQUIPO (Reemplaza window.prompt) */}
+                <Modal 
+                    isOpen={isNameModalOpen} 
+                    onClose={() => setNameModalOpen(false)} 
+                    title={nameModalTitle}
+                    size="sm"
+                >
+                    <form onSubmit={handleNameModalSubmit} className="space-y-4">
+                        <div>
+                            <label className="block text-xs font-bold uppercase text-text-secondary mb-1">Nombre del Equipo</label>
+                            <input 
+                                type="text" 
+                                autoFocus
+                                value={nameInputValue}
+                                onChange={e => setNameInputValue(e.target.value)}
+                                className="w-full p-2 border-2 border-border-color rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none"
+                                placeholder="Ej: Equipo Alfa"
+                            />
+                        </div>
+                        <div className="flex justify-end gap-2">
+                            <Button variant="secondary" type="button" onClick={() => setNameModalOpen(false)}>Cancelar</Button>
+                            <Button type="submit">Aceptar</Button>
+                        </div>
+                    </form>
+                </Modal>
+
+                {/* MODAL PARA ELIMINAR EQUIPO (Reemplaza window.confirm) */}
+                <ConfirmationModal
+                    isOpen={!!teamToDelete}
+                    onClose={() => setTeamToDelete(null)}
+                    onConfirm={executeDeleteTeam}
+                    title="Disolver Equipo"
+                    variant="danger"
+                    confirmText="Disolver"
+                >
+                    ¿Estás seguro de que quieres disolver el equipo <strong>"{teamToDelete?.name}"</strong>? 
+                    <p className="mt-2 text-xs opacity-70">Los alumnos quedarán libres pero no se borrarán sus datos personales.</p>
+                </ConfirmationModal>
             </Modal>
         </>
     );

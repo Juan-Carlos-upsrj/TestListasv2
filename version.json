@@ -1,6 +1,6 @@
 
 {
-  "version": "1.6.7",
-  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v1.6.7/app-debug.apk",
-  "notes": "¡Versión 1.6.7! Corrección de los botones de Equipos: se ha reparado la creación de nuevos equipos y el botón de renombrar, mejorando la persistencia de equipos vacíos y asegurando la sincronización de estado entre grupos."
+  "version": "1.6.8",
+  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v1.6.8/app-debug.apk",
+  "notes": "¡Versión 1.6.8! Se han eliminado las llamadas a window.prompt() y confirm() nativos, reemplazándolos con modales personalizados para garantizar compatibilidad total en Android y entornos donde los cuadros de diálogo nativos están bloqueados. Mejoras en la estabilidad del Gestor de Equipos."
 }
