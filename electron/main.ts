@@ -1,3 +1,4 @@
+
 import { app, BrowserWindow, ipcMain } from 'electron';
 import path from 'node:path';
 import fs from 'node:fs';
@@ -18,6 +19,11 @@ const dataFilePath = path.join(userDataPath, 'appData.json');
 // Configure logging
 log.transports.file.level = 'info';
 autoUpdater.logger = log;
+
+// Establecer el ID de la aplicación para que las notificaciones muestren el nombre correcto
+if (process.platform === 'win32') {
+  app.setAppUserModelId('Gestión Académica IAEV');
+}
 
 // Function to read application data from a JSON file.
 function readData(): Partial<AppState> {
