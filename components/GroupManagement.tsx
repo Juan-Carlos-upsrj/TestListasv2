@@ -8,7 +8,6 @@ import Button from './common/Button';
 import Icon from './icons/Icon';
 import ConfirmationModal from './common/ConfirmationModal';
 import { DAYS_OF_WEEK, GROUP_COLORS } from '../constants';
-import { motion, AnimatePresence } from 'framer-motion';
 
 export const EvaluationTypesEditor: React.FC<{
     types: EvaluationType[];
@@ -134,7 +133,7 @@ const StudentForm: React.FC<{ student?: Student; currentGroup?: Group; allGroups
 
 const TeamsManager: React.FC<{ group: Group }> = ({ group }) => {
     const { state, dispatch } = useContext(AppContext);
-    const { groups, teamNotes = {}, coyoteTeamNotes = {} } = state;
+    const { groups } = state;
     
     const [isCoyoteMode, setCoyoteMode] = useState(false);
     const [selectedTeam, setSelectedTeam] = useState<string | null>(null);
@@ -536,7 +535,7 @@ const GroupManagement: React.FC = () => {
                                             <tr key={s.id} className="border-b border-border-color/50 hover:bg-surface-secondary/40">
                                                 <td className="p-2 text-text-secondary font-medium">{i + 1}</td>
                                                 {settings.showMatricula && <td className="p-2 opacity-70">{s.matricula || '-'}</td>}
-                                                <td className="p-2 font-bold flex items-center gap-1.5 truncate">{s.name}{s.isRepeating && <span className="bg-rose-600 text-white text-[8px] px-1 rounded-full shrink-0">R</span>}</td>
+                                                <td className="p-2 font-bold flex items-center gap-1.5 truncate">{s.name}{s.isRepeating && <span className="bg-rose-600 text-white text-[8px] font-bold px-1 rounded-full shrink-0">R</span>}</td>
                                                 <td className="p-2 truncate">
                                                     <span className="text-[10px] bg-indigo-50 text-indigo-700 px-1.5 py-0.5 rounded font-bold">{s.team || '-'}</span>
                                                 </td>
