@@ -139,18 +139,17 @@ const TeamsManager: React.FC<{ group: Group }> = ({ group }) => {
     const [selectedTeam, setSelectedTeam] = useState<string | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [isTeamsModalOpen, setTeamsModalOpen] = useState(false);
+    const [isMigrateModalOpen, setMigrateModalOpen] = useState(false);
 
     // Context-aware student list
     const studentsList = useMemo(() => {
         if (isCoyoteMode) {
-            // Mode Coyote: Show ALL students in the same quarter across all groups
             const allQuarterStudents: {student: Student, gName: string}[] = [];
             groups.filter(g => g.quarter === group.quarter).forEach(g => {
                 g.students.forEach(s => allQuarterStudents.push({student: s, gName: g.name}));
             });
             return allQuarterStudents;
         } else {
-            // Mode Base: Just this group
             return group.students.map(s => ({student: s, gName: group.name}));
         }
     }, [groups, group, isCoyoteMode]);
@@ -166,7 +165,6 @@ const TeamsManager: React.FC<{ group: Group }> = ({ group }) => {
         );
     }, [studentsList, searchTerm]);
 
-    // Context-aware team list
     const existingTeams = useMemo(() => {
         const teamsMap = new Map<string, number>();
         if (isCoyoteMode) {
@@ -184,6 +182,20 @@ const TeamsManager: React.FC<{ group: Group }> = ({ group }) => {
         }
         return Array.from(teamsMap.entries()).sort((a,b) => a[0].localeCompare(b[0]));
     }, [studentsList, group.students, isCoyoteMode]);
+
+    const allBaseTeamsForQuarter = useMemo(() => {
+        const teamsMap = new Map<string, string[]>();
+        groups.filter(g => g.quarter === group.quarter).forEach(g => {
+            g.students.forEach(s => {
+                if (s.team) {
+                    const members = teamsMap.get(s.team) || [];
+                    members.push(s.id);
+                    teamsMap.set(s.team, members);
+                }
+            });
+        });
+        return Array.from(teamsMap.entries()).sort();
+    }, [groups, group.quarter]);
 
     const handleAssign = (studentId: string, assign: boolean) => {
         if (!selectedTeam) return;
@@ -206,11 +218,31 @@ const TeamsManager: React.FC<{ group: Group }> = ({ group }) => {
         });
     };
 
+    const handleMigrateTeam = (baseTeamName: string, memberIds: string[]) => {
+        if (!selectedTeam) return;
+        
+        const currentCount = existingTeams.find(t => t[0] === selectedTeam)?.[1] || 0;
+        const availableSlots = 4 - currentCount;
+        
+        if (memberIds.length > availableSlots) {
+            dispatch({ type: 'ADD_TOAST', payload: { message: `No hay espacio suficiente. Se necesitan ${memberIds.length} lugares y solo quedan ${availableSlots}.`, type: 'error' } });
+            return;
+        }
+
+        memberIds.forEach(sid => {
+            dispatch({ 
+                type: 'ASSIGN_STUDENT_TEAM', 
+                payload: { studentId: sid, teamName: selectedTeam, isCoyote: true } 
+            });
+        });
+
+        dispatch({ type: 'ADD_TOAST', payload: { message: `Equipo "${baseTeamName}" migrado con éxito a "${selectedTeam}".`, type: 'success' } });
+        setMigrateModalOpen(false);
+    };
+
     const handleCreateTeam = () => {
         const name = window.prompt(`Nuevo equipo ${isCoyoteMode ? 'Coyote' : 'Base'}:`);
-        if (name && name.trim()) {
-            setSelectedTeam(name.trim());
-        }
+        if (name && name.trim()) setSelectedTeam(name.trim());
     };
 
     return (
@@ -230,15 +262,13 @@ const TeamsManager: React.FC<{ group: Group }> = ({ group }) => {
                 </Button>
             </div>
 
-            {/* MODAL DEL GESTOR ESPECIAL - REDISEÑADO PARA SER MÁS ANCHO */}
             <Modal 
                 isOpen={isTeamsModalOpen} 
                 onClose={() => setTeamsModalOpen(false)} 
                 title={`Gestor de Equipos - ${group.name}`}
                 size="6xl"
             >
-                <div className="flex flex-col h-[80vh]">
-                    {/* Switch Superior */}
+                <div className="flex flex-col h-[75vh]">
                     <div className="flex items-center justify-center mb-8 shrink-0">
                         <div className="bg-surface-secondary p-1.5 rounded-2xl flex border border-border-color shadow-inner">
                             <button 
@@ -256,18 +286,28 @@ const TeamsManager: React.FC<{ group: Group }> = ({ group }) => {
                         </div>
                     </div>
 
-                    <div className="flex-1 grid grid-cols-1 md:grid-cols-12 gap-8 overflow-hidden">
-                        {/* PANEL IZQUIERDO: EQUIPOS (Ahora ocupa un poco menos para dejar espacio a la tabla) */}
+                    <div className="flex-1 grid grid-cols-1 md:grid-cols-12 gap-6 overflow-hidden">
                         <div className="md:col-span-4 lg:col-span-3 flex flex-col bg-surface-secondary/50 rounded-2xl border border-border-color p-5 overflow-hidden shadow-sm">
                             <div className="flex items-center justify-between mb-5">
-                                <h3 className="font-extrabold text-xs uppercase tracking-widest text-text-secondary">Equipos Activos</h3>
-                                <button 
-                                    onClick={handleCreateTeam}
-                                    className="p-2 bg-primary text-white rounded-xl hover:bg-primary-hover transition-all shadow-md hover:shadow-primary/20 active:scale-95"
-                                    title="Crear Equipo"
-                                >
-                                    <Icon name="plus" className="w-5 h-5"/>
-                                </button>
+                                <h3 className="font-extrabold text-[10px] uppercase tracking-widest text-text-secondary">Equipos Activos</h3>
+                                <div className="flex gap-2">
+                                    {isCoyoteMode && selectedTeam && (
+                                        <button 
+                                            onClick={() => setMigrateModalOpen(true)}
+                                            className="p-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-all shadow-md active:scale-95"
+                                            title="Migrar desde Equipo Base"
+                                        >
+                                            <Icon name="copy" className="w-4 h-4"/>
+                                        </button>
+                                    )}
+                                    <button 
+                                        onClick={handleCreateTeam}
+                                        className="p-2 bg-primary text-white rounded-xl hover:bg-primary-hover transition-all shadow-md active:scale-95"
+                                        title="Crear Equipo"
+                                    >
+                                        <Icon name="plus" className="w-4 h-4"/>
+                                    </button>
+                                </div>
                             </div>
                             
                             <div className="flex-1 overflow-y-auto space-y-3 custom-scrollbar pr-2">
@@ -283,11 +323,11 @@ const TeamsManager: React.FC<{ group: Group }> = ({ group }) => {
                                             }`}
                                         >
                                             <div className="min-w-0 flex-1">
-                                                <p className={`font-bold text-base truncate ${selectedTeam === name ? (isCoyoteMode ? 'text-orange-900' : 'text-indigo-900') : ''}`}>{name}</p>
+                                                <p className={`font-bold text-sm lg:text-base truncate ${selectedTeam === name ? (isCoyoteMode ? 'text-orange-900' : 'text-indigo-900') : ''}`}>{name}</p>
                                                 <div className="flex items-center gap-2 mt-1">
                                                     {isCoyoteMode && <Icon name="footprints" className="w-3.5 h-3.5 text-orange-600"/>}
-                                                    <span className={`text-[11px] font-extrabold uppercase tracking-tight ${count > (isCoyoteMode ? 4 : 10) ? 'text-accent-red' : 'text-text-secondary opacity-70'}`}>
-                                                        {count} {isCoyoteMode ? '/ 4 Integrantes' : 'Alumnos'}
+                                                    <span className={`text-[10px] font-extrabold uppercase tracking-tight ${count > (isCoyoteMode ? 4 : 10) ? 'text-accent-red' : 'text-text-secondary opacity-70'}`}>
+                                                        {count} {isCoyoteMode ? '/ 4' : 'Alumnos'}
                                                     </span>
                                                 </div>
                                             </div>
@@ -300,7 +340,7 @@ const TeamsManager: React.FC<{ group: Group }> = ({ group }) => {
                                                             if (selectedTeam === name) setSelectedTeam(null);
                                                         }
                                                     }}
-                                                    className="p-1.5 text-accent-red hover:bg-rose-100 rounded-lg transition-colors"
+                                                    className="p-1.5 text-accent-red hover:bg-rose-100 rounded-lg"
                                                 >
                                                     <Icon name="trash-2" className="w-4 h-4"/>
                                                 </button>
@@ -310,13 +350,12 @@ const TeamsManager: React.FC<{ group: Group }> = ({ group }) => {
                                 ) : (
                                     <div className="text-center py-16 opacity-30">
                                         <Icon name="users" className="w-12 h-12 mx-auto mb-3"/>
-                                        <p className="text-sm font-bold uppercase tracking-tighter">Sin equipos creados</p>
+                                        <p className="text-xs font-bold uppercase">Sin equipos</p>
                                     </div>
                                 )}
                             </div>
                         </div>
 
-                        {/* PANEL DERECHO: ALUMNOS (Más ancho y detallado) */}
                         <div className="md:col-span-8 lg:col-span-9 flex flex-col overflow-hidden">
                             <div className="mb-6 space-y-4">
                                 <div className="relative">
@@ -327,51 +366,40 @@ const TeamsManager: React.FC<{ group: Group }> = ({ group }) => {
                                         type="text" 
                                         value={searchTerm}
                                         onChange={e => setSearchTerm(e.target.value)}
-                                        placeholder={`Buscar en ${isCoyoteMode ? 'todos los grupos de ' + group.quarter : 'el grupo ' + group.name}...`}
-                                        className="w-full pl-11 pr-4 py-3.5 border border-border-color rounded-2xl bg-surface focus:ring-2 focus:ring-primary text-base shadow-sm transition-all"
+                                        placeholder={`Buscar en ${isCoyoteMode ? 'todo el cuatrimestre ' + group.quarter : 'el grupo ' + group.name}...`}
+                                        className="w-full pl-11 pr-4 py-3.5 border border-border-color rounded-2xl bg-surface focus:ring-2 focus:ring-primary text-base shadow-sm"
                                     />
                                 </div>
                                 {isCoyoteMode && (
-                                    <div className="bg-orange-50/80 p-3 rounded-2xl border border-orange-100 flex items-center gap-3 animate-in fade-in slide-in-from-top-1">
-                                        <div className="bg-orange-100 p-1.5 rounded-lg">
-                                            <Icon name="info" className="w-5 h-5 text-orange-600"/>
-                                        </div>
-                                        <p className="text-xs text-orange-900 font-bold">
-                                            Modo Coyote Activo: Reclutando entre todos los grupos de <span className="underline underline-offset-2">{group.quarter} cuatrimestre</span>.
-                                        </p>
+                                    <div className="bg-orange-50/80 p-3 rounded-2xl border border-orange-100 flex items-center gap-3">
+                                        <div className="bg-orange-100 p-1.5 rounded-lg text-orange-600"><Icon name="info" className="w-5 h-5"/></div>
+                                        <p className="text-xs text-orange-900 font-bold">Modo Coyote Activo: Reclutando entre todos los grupos de <strong>{group.quarter} cuatrimestre</strong>.</p>
                                     </div>
                                 )}
                             </div>
 
-                            <div className="flex-1 overflow-y-auto custom-scrollbar border border-border-color rounded-2xl bg-surface shadow-sm relative">
+                            <div className="flex-1 overflow-y-auto custom-scrollbar border border-border-color rounded-2xl bg-surface shadow-sm">
                                 {!selectedTeam ? (
                                     <div className="h-full flex flex-col items-center justify-center opacity-40 p-10">
-                                        <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mb-4">
-                                            <Icon name="arrow-left" className="w-10 h-10 text-slate-400 animate-pulse"/>
-                                        </div>
-                                        <h4 className="text-xl font-bold text-slate-600">Selecciona un equipo</h4>
-                                        <p className="text-sm text-slate-400 mt-2">Usa el panel de la izquierda para ver o crear un equipo y asignar alumnos.</p>
+                                        <Icon name="arrow-left" className="w-16 h-16 mb-4 text-slate-400 animate-pulse"/>
+                                        <h4 className="text-xl font-bold">Selecciona un equipo a la izquierda</h4>
                                     </div>
                                 ) : (
-                                    <table className="w-full text-left text-sm border-separate border-spacing-0">
+                                    <table className="w-full text-left text-sm">
                                         <thead className="sticky top-0 bg-slate-50/95 backdrop-blur-sm z-10">
                                             <tr className="text-text-secondary uppercase tracking-widest text-[10px] font-black">
                                                 <th className="p-4 w-16 border-b border-border-color text-center">Incl.</th>
-                                                <th className="p-4 border-b border-border-color">Nombre Completo</th>
+                                                <th className="p-4 border-b border-border-color">Nombre Alumno</th>
                                                 <th className="p-4 border-b border-border-color">Grupo Origen</th>
                                                 <th className="p-4 border-b border-border-color text-center">Equipo Actual</th>
                                             </tr>
                                         </thead>
-                                        <tbody className="divide-y divide-border-color/30">
+                                        <tbody className="divide-y divide-border-color/30 text-xs">
                                             {filteredStudents.map(({student, gName}) => {
                                                 const isInSelectedTeam = (isCoyoteMode ? student.teamCoyote : student.team) === selectedTeam;
                                                 const currentOtherTeam = (isCoyoteMode ? student.teamCoyote : student.team);
-                                                
                                                 return (
-                                                    <tr 
-                                                        key={`${student.id}-${gName}`}
-                                                        className={`group/row transition-all ${isInSelectedTeam ? 'bg-indigo-50/40' : 'hover:bg-slate-50'}`}
-                                                    >
+                                                    <tr key={`${student.id}-${gName}`} className={`transition-all ${isInSelectedTeam ? 'bg-indigo-50/40' : 'hover:bg-slate-50'}`}>
                                                         <td className="p-4 text-center">
                                                             <input 
                                                                 type="checkbox"
@@ -381,20 +409,20 @@ const TeamsManager: React.FC<{ group: Group }> = ({ group }) => {
                                                             />
                                                         </td>
                                                         <td className="p-4">
-                                                            <p className={`font-bold text-text-primary ${isInSelectedTeam ? 'text-primary' : ''}`}>{student.name}</p>
-                                                            <p className="text-[11px] text-text-secondary font-medium tracking-tight opacity-60 uppercase">{student.matricula}</p>
+                                                            <p className={`font-bold ${isInSelectedTeam ? 'text-primary' : ''}`}>{student.name}</p>
+                                                            <p className="text-[10px] opacity-60 uppercase">{student.matricula}</p>
                                                         </td>
                                                         <td className="p-4">
-                                                            <span className={`px-3 py-1 rounded-full font-black text-[10px] tracking-tighter ${gName === group.name ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-200 text-slate-600'}`}>
+                                                            <span className={`px-3 py-1 rounded-full font-black text-[9px] tracking-tighter ${gName === group.name ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-200 text-slate-600'}`}>
                                                                 {gName}
                                                             </span>
                                                         </td>
                                                         <td className="p-4 text-center">
                                                             {currentOtherTeam ? (
-                                                                <span className={`font-black text-[11px] px-2 py-0.5 rounded ${isInSelectedTeam ? 'bg-primary text-white' : 'text-slate-400 bg-slate-100'}`}>
+                                                                <span className={`font-black text-[10px] px-2 py-0.5 rounded ${isInSelectedTeam ? 'bg-primary text-white' : 'text-slate-400 bg-slate-100'}`}>
                                                                     {currentOtherTeam}
                                                                 </span>
-                                                            ) : <span className="text-slate-300 italic text-xs">- Ninguno -</span>}
+                                                            ) : <span className="text-slate-300 italic">- Ninguno -</span>}
                                                         </td>
                                                     </tr>
                                                 );
@@ -406,6 +434,33 @@ const TeamsManager: React.FC<{ group: Group }> = ({ group }) => {
                         </div>
                     </div>
                 </div>
+
+                {/* MODAL DE MIGRACIÓN RÁPIDA */}
+                <Modal 
+                    isOpen={isMigrateModalOpen} 
+                    onClose={() => setMigrateModalOpen(false)} 
+                    title={`Migrar equipo a "${selectedTeam}"`}
+                    size="md"
+                >
+                    <div className="space-y-4">
+                        <p className="text-sm text-text-secondary">Selecciona un equipo base para mover a todos sus integrantes:</p>
+                        <div className="max-h-[50vh] overflow-y-auto space-y-2 pr-2 custom-scrollbar">
+                            {allBaseTeamsForQuarter.map(([tName, members]) => (
+                                <button
+                                    key={tName}
+                                    onClick={() => handleMigrateTeam(tName, members)}
+                                    className="w-full p-4 bg-surface border border-border-color rounded-xl flex items-center justify-between hover:bg-indigo-50 hover:border-indigo-300 transition-all group"
+                                >
+                                    <div className="text-left">
+                                        <p className="font-bold text-sm text-text-primary group-hover:text-indigo-900">{tName}</p>
+                                        <p className="text-[10px] text-text-secondary">{members.length} Integrantes</p>
+                                    </div>
+                                    <Icon name="arrow-right" className="w-5 h-5 text-indigo-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                </Modal>
             </Modal>
         </div>
     );

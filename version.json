@@ -1,6 +1,6 @@
 
 {
-  "version": "1.5.7",
-  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v1.5.7/app-debug.apk",
-  "notes": "¡Versión 1.5.7! Gestor de Equipos ampliado (6xl) con mejor adaptabilidad visual y mayor altura (80vh)."
+  "version": "1.5.8",
+  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v1.5.8/app-debug.apk",
+  "notes": "¡Versión 1.5.8! Centrado inteligente de modales según el sidebar y nueva función de migración mágica de Equipos Base a Coyote."
 }
