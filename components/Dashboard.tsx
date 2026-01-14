@@ -32,14 +32,6 @@ const TeacherScheduleModal: React.FC<{ schedule: TeacherClass[], isOpen: boolean
         groupName: ''
     });
 
-    // Estado para la asignación rápida desde grupos existentes
-    const [quickAssign, setQuickAssign] = useState<{ groupId: string, day: DayOfWeek, start: number, duration: number }>({
-        groupId: '',
-        day: 'Lunes',
-        start: 7,
-        duration: 2
-    });
-
     const scheduleByDay = useMemo(() => {
         const map: Record<string, TeacherClass[]> = {};
         DAYS_OF_WEEK.forEach(d => map[d] = []);
@@ -215,7 +207,7 @@ const TeacherScheduleModal: React.FC<{ schedule: TeacherClass[], isOpen: boolean
                                     <label className="text-[10px] font-bold uppercase text-slate-400">Actividad / Materia</label>
                                     <input 
                                         type="text" placeholder="Ej. Reunión Academia"
-                                        className="w-full p-2 text-sm border border-slate-300 rounded-lg bg-white"
+                                        className="w-full p-2 text-sm border border-border-color rounded-md bg-surface"
                                         value={newCustomClass.subjectName}
                                         onChange={e => setNewCustomClass({...newCustomClass, subjectName: e.target.value})}
                                     />
@@ -224,7 +216,7 @@ const TeacherScheduleModal: React.FC<{ schedule: TeacherClass[], isOpen: boolean
                                     <label className="text-[10px] font-bold uppercase text-slate-400">Lugar / Grupo</label>
                                     <input 
                                         type="text" placeholder="Ej. Sala A"
-                                        className="w-full p-2 text-sm border border-slate-300 rounded-lg bg-white"
+                                        className="w-full p-2 text-sm border border-border-color rounded-md bg-surface"
                                         value={newCustomClass.groupName}
                                         onChange={e => setNewCustomClass({...newCustomClass, groupName: e.target.value})}
                                     />
