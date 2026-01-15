@@ -1,25 +1,22 @@
 
 import React, { useContext, useMemo, useEffect, useCallback, useState } from 'react';
 import { AppContext } from '../context/AppContext';
-import { AttendanceStatus, GroupReportSummary } from '../types';
+import { AttendanceStatus, GroupReportSummary, Group } from '../types';
 import { getClassDates } from '../services/dateUtils';
-import { exportAttendanceToCSV, exportGradesToCSV, generateAttendanceCSVContent, generateGradesCSVContent } from '../services/exportService';
-import { exportReportToPDF } from '../services/pdfService';
+import { exportAttendanceToCSV, exportGradesToCSV } from '../services/exportService';
+import { exportReportToPDF, generateReportPDFBlob } from '../services/pdfService';
 import Icon from './icons/Icon';
 import Button from './common/Button';
 import ReportChart from './ReportChart';
 import { motion } from 'framer-motion';
 import { STATUS_STYLES, GROUP_COLORS } from '../constants';
-// @ts-ignore
-import * as JSZipModule from 'jszip';
-
-// Fix for jszip import inconsistency between dev/prod and ESM/UMD
-const JSZip = (JSZipModule as any).default || JSZipModule;
+import JSZip from 'jszip';
 
 const ReportsView: React.FC = () => {
     const { state, dispatch } = useContext(AppContext);
     const { groups, attendance, evaluations, grades, settings, selectedGroupId } = state;
     const [isExportingMassive, setIsExportingMassive] = useState(false);
+    const [massiveProgress, setMassiveProgress] = useState({ current: 0, total: 0, name: '' });
 
     const setSelectedGroupId = useCallback((id: string | null) => {
         dispatch({ type: 'SET_SELECTED_GROUP', payload: id });
@@ -28,7 +25,6 @@ const ReportsView: React.FC = () => {
     const group = useMemo(() => groups.find(g => g.id === selectedGroupId), [groups, selectedGroupId]);
     const groupEvaluations = useMemo(() => (evaluations[selectedGroupId || ''] || []), [evaluations, selectedGroupId]);
     
-    // Resolve group color hex
     const groupColorHex = useMemo(() => {
         if (!group) return undefined;
         const colorObj = GROUP_COLORS.find(c => c.name === group.color) || GROUP_COLORS[0];
@@ -42,19 +38,16 @@ const ReportsView: React.FC = () => {
     }, [groups, selectedGroupId, setSelectedGroupId]);
 
     const classDates = useMemo(() => {
-        if (group) {
-            return getClassDates(settings.semesterStart, settings.semesterEnd, group.classDays);
-        }
+        if (group) return getClassDates(settings.semesterStart, settings.semesterEnd, group.classDays);
         return [];
     }, [group, settings.semesterStart, settings.semesterEnd]);
 
-    const attendanceHeaders = useMemo(() => {
-        if (!group) return null;
-
+    const getAttendanceHeaders = (g: Group) => {
         const partial1End = new Date(settings.firstPartialEnd + 'T00:00:00');
         const grouped: Record<string, Record<string, string[]>> = {};
+        const gDates = getClassDates(settings.semesterStart, settings.semesterEnd, g.classDays);
 
-        classDates.forEach(dateStr => {
+        gDates.forEach(dateStr => {
             const date = new Date(dateStr + 'T00:00:00');
             const partialName = date <= partial1End ? "Primer Parcial" : "Segundo Parcial";
             const monthName = date.toLocaleDateString('es-MX', { month: 'long' }).replace(/^\w/, c => c.toUpperCase());
@@ -64,13 +57,10 @@ const ReportsView: React.FC = () => {
             grouped[partialName][monthName].push(dateStr);
         });
         return grouped;
-    }, [group, classDates, settings.firstPartialEnd]);
+    };
 
-    const groupSummaryData: GroupReportSummary | null = useMemo(() => {
-        if (!group) return null;
-
-        const allSemesterDates = getClassDates(settings.semesterStart, settings.semesterEnd, group.classDays);
-        
+    const getSummaryData = (g: Group): GroupReportSummary => {
+        const allSemesterDates = getClassDates(settings.semesterStart, settings.semesterEnd, g.classDays);
         const monthlyDates: { [monthYear: string]: string[] } = {};
         allSemesterDates.forEach(d => {
             const dateObj = new Date(d + 'T00:00:00');
@@ -79,18 +69,14 @@ const ReportsView: React.FC = () => {
             monthlyDates[monthYear].push(d);
         });
 
-        const summary: GroupReportSummary = {
-            monthlyAttendance: {},
-            evaluationAverages: {}
-        };
-
+        const summary: GroupReportSummary = { monthlyAttendance: {}, evaluationAverages: {} };
         Object.keys(monthlyDates).forEach(monthYear => {
             const datesInMonth = monthlyDates[monthYear];
             let totalPercentageSum = 0;
             let studentsWithAttendanceThisMonth = 0;
 
-            group.students.forEach(student => {
-                const studentAttendance = attendance[group.id]?.[student.id] || {};
+            g.students.forEach(student => {
+                const studentAttendance = attendance[g.id]?.[student.id] || {};
                 let present = 0;
                 let validAttendanceTaken = 0;
                 datesInMonth.forEach(date => {
@@ -107,109 +93,69 @@ const ReportsView: React.FC = () => {
                     studentsWithAttendanceThisMonth++;
                 }
             });
-            
             if (studentsWithAttendanceThisMonth > 0) {
                 summary.monthlyAttendance[monthYear] = totalPercentageSum / studentsWithAttendanceThisMonth;
             }
         });
-
         return summary;
-    }, [group, settings, attendance]);
+    };
     
-    
-    const getExportFileName = useCallback((g?: any) => {
-        const targetGroup = g || group;
-        if (!targetGroup) return 'reporte';
-        
-        const cleanString = (str: string) => str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9]/g, "_").toUpperCase();
-
-        const start = new Date(settings.semesterStart);
-        const end = new Date(settings.semesterEnd);
-        
-        const startMonth = start.toLocaleDateString('es-MX', { month: 'short' }).toUpperCase().replace('.', '');
-        const startYear = start.toLocaleDateString('es-MX', { year: '2-digit' });
-        
-        const endMonth = end.toLocaleDateString('es-MX', { month: 'short' }).toUpperCase().replace('.', '');
-        const endYear = end.toLocaleDateString('es-MX', { year: '2-digit' });
-        
-        const period = `${startMonth}${startYear}-${endMonth}${endYear}`;
-        const subject = cleanString(targetGroup.subject);
-        const groupName = cleanString(targetGroup.name);
-        
-        return `${period}_${subject}_${groupName}`;
-    }, [group, settings.semesterStart, settings.semesterEnd]);
+    const attendanceHeaders = useMemo(() => group ? getAttendanceHeaders(group) : null, [group, settings.firstPartialEnd]);
+    const groupSummaryData = useMemo(() => group ? getSummaryData(group) : null, [group, settings, attendance]);
 
     const handleMassiveExport = async () => {
         if (groups.length === 0) return;
         setIsExportingMassive(true);
-        dispatch({ type: 'ADD_TOAST', payload: { message: 'Generando archivo ZIP organizado...', type: 'info' } });
+        setMassiveProgress({ current: 0, total: groups.length, name: '' });
+        dispatch({ type: 'ADD_TOAST', payload: { message: 'Iniciando generación masiva de PDFs...', type: 'info' } });
 
         try {
             const zip = new JSZip();
-            const rootFolder = zip.folder(`Reportes_IAEV_${new Date().toISOString().split('T')[0]}`);
+            const rootFolder = zip.folder(`Reportes_PDF_IAEV_${new Date().toISOString().split('T')[0]}`);
 
-            for (const g of groups) {
+            for (let i = 0; i < groups.length; i++) {
+                const g = groups[i];
+                setMassiveProgress({ current: i + 1, total: groups.length, name: g.name });
+
                 const quarter = (g.quarter || 'Sin_Cuatrimestre').replace(/[^a-zA-Z0-9]/g, '_');
                 const subject = g.subject.replace(/[^a-zA-Z0-9]/g, '_');
                 const gName = g.name.replace(/[^a-zA-Z0-9]/g, '_');
 
-                const groupFolder = rootFolder.folder(quarter).folder(subject).folder(gName);
-
-                // Asistencia
+                const summary = getSummaryData(g);
+                const headers = getAttendanceHeaders(g);
                 const gDates = getClassDates(settings.semesterStart, settings.semesterEnd, g.classDays);
-                const attContent = generateAttendanceCSVContent(g, gDates, attendance[g.id] || {});
-                groupFolder.file(`Asistencia_${gName}.csv`, attContent);
-
-                // Calificaciones
                 const gEvals = evaluations[g.id] || [];
-                const gradesContent = generateGradesCSVContent(g, gEvals, grades[g.id] || {});
-                groupFolder.file(`Calificaciones_${gName}.csv`, gradesContent);
+
+                // Generar PDF como Blob
+                const pdfBlob = await generateReportPDFBlob(
+                    g,
+                    summary,
+                    gDates,
+                    attendance[g.id] || {},
+                    headers,
+                    gEvals,
+                    settings
+                );
+
+                const groupFolder = rootFolder.folder(quarter).folder(subject);
+                groupFolder.file(`Reporte_${gName}.pdf`, pdfBlob);
             }
 
             const content = await zip.generateAsync({ type: 'blob' });
             const link = document.createElement('a');
             link.href = URL.createObjectURL(content);
-            link.download = `Reportes_IAEV_Masivo_${new Date().toISOString().split('T')[0]}.zip`;
+            link.download = `Reportes_IAEV_Masivo_PDF_${new Date().toISOString().split('T')[0]}.zip`;
             link.click();
             
-            dispatch({ type: 'ADD_TOAST', payload: { message: '¡Exportación masiva completa!', type: 'success' } });
+            dispatch({ type: 'ADD_TOAST', payload: { message: '¡ZIP generado con todos los reportes PDF!', type: 'success' } });
         } catch (err) {
             console.error(err);
             dispatch({ type: 'ADD_TOAST', payload: { message: 'Error al generar la exportación masiva.', type: 'error' } });
         } finally {
             setIsExportingMassive(false);
+            setMassiveProgress({ current: 0, total: 0, name: '' });
         }
     };
-
-    const handleExportAttendance = () => {
-        if (group) {
-            exportAttendanceToCSV(group, classDates, attendance[group.id] || {}, getExportFileName());
-        }
-    };
-
-    const handleExportGrades = () => {
-        if (group) {
-            exportGradesToCSV(group, groupEvaluations, grades[group.id] || {}, getExportFileName());
-        }
-    };
-
-    const handleExportPDF = () => {
-        if (group && groupSummaryData && attendanceHeaders) {
-            exportReportToPDF(
-                group,
-                groupSummaryData,
-                classDates,
-                attendance[group.id] || {},
-                attendanceHeaders,
-                groupEvaluations,
-                settings,
-                getExportFileName()
-            );
-        } else {
-             dispatch({ type: 'ADD_TOAST', payload: { message: 'No hay datos suficientes para generar el PDF.', type: 'error' } });
-        }
-    };
-
 
     return (
         <div>
@@ -224,6 +170,19 @@ const ReportsView: React.FC = () => {
                 </select>
             </div>
 
+            {isExportingMassive && (
+                <div className="mb-6 p-4 bg-indigo-50 border border-indigo-200 rounded-xl animate-pulse flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <Icon name="download-cloud" className="w-6 h-6 text-indigo-600" />
+                        <div>
+                            <p className="text-sm font-bold text-indigo-900">Generando PDFs ({massiveProgress.current} de {massiveProgress.total})</p>
+                            <p className="text-xs text-indigo-700">Procesando: <span className="font-black">{massiveProgress.name}</span></p>
+                        </div>
+                    </div>
+                    <div className="text-indigo-800 font-bold text-xl">{Math.round((massiveProgress.current / massiveProgress.total) * 100)}%</div>
+                </div>
+            )}
+
             {group ? (
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
                     <div className="flex flex-wrap justify-start md:justify-end gap-3 mb-4">
@@ -234,15 +193,15 @@ const ReportsView: React.FC = () => {
                             className="w-full sm:w-auto bg-indigo-600 !text-white hover:bg-indigo-700 shadow-md"
                         >
                             <Icon name="download-cloud" className="w-4 h-4" /> 
-                            {isExportingMassive ? 'Procesando...' : 'Exportación Masiva (ZIP)'}
+                            {isExportingMassive ? 'Exportando...' : 'Exportación Masiva (ZIP-PDF)'}
                         </Button>
-                        <Button variant="secondary" onClick={handleExportPDF} className="w-full sm:w-auto">
+                        <Button variant="secondary" onClick={() => exportReportToPDF(group, groupSummaryData!, classDates, attendance[group.id] || {}, attendanceHeaders, groupEvaluations, settings)} className="w-full sm:w-auto">
                             <Icon name="file-spreadsheet" className="w-4 h-4" /> PDF Individual
                         </Button>
-                         <Button variant="secondary" onClick={handleExportAttendance} className="w-full sm:w-auto">
+                         <Button variant="secondary" onClick={() => exportAttendanceToCSV(group, classDates, attendance[group.id] || {})} className="w-full sm:w-auto">
                             <Icon name="file-spreadsheet" className="w-4 h-4" /> Asistencia (CSV)
                         </Button>
-                        <Button variant="secondary" onClick={handleExportGrades} className="w-full sm:w-auto">
+                        <Button variant="secondary" onClick={() => exportGradesToCSV(group, groupEvaluations, grades[group.id] || {})} className="w-full sm:w-auto">
                            <Icon name="file-spreadsheet" className="w-4 h-4" /> Calificaciones (CSV)
                         </Button>
                     </div>

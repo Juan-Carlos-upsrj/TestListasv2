@@ -1,6 +1,6 @@
 
 {
-  "version": "1.7.6",
-  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v1.7.6/app-debug.apk",
-  "notes": "¡Versión 1.7.6! Corrección crítica en la importación de la librería de exportación masiva (JSZip) para compatibilidad total con navegadores y dispositivos móviles."
+  "version": "1.7.7",
+  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v1.7.7/app-debug.apk",
+  "notes": "¡Versión 1.7.7! 1. Corrección del error de compilación en JSZip. 2. La exportación masiva ahora genera archivos PDF organizados en carpetas en lugar de CSV."
 }
