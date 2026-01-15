@@ -1,18 +1,25 @@
-import React, { useContext, useMemo, useEffect, useCallback } from 'react';
+
+import React, { useContext, useMemo, useEffect, useCallback, useState } from 'react';
 import { AppContext } from '../context/AppContext';
 import { AttendanceStatus, GroupReportSummary } from '../types';
 import { getClassDates } from '../services/dateUtils';
-import { exportAttendanceToCSV, exportGradesToCSV } from '../services/exportService';
+import { exportAttendanceToCSV, exportGradesToCSV, generateAttendanceCSVContent, generateGradesCSVContent } from '../services/exportService';
 import { exportReportToPDF } from '../services/pdfService';
 import Icon from './icons/Icon';
 import Button from './common/Button';
 import ReportChart from './ReportChart';
 import { motion } from 'framer-motion';
 import { STATUS_STYLES, GROUP_COLORS } from '../constants';
+// @ts-ignore
+import * as JSZipModule from 'jszip';
+
+// Fix for jszip import inconsistency between dev/prod and ESM/UMD
+const JSZip = (JSZipModule as any).default || JSZipModule;
 
 const ReportsView: React.FC = () => {
     const { state, dispatch } = useContext(AppContext);
     const { groups, attendance, evaluations, grades, settings, selectedGroupId } = state;
+    const [isExportingMassive, setIsExportingMassive] = useState(false);
 
     const setSelectedGroupId = useCallback((id: string | null) => {
         dispatch({ type: 'SET_SELECTED_GROUP', payload: id });
@@ -110,10 +117,10 @@ const ReportsView: React.FC = () => {
     }, [group, settings, attendance]);
     
     
-    const getExportFileName = useCallback(() => {
-        if (!group) return 'reporte';
+    const getExportFileName = useCallback((g?: any) => {
+        const targetGroup = g || group;
+        if (!targetGroup) return 'reporte';
         
-        // Normalize string to remove accents and special chars
         const cleanString = (str: string) => str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9]/g, "_").toUpperCase();
 
         const start = new Date(settings.semesterStart);
@@ -126,12 +133,53 @@ const ReportsView: React.FC = () => {
         const endYear = end.toLocaleDateString('es-MX', { year: '2-digit' });
         
         const period = `${startMonth}${startYear}-${endMonth}${endYear}`;
-        const subject = cleanString(group.subject);
-        const groupName = cleanString(group.name);
+        const subject = cleanString(targetGroup.subject);
+        const groupName = cleanString(targetGroup.name);
         
         return `${period}_${subject}_${groupName}`;
     }, [group, settings.semesterStart, settings.semesterEnd]);
 
+    const handleMassiveExport = async () => {
+        if (groups.length === 0) return;
+        setIsExportingMassive(true);
+        dispatch({ type: 'ADD_TOAST', payload: { message: 'Generando archivo ZIP organizado...', type: 'info' } });
+
+        try {
+            const zip = new JSZip();
+            const rootFolder = zip.folder(`Reportes_IAEV_${new Date().toISOString().split('T')[0]}`);
+
+            for (const g of groups) {
+                const quarter = (g.quarter || 'Sin_Cuatrimestre').replace(/[^a-zA-Z0-9]/g, '_');
+                const subject = g.subject.replace(/[^a-zA-Z0-9]/g, '_');
+                const gName = g.name.replace(/[^a-zA-Z0-9]/g, '_');
+
+                const groupFolder = rootFolder.folder(quarter).folder(subject).folder(gName);
+
+                // Asistencia
+                const gDates = getClassDates(settings.semesterStart, settings.semesterEnd, g.classDays);
+                const attContent = generateAttendanceCSVContent(g, gDates, attendance[g.id] || {});
+                groupFolder.file(`Asistencia_${gName}.csv`, attContent);
+
+                // Calificaciones
+                const gEvals = evaluations[g.id] || [];
+                const gradesContent = generateGradesCSVContent(g, gEvals, grades[g.id] || {});
+                groupFolder.file(`Calificaciones_${gName}.csv`, gradesContent);
+            }
+
+            const content = await zip.generateAsync({ type: 'blob' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(content);
+            link.download = `Reportes_IAEV_Masivo_${new Date().toISOString().split('T')[0]}.zip`;
+            link.click();
+            
+            dispatch({ type: 'ADD_TOAST', payload: { message: '¡Exportación masiva completa!', type: 'success' } });
+        } catch (err) {
+            console.error(err);
+            dispatch({ type: 'ADD_TOAST', payload: { message: 'Error al generar la exportación masiva.', type: 'error' } });
+        } finally {
+            setIsExportingMassive(false);
+        }
+    };
 
     const handleExportAttendance = () => {
         if (group) {
@@ -179,8 +227,17 @@ const ReportsView: React.FC = () => {
             {group ? (
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
                     <div className="flex flex-wrap justify-start md:justify-end gap-3 mb-4">
+                        <Button 
+                            variant="secondary" 
+                            onClick={handleMassiveExport} 
+                            disabled={isExportingMassive}
+                            className="w-full sm:w-auto bg-indigo-600 !text-white hover:bg-indigo-700 shadow-md"
+                        >
+                            <Icon name="download-cloud" className="w-4 h-4" /> 
+                            {isExportingMassive ? 'Procesando...' : 'Exportación Masiva (ZIP)'}
+                        </Button>
                         <Button variant="secondary" onClick={handleExportPDF} className="w-full sm:w-auto">
-                            <Icon name="download-cloud" className="w-4 h-4" /> Exportar a PDF
+                            <Icon name="file-spreadsheet" className="w-4 h-4" /> PDF Individual
                         </Button>
                          <Button variant="secondary" onClick={handleExportAttendance} className="w-full sm:w-auto">
                             <Icon name="file-spreadsheet" className="w-4 h-4" /> Asistencia (CSV)

@@ -1,5 +1,5 @@
 
-import React, { useContext, useEffect, useState, useRef } from 'react';
+import React, { useContext, useEffect, useState, useRef, useCallback } from 'react';
 import { AppContext } from './context/AppContext';
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
@@ -12,15 +12,15 @@ import CalendarView from './components/CalendarView';
 import UpdateNotification from './components/UpdateNotification';
 import MobileUpdateModal from './components/MobileUpdateModal';
 import { PROFESSOR_BIRTHDAYS, APP_VERSION } from './constants';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, PanInfo } from 'framer-motion';
 import Icon from './components/icons/Icon';
 import BackgroundShapesV2 from './components/common/BackgroundShapesV2';
 import { checkForMobileUpdate } from './services/mobileUpdateService';
 import { MobileUpdateInfo } from './types';
 
 const App: React.FC = () => {
-  const { state } = useContext(AppContext);
-  const { settings, teacherSchedule } = state;
+  const { state, dispatch } = useContext(AppContext);
+  const { settings, teacherSchedule, groups, selectedGroupId } = state;
   const [isFriday, setIsFriday] = useState(false);
   const [isBirthday, setIsBirthday] = useState(false);
   const [updateAvailable, setUpdateAvailable] = useState(false);
@@ -119,6 +119,30 @@ const App: React.FC = () => {
     }
   };
 
+  // NAVEGACIÓN POR GESTOS (SWIPES)
+  const handleSwipe = useCallback((_: any, info: PanInfo) => {
+    if (window.innerWidth >= 768) return; // Solo móvil
+    if (groups.length <= 1) return;
+
+    const swipeThreshold = 50;
+    const velocityThreshold = 0.5;
+
+    if (Math.abs(info.offset.x) > swipeThreshold || Math.abs(info.velocity.x) > velocityThreshold) {
+      const currentIndex = groups.findIndex(g => g.id === selectedGroupId);
+      if (currentIndex === -1 && selectedGroupId !== null) return;
+
+      if (info.offset.x > 0) {
+        // Swipe Right -> Previous Group
+        const prevIndex = (currentIndex <= 0) ? groups.length - 1 : currentIndex - 1;
+        dispatch({ type: 'SET_SELECTED_GROUP', payload: groups[prevIndex].id });
+      } else {
+        // Swipe Left -> Next Group
+        const nextIndex = (currentIndex >= groups.length - 1 || currentIndex === -1) ? 0 : currentIndex + 1;
+        dispatch({ type: 'SET_SELECTED_GROUP', payload: groups[nextIndex].id });
+      }
+    }
+  }, [groups, selectedGroupId, dispatch]);
+
 
   const renderView = () => {
     switch (state.activeView) {
@@ -151,7 +175,7 @@ const App: React.FC = () => {
   const showFridayBanner = isFriday && !isBirthday;
 
   return (
-    <div className="flex h-screen bg-background text-text-primary font-sans relative">
+    <div className="flex h-screen bg-background text-text-primary font-sans relative overflow-hidden">
       <BackgroundShapesV2 />
       
       {updateAvailable && <UpdateNotification onUpdate={handleUpdate} />}
@@ -212,9 +236,25 @@ const App: React.FC = () => {
             </div>
           )}
         </header>
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
-            {renderView()}
-        </div>
+        
+        {/* Contenedor animado con soporte para Swipes en móvil */}
+        <motion.div 
+            className="flex-1 overflow-y-auto"
+            onPanEnd={handleSwipe}
+        >
+            <AnimatePresence mode="wait">
+                <motion.div
+                    key={`${state.activeView}-${selectedGroupId}`}
+                    initial={{ opacity: 0, x: 10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -10 }}
+                    transition={{ duration: 0.2 }}
+                    className="p-4 sm:p-6 lg:p-8 min-h-full"
+                >
+                    {renderView()}
+                </motion.div>
+            </AnimatePresence>
+        </motion.div>
       </main>
 
       <ToastContainer />

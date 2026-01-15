@@ -1,6 +1,6 @@
 
 {
-  "version": "1.7.4",
-  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v1.7.4/app-debug.apk",
-  "notes": "¡Versión 1.7.4! Ahora los buscadores en todas las secciones (Grupos, Asistencia y Calificaciones) reconocen los apodos de los alumnos, permitiendo una localización mucho más rápida."
+  "version": "1.7.6",
+  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v1.7.6/app-debug.apk",
+  "notes": "¡Versión 1.7.6! Corrección crítica en la importación de la librería de exportación masiva (JSZip) para compatibilidad total con navegadores y dispositivos móviles."
 }

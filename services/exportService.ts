@@ -1,3 +1,4 @@
+
 import { Group, Evaluation, AttendanceStatus } from '../types';
 
 function downloadCSV(csvContent: string, filename: string) {
@@ -14,14 +15,12 @@ function downloadCSV(csvContent: string, filename: string) {
     }
 }
 
-export const exportAttendanceToCSV = (
+export const generateAttendanceCSVContent = (
     group: Group,
     classDates: string[],
-    attendance: { [studentId: string]: { [date: string]: AttendanceStatus } },
-    fileName?: string
-) => {
+    attendance: { [studentId: string]: { [date: string]: AttendanceStatus } }
+): string => {
     let csvRows = [];
-    
     // Header
     const header = ['Matrícula', 'Nombre', ...classDates];
     csvRows.push(header.join(','));
@@ -45,19 +44,15 @@ export const exportAttendanceToCSV = (
         ];
         csvRows.push(row.join(','));
     });
-    
-    const finalName = fileName ? `${fileName}.csv` : `asistencia_${group.name.replace(/\s/g, '_')}.csv`;
-    downloadCSV(csvRows.join('\r\n'), finalName);
+    return csvRows.join('\r\n');
 };
 
-export const exportGradesToCSV = (
+export const generateGradesCSVContent = (
     group: Group,
     evaluations: Evaluation[],
-    grades: { [studentId: string]: { [evaluationId: string]: number | null } },
-    fileName?: string
-) => {
+    grades: { [studentId: string]: { [evaluationId: string]: number | null } }
+): string => {
     let csvRows = [];
-
     // Header
     const header = ['Matrícula', 'Nombre', ...evaluations.map(e => `"${e.name} (${e.maxScore} pts)"`)];
     csvRows.push(header.join(','));
@@ -74,7 +69,27 @@ export const exportGradesToCSV = (
         ];
         csvRows.push(row.join(','));
     });
+    return csvRows.join('\r\n');
+};
 
+export const exportAttendanceToCSV = (
+    group: Group,
+    classDates: string[],
+    attendance: { [studentId: string]: { [date: string]: AttendanceStatus } },
+    fileName?: string
+) => {
+    const content = generateAttendanceCSVContent(group, classDates, attendance);
+    const finalName = fileName ? `${fileName}.csv` : `asistencia_${group.name.replace(/\s/g, '_')}.csv`;
+    downloadCSV(content, finalName);
+};
+
+export const exportGradesToCSV = (
+    group: Group,
+    evaluations: Evaluation[],
+    grades: { [studentId: string]: { [evaluationId: string]: number | null } },
+    fileName?: string
+) => {
+    const content = generateGradesCSVContent(group, evaluations, grades);
     const finalName = fileName ? `${fileName}.csv` : `calificaciones_${group.name.replace(/\s/g, '_')}.csv`;
-    downloadCSV(csvRows.join('\r\n'), finalName);
+    downloadCSV(content, finalName);
 };
