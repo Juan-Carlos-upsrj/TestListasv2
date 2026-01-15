@@ -214,6 +214,7 @@ const TeamsManager: React.FC<{ group: Group }> = ({ group }) => {
         return studentsList.filter(item => 
             item.student?.name?.toLowerCase().includes(s) || 
             item.student?.matricula?.toLowerCase().includes(s) ||
+            item.student?.nickname?.toLowerCase().includes(s) ||
             item.student?.team?.toLowerCase().includes(s) ||
             item.student?.teamCoyote?.toLowerCase().includes(s)
         );
@@ -499,6 +500,7 @@ const GroupManagement: React.FC = () => {
         return (selectedGroup.students || []).filter(Boolean).filter(s => 
             s?.name?.toLowerCase().includes(search) || 
             (s?.matricula && s?.matricula?.toLowerCase().includes(search)) || 
+            (s?.nickname && s?.nickname?.toLowerCase().includes(search)) ||
             (s?.team && s?.team?.toLowerCase().includes(search))
         ); 
     }, [selectedGroup, searchTerm]);
@@ -625,7 +627,7 @@ const GroupManagement: React.FC = () => {
                                         type="text" 
                                         value={searchTerm} 
                                         onChange={e => setSearchTerm(e.target.value)} 
-                                        placeholder="Filtrar alumnos por nombre o matrícula..." 
+                                        placeholder="Filtrar alumnos por nombre, matrícula o apodo..." 
                                         className="w-full pl-10 pr-4 py-2 border-2 border-border-color rounded-xl bg-surface text-sm focus:ring-2 focus:ring-primary focus:border-primary transition-all"
                                     />
                                 </div>
@@ -649,6 +651,7 @@ const GroupManagement: React.FC = () => {
                                                 <td className="p-3">
                                                     <div className="flex items-center gap-2">
                                                         <span className="font-bold text-text-primary">{s.name}</span>
+                                                        {s.nickname && <span className="text-[10px] text-text-secondary italic">({s.nickname})</span>}
                                                         {s.isRepeating && <span className="bg-rose-600 text-white text-[8px] font-black px-1.5 py-0.5 rounded-full uppercase">R</span>}
                                                     </div>
                                                 </td>

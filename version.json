@@ -1,6 +1,6 @@
 
 {
-  "version": "1.7.3",
-  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v1.7.3/app-debug.apk",
-  "notes": "¡Versión 1.7.3! 1. Calificaciones por equipo ahora permiten elegir entre Equipo Base o Equipo Coyote. 2. Nuevo selector dinámico en la tabla de calificaciones para alternar la visualización de integrantes entre tipos de equipo. 3. Mejoras de UX en el formulario de evaluaciones para grupos híbridos."
+  "version": "1.7.4",
+  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v1.7.4/app-debug.apk",
+  "notes": "¡Versión 1.7.4! Ahora los buscadores en todas las secciones (Grupos, Asistencia y Calificaciones) reconocen los apodos de los alumnos, permitiendo una localización mucho más rápida."
 }

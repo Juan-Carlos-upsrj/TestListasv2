@@ -182,7 +182,8 @@ const GradesView: React.FC = () => {
         const term = searchTerm.toLowerCase();
         return group.students.filter(s => 
             s.name.toLowerCase().includes(term) || 
-            (s.matricula && s.matricula.toLowerCase().includes(term))
+            (s.matricula && s.matricula.toLowerCase().includes(term)) ||
+            (s.nickname && s.nickname.toLowerCase().includes(term))
         );
     }, [group, searchTerm]);
 
@@ -257,7 +258,7 @@ const GradesView: React.FC = () => {
                         <input 
                             type="text" 
                             className="block w-full pl-9 pr-3 py-2 border border-border-color rounded-md bg-white text-sm focus:ring-1 focus:ring-primary" 
-                            placeholder="Buscar alumno..." 
+                            placeholder="Buscar alumno por nombre, matrícula o apodo..." 
                             value={searchTerm} 
                             onChange={(e) => setSearchTerm(e.target.value)} 
                         />
@@ -349,6 +350,7 @@ const GradesView: React.FC = () => {
                                                     <div className="flex items-center gap-1.5">
                                                         <span className="text-[10px] text-slate-400 w-4 inline-block text-right">{idx + 1}.</span>
                                                         <span className="font-bold">{student.name}</span>
+                                                        {student.nickname && <span className="text-[10px] text-text-secondary italic">({student.nickname})</span>}
                                                         {student.isRepeating && <span className="bg-rose-600 text-white text-[8px] font-bold px-1 rounded-full shrink-0">R</span>}
                                                     </div>
                                                 </td>
@@ -399,7 +401,7 @@ const GradesView: React.FC = () => {
                                         return (
                                             <tr key={student.id} className={`border-b border-amber-100 ${idx % 2 === 0 ? 'bg-white' : 'bg-amber-50/30'}`}>
                                                 <td className="p-2.5 font-bold whitespace-nowrap">
-                                                    {student.name} {student.isRepeating && <span className="bg-rose-600 text-white text-[8px] font-bold px-1 rounded-full">R</span>}
+                                                    {student.name} {student.nickname && <span className="text-[10px] text-text-secondary italic">({student.nickname})</span>} {student.isRepeating && <span className="bg-rose-600 text-white text-[8px] font-bold px-1 rounded-full">R</span>}
                                                 </td>
                                                 <td className="p-1 text-center"><input type="number" value={r1 ?? ''} onChange={(e) => handleGradeChange(student.id, GRADE_REMEDIAL_P1, e.target.value)} className="w-12 text-center border-amber-200 focus:ring-amber-500 rounded py-1"/></td>
                                                 <td className="p-1 text-center"><input type="number" value={r2 ?? ''} onChange={(e) => handleGradeChange(student.id, GRADE_REMEDIAL_P2, e.target.value)} className="w-12 text-center border-amber-200 focus:ring-amber-500 rounded py-1"/></td>

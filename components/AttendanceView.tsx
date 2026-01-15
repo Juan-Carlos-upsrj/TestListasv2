@@ -1,3 +1,4 @@
+
 import React, { useContext, useState, useMemo, useEffect, useCallback, useRef, createContext } from 'react';
 import { AppContext } from '../context/AppContext';
 import { AttendanceStatus, Student } from '../types';
@@ -268,7 +269,8 @@ const AttendanceView: React.FC = () => {
         const term = searchTerm.toLowerCase();
         return group.students.filter(s => 
             s.name.toLowerCase().includes(term) || 
-            (s.matricula && s.matricula.toLowerCase().includes(term))
+            (s.matricula && s.matricula.toLowerCase().includes(term)) ||
+            (s.nickname && s.nickname.toLowerCase().includes(term))
         );
     }, [group, searchTerm]);
 
@@ -420,7 +422,7 @@ const AttendanceView: React.FC = () => {
                         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
                             <Icon name="search" className="h-4 w-4" />
                         </div>
-                        <input type="text" className="block w-full pl-9 pr-3 py-2 border border-border-color rounded-md bg-white text-sm focus:ring-1 focus:ring-primary" placeholder="Buscar alumno..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+                        <input type="text" className="block w-full pl-9 pr-3 py-2 border border-border-color rounded-md bg-white text-sm focus:ring-1 focus:ring-primary" placeholder="Buscar alumno por nombre, matrícula o apodo..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
                     </div>
                 </div>
                 <div className="flex flex-wrap gap-2 justify-end">
