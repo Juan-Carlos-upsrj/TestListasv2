@@ -10,6 +10,9 @@ import Button from './common/Button';
 import ReportChart from './ReportChart';
 import { motion } from 'framer-motion';
 import { STATUS_STYLES, GROUP_COLORS } from '../constants';
+
+// Fix for dynamic build environments (Vite/TSC)
+// @ts-ignore
 import JSZip from 'jszip';
 
 const ReportsView: React.FC = () => {
@@ -110,8 +113,10 @@ const ReportsView: React.FC = () => {
         dispatch({ type: 'ADD_TOAST', payload: { message: 'Iniciando generación masiva de PDFs...', type: 'info' } });
 
         try {
-            const zip = new JSZip();
-            const rootFolder = zip.folder(`Reportes_PDF_IAEV_${new Date().toISOString().split('T')[0]}`);
+            // Handle both default and commonJS exports of JSZip
+            const ZipConstructor = (JSZip as any).default || JSZip;
+            const zip = new ZipConstructor();
+            const rootFolder = zip.folder(`Reportes_IAEV_PDF_${new Date().toISOString().split('T')[0]}`);
 
             for (let i = 0; i < groups.length; i++) {
                 const g = groups[i];
@@ -126,7 +131,7 @@ const ReportsView: React.FC = () => {
                 const gDates = getClassDates(settings.semesterStart, settings.semesterEnd, g.classDays);
                 const gEvals = evaluations[g.id] || [];
 
-                // Generar PDF como Blob
+                // Generar PDF como Blob usando el servicio robusto
                 const pdfBlob = await generateReportPDFBlob(
                     g,
                     summary,
@@ -147,7 +152,7 @@ const ReportsView: React.FC = () => {
             link.download = `Reportes_IAEV_Masivo_PDF_${new Date().toISOString().split('T')[0]}.zip`;
             link.click();
             
-            dispatch({ type: 'ADD_TOAST', payload: { message: '¡ZIP generado con todos los reportes PDF!', type: 'success' } });
+            dispatch({ type: 'ADD_TOAST', payload: { message: '¡Exportación masiva completa!', type: 'success' } });
         } catch (err) {
             console.error(err);
             dispatch({ type: 'ADD_TOAST', payload: { message: 'Error al generar la exportación masiva.', type: 'error' } });
