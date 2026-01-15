@@ -1,6 +1,6 @@
 
 {
-  "version": "1.8.2",
-  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v1.8.2/app-debug.apk",
-  "notes": "¡Versión 1.8.2! Corrección crítica de diseño: se eliminó el desplazamiento horizontal indeseado y se ajustó el Dashboard para que se adapte perfectamente a todos los tamaños de pantalla."
+  "version": "1.8.3",
+  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v1.8.3/app-debug.apk",
+  "notes": "¡Versión 1.8.3! Navegación fluida: Ahora puedes cambiar de grupo en el panel lateral sin que se cierren las ventanas de gestión de equipos o se refresque la vista actual."
 }

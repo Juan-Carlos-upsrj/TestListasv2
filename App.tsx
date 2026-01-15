@@ -218,7 +218,7 @@ const App: React.FC = () => {
                 >
                     <Icon name="align-justify" className="w-6 h-6"/>
                 </button>
-              <Icon name="cake" className="w-8 h-8 animate-pulse" />
+              <Icon name="cake" className="w-8 h-8 animate-bounce" />
               <div>
                 <p className="font-bold text-lg">¡Es viernes!</p>
                 <p>¡Ya casi es momento de descansar, suerte en el día!</p>
@@ -241,13 +241,14 @@ const App: React.FC = () => {
         </header>
         
         {/* Contenedor principal de la vista - Ajustado para evitar desbordamiento */}
+        {/* FIX: Se eliminó el selectedGroupId de la KEY para permitir actualizaciones suaves sin remounting */}
         <motion.div 
             className={`flex-1 flex flex-col min-w-0 ${isFullScreenView ? 'overflow-hidden' : 'overflow-y-auto overflow-x-hidden'}`}
             onPanEnd={handleSwipe}
         >
             <AnimatePresence mode="wait">
                 <motion.div
-                    key={`${state.activeView}-${selectedGroupId}`}
+                    key={`${state.activeView}`}
                     initial={{ opacity: 0, x: 10 }}
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: -10 }}
