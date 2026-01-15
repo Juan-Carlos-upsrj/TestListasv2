@@ -27,14 +27,16 @@ const EvaluationForm: React.FC<{
     const [maxScore, setMaxScore] = useState(evaluation?.maxScore || 10);
     const [partial, setPartial] = useState<1 | 2>(evaluation?.partial || 1);
     const [isTeamBased, setIsTeamBased] = useState(evaluation?.isTeamBased || false);
-    const [teamType, setTeamType] = useState<'base' | 'coyote'>(evaluation?.teamType || 'base');
+    
+    // Detectar qué tipos de equipos existen en el grupo para decidir el default
+    const hasBaseTeams = useMemo(() => group.students.some(s => s.team), [group]);
+    const hasCoyoteTeams = useMemo(() => group.students.some(s => s.teamCoyote), [group]);
+    
+    const initialTeamType = evaluation?.teamType || (hasCoyoteTeams && !hasBaseTeams ? 'coyote' : 'base');
+    const [teamType, setTeamType] = useState<'base' | 'coyote'>(initialTeamType);
     
     const availableTypes = (partial === 1 ? group.evaluationTypes.partial1 : group.evaluationTypes.partial2).filter(t => !t.isAttendance);
     const [typeId, setTypeId] = useState(evaluation?.typeId || availableTypes[0]?.id || '');
-
-    // Detectar qué tipos de equipos existen en el grupo
-    const hasBaseTeams = useMemo(() => group.students.some(s => s.team), [group]);
-    const hasCoyoteTeams = useMemo(() => group.students.some(s => s.teamCoyote), [group]);
 
     useEffect(() => {
         const newAvailableTypes = (partial === 1 ? group.evaluationTypes.partial1 : group.evaluationTypes.partial2).filter(t => !t.isAttendance);
@@ -148,6 +150,16 @@ const GradesView: React.FC = () => {
 
     const group = useMemo(() => groups.find(g => g.id === selectedGroupId), [groups, selectedGroupId]);
     
+    // Auto-reset de displayTeamType si el grupo actual no tiene alumnos Coyote
+    useEffect(() => {
+        if (group) {
+            const hasCoyote = group.students.some(s => s.teamCoyote);
+            if (!hasCoyote && displayTeamType === 'coyote') {
+                setDisplayTeamType('base');
+            }
+        }
+    }, [selectedGroupId, group]);
+
     // Detectar si existen ambos tipos para mostrar el switch
     const hasBothTeamTypes = useMemo(() => {
         if (!group) return false;
@@ -194,7 +206,6 @@ const GradesView: React.FC = () => {
 
     const deleteEvaluationAction = () => {
         if (confirmDeleteEval && selectedGroupId) {
-            dispatch({ type: 'DELETE_STUDENT_TEAM' as any, payload: confirmDeleteEval.id }); // Fallback logic
             dispatch({ type: 'DELETE_EVALUATION', payload: { groupId: selectedGroupId, evaluationId: confirmDeleteEval.id } });
             setConfirmDeleteEval(null);
         }
@@ -221,7 +232,7 @@ const GradesView: React.FC = () => {
                 <button onClick={() => setConfirmDeleteEval(ev)} className="p-1 text-red-600 hover:bg-red-50 rounded" title="Borrar"><Icon name="trash-2" className="w-3 h-3"/></button>
             </div>
             {ev.isTeamBased && (
-                <div className="flex items-center gap-1 mb-0.5">
+                <div className="flex items-center gap-1 mb-0.5" title={`Evaluación por ${ev.teamType === 'coyote' ? 'Equipo Coyote' : 'Equipo Base'}`}>
                     <Icon name={ev.teamType === 'coyote' ? "dog" : "users"} className={`w-3 h-3 ${ev.teamType === 'coyote' ? 'text-orange-500' : 'text-indigo-500'}`} />
                 </div>
             )}
@@ -301,7 +312,7 @@ const GradesView: React.FC = () => {
                                                         <button 
                                                             onClick={toggleDisplayTeamType}
                                                             className={`p-1 rounded-md transition-all flex items-center gap-1.5 ${displayTeamType === 'coyote' ? 'bg-orange-100 text-orange-700' : 'bg-indigo-100 text-indigo-700'}`}
-                                                            title="Alternar entre Base y Coyote"
+                                                            title={`Viendo: ${displayTeamType === 'coyote' ? 'Equipo Coyote' : 'Equipo Base'}. Haz clic para cambiar.`}
                                                         >
                                                             <Icon name={displayTeamType === 'coyote' ? "dog" : "users"} className="w-3 h-3"/>
                                                             <Icon name="layout" className="w-2.5 h-2.5 opacity-40"/>
