@@ -18,6 +18,9 @@ import BackgroundShapesV2 from './components/common/BackgroundShapesV2';
 import { checkForMobileUpdate } from './services/mobileUpdateService';
 import { MobileUpdateInfo } from './types';
 
+// Helper para normalizar nombres de días y evitar fallos por acentos/mayúsculas
+const normalizeStr = (s: string) => s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
 const App: React.FC = () => {
   const { state, dispatch } = useContext(AppContext);
   const { settings, teacherSchedule, groups, selectedGroupId } = state;
@@ -27,55 +30,77 @@ const App: React.FC = () => {
   const [mobileUpdateInfo, setMobileUpdateInfo] = useState<MobileUpdateInfo | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   
-  // Seguimiento de notificaciones enviadas para no repetir
+  // Seguimiento de notificaciones enviadas para no repetir en el mismo minuto/día
   const notifiedClassesRef = useRef<Set<string>>(new Set());
 
+  // Solicitar permisos de notificación al cargar
   useEffect(() => {
     document.documentElement.classList.remove('dark');
     
-    // Solicitar permiso para notificaciones
     if ("Notification" in window) {
-      Notification.requestPermission();
+      if (Notification.permission === "default") {
+        Notification.requestPermission().then(permission => {
+          if (permission === "granted") {
+            console.log("Notificaciones habilitadas por el usuario.");
+          }
+        });
+      }
     }
   }, []);
 
-  // Lógica de Alerta de Próxima Clase (Configurable)
+  // Lógica de Alertas de Clase (Inicio y Fin)
   useEffect(() => {
     if (!teacherSchedule || teacherSchedule.length === 0 || !settings.enableReminders) return;
 
     const checkSchedule = () => {
+      if (!("Notification" in window) || Notification.permission !== "granted") return;
+
       const now = new Date();
-      const currentDayStr = now.toLocaleDateString('es-ES', { weekday: 'long' });
+      const currentDayStr = normalizeStr(now.toLocaleDateString('es-ES', { weekday: 'long' }));
       const currentHour = now.getHours();
       const currentMin = now.getMinutes();
       const currentTimeInMins = currentHour * 60 + currentMin;
 
-      // Buscar clases de hoy
-      const todaysClasses = teacherSchedule.filter(c => c.day.toLowerCase() === currentDayStr.toLowerCase());
+      // Buscar clases de hoy comparando nombres normalizados
+      const todaysClasses = teacherSchedule.filter(c => normalizeStr(c.day) === currentDayStr);
 
       todaysClasses.forEach(clase => {
         const classStartInMins = clase.startTime * 60;
-        const diff = classStartInMins - currentTimeInMins;
-        const notificationKey = `${clase.id}-${now.toDateString()}`;
+        const classEndInMins = (clase.startTime + clase.duration) * 60;
+        
+        const diffToStart = classStartInMins - currentTimeInMins;
+        const diffToEnd = classEndInMins - currentTimeInMins;
+        
+        const todayKey = now.toDateString();
+        const startKey = `START-${clase.id}-${todayKey}`;
+        const endKey = `END-${clase.id}-${todayKey}`;
 
-        // Usar el tiempo configurado en settings
+        // ALERTA: PRÓXIMA CLASE
         const reminderTime = settings.reminderTime || 20;
-
-        // Si faltan exactamente o menos que el tiempo configurado (pero más de 0)
-        if (diff > 0 && diff <= reminderTime && !notifiedClassesRef.current.has(notificationKey)) {
-          if (Notification.permission === "granted") {
-            new Notification("🍎 Próxima Clase", {
-              body: `Faltan ${diff} min para: ${clase.subjectName} (${clase.groupName})`,
-              icon: "logo.png"
+        if (diffToStart > 0 && diffToStart <= reminderTime && !notifiedClassesRef.current.has(startKey)) {
+           new Notification("🍎 Próxima Clase", {
+              body: `Faltan ${diffToStart} min para: ${clase.subjectName} (${clase.groupName})`,
+              icon: "logo.png",
+              silent: false,
+              requireInteraction: true
             });
-            notifiedClassesRef.current.add(notificationKey);
-          }
+            notifiedClassesRef.current.add(startKey);
+        }
+
+        // ALERTA: CLASE POR TERMINAR (Aviso a los 5 minutos del final)
+        if (diffToEnd > 0 && diffToEnd <= 5 && !notifiedClassesRef.current.has(endKey)) {
+            new Notification("🔔 Fin de Clase", {
+              body: `La clase de ${clase.subjectName} está por terminar en 5 minutos.`,
+              icon: "logo.png",
+              silent: false
+            });
+            notifiedClassesRef.current.add(endKey);
         }
       });
     };
 
     checkSchedule();
-    const interval = setInterval(checkSchedule, 60000); // Revisar cada minuto
+    const interval = setInterval(checkSchedule, 30000); // Revisar cada 30 segundos para mayor precisión
     return () => clearInterval(interval);
   }, [teacherSchedule, settings.enableReminders, settings.reminderTime]);
 
@@ -119,9 +144,8 @@ const App: React.FC = () => {
     }
   };
 
-  // NAVEGACIÓN POR GESTOS (SWIPES)
   const handleSwipe = useCallback((_: any, info: PanInfo) => {
-    if (window.innerWidth >= 768) return; // Solo móvil
+    if (window.innerWidth >= 768) return;
     if (groups.length <= 1) return;
 
     const swipeThreshold = 50;
@@ -132,11 +156,9 @@ const App: React.FC = () => {
       if (currentIndex === -1 && selectedGroupId !== null) return;
 
       if (info.offset.x > 0) {
-        // Swipe Right -> Previous Group
         const prevIndex = (currentIndex <= 0) ? groups.length - 1 : currentIndex - 1;
         dispatch({ type: 'SET_SELECTED_GROUP', payload: groups[prevIndex].id });
       } else {
-        // Swipe Left -> Next Group
         const nextIndex = (currentIndex >= groups.length - 1 || currentIndex === -1) ? 0 : currentIndex + 1;
         dispatch({ type: 'SET_SELECTED_GROUP', payload: groups[nextIndex].id });
       }
@@ -146,20 +168,13 @@ const App: React.FC = () => {
 
   const renderView = () => {
     switch (state.activeView) {
-      case 'dashboard':
-        return <Dashboard />;
-      case 'groups':
-        return <GroupManagement />;
-      case 'attendance':
-        return <AttendanceView />;
-      case 'calendar':
-        return <CalendarView />;
-      case 'grades':
-        return <GradesView />;
-      case 'reports':
-        return <ReportsView />;
-      default:
-        return <Dashboard />;
+      case 'dashboard': return <Dashboard />;
+      case 'groups': return <GroupManagement />;
+      case 'attendance': return <AttendanceView />;
+      case 'calendar': return <CalendarView />;
+      case 'grades': return <GradesView />;
+      case 'reports': return <ReportsView />;
+      default: return <Dashboard />;
     }
   };
   
@@ -172,9 +187,7 @@ const App: React.FC = () => {
     reports: 'Reportes',
   };
 
-  // Vistas que requieren pantalla completa y scroll interno (como Asistencia)
   const isFullScreenView = state.activeView === 'attendance' || state.activeView === 'grades';
-
   const showFridayBanner = isFriday && !isBirthday;
 
   return (
@@ -219,7 +232,7 @@ const App: React.FC = () => {
                     <Icon name="align-justify" className="w-6 h-6"/>
                 </button>
               <Icon name="cake" className="w-8 h-8 animate-bounce" />
-              <div>
+              <div className="ml-3">
                 <p className="font-bold text-lg">¡Es viernes!</p>
                 <p>¡Ya casi es momento de descansar, suerte en el día!</p>
               </div>
@@ -240,8 +253,6 @@ const App: React.FC = () => {
           )}
         </header>
         
-        {/* Contenedor principal de la vista - Ajustado para evitar desbordamiento */}
-        {/* FIX: Se eliminó el selectedGroupId de la KEY para permitir actualizaciones suaves sin remounting */}
         <motion.div 
             className={`flex-1 flex flex-col min-w-0 ${isFullScreenView ? 'overflow-hidden' : 'overflow-y-auto overflow-x-hidden'}`}
             onPanEnd={handleSwipe}
