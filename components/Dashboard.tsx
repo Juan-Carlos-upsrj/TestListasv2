@@ -523,9 +523,18 @@ const Dashboard: React.FC = () => {
     };
 
     return (
-        <div className="max-w-[1200px] mx-auto relative h-full">
+        <div className="w-full relative h-full overflow-x-hidden">
             <BirthdayCelebration name={birthdayPerson || ''} show={!!birthdayPerson} />
-            <ResponsiveGridLayout layouts={layouts} breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }} cols={{ lg: 3, md: 3, sm: 2, xs: 1, xxs: 1 }} rowHeight={120} isDraggable={false} isResizable={false} margin={[20, 20]}>
+            <ResponsiveGridLayout 
+                layouts={layouts} 
+                breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }} 
+                cols={{ lg: 3, md: 3, sm: 2, xs: 1, xxs: 1 }} 
+                rowHeight={110} 
+                isDraggable={false} 
+                isResizable={false} 
+                margin={[15, 15]}
+                useCSSTransforms={true}
+            >
                 <div key="welcome"><WidgetWrapper title=""><WelcomeWidget dateString={dateString} /></WidgetWrapper></div>
                 <div key="take-attendance"><WidgetWrapper id="dashboard-attendance-widget" title="Pase de Lista Hoy"><TakeAttendanceWidget onTakeAttendance={handleTakeAttendance} /></WidgetWrapper></div>
                 <div key="combined-overview"><WidgetWrapper id="dashboard-combined-overview" title="Resumen General"><CombinedOverviewWidget todayStr={todayStr} /></WidgetWrapper></div>
@@ -538,11 +547,11 @@ const Dashboard: React.FC = () => {
                 whileHover={{ scale: 1.1, rotate: 5 }}
                 whileTap={{ scale: 0.9 }}
                 onClick={() => setScheduleOpen(true)}
-                className="fixed bottom-10 right-10 z-[40] w-16 h-16 bg-primary text-white rounded-full shadow-[0_10px_30px_rgba(59,130,246,0.5)] flex items-center justify-center hover:bg-primary-hover transition-colors border-2 border-white/20"
+                className="fixed bottom-6 right-6 z-[40] w-14 h-14 bg-primary text-white rounded-full shadow-[0_10px_30px_rgba(59,130,246,0.5)] flex items-center justify-center hover:bg-primary-hover transition-colors border-2 border-white/20 sm:w-16 sm:h-16"
                 title="Ver mi horario completo"
             >
-                <Icon name="calendar" className="w-7 h-7" />
-                <div className="absolute -top-1 -right-1 w-5 h-5 bg-accent-red rounded-full border-2 border-white animate-pulse flex items-center justify-center text-[10px] font-bold">!</div>
+                <Icon name="calendar" className="w-6 h-6 sm:w-7 sm:h-7" />
+                <div className="absolute -top-1 -right-1 w-4 h-4 bg-accent-red rounded-full border-2 border-white animate-pulse flex items-center justify-center text-[9px] font-bold sm:w-5 sm:h-5 sm:text-[10px]">!</div>
             </motion.button>
 
             {attendanceGroup && (<Modal isOpen={isTakerOpen} onClose={() => setTakerOpen(false)} title={`Pase: ${attendanceGroup.name}`}><AttendanceTaker students={attendanceGroup.students} date={todayStr} groupAttendance={state.attendance[attendanceGroup.id] || {}} onStatusChange={(sid, s) => dispatch({ type: 'UPDATE_ATTENDANCE', payload: { groupId: attendanceGroup.id, studentId: sid, date: todayStr, status: s } })} onClose={() => setTakerOpen(false)}/></Modal>)}

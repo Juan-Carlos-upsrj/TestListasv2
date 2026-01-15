@@ -203,7 +203,7 @@ const App: React.FC = () => {
         )}
       </AnimatePresence>
       
-      <main className="flex-1 flex flex-col overflow-hidden z-10 relative">
+      <main className="flex-1 flex flex-col min-w-0 overflow-hidden z-10 relative">
         <header className="flex-shrink-0 relative">
           {showFridayBanner ? (
             <motion.div
@@ -240,9 +240,9 @@ const App: React.FC = () => {
           )}
         </header>
         
-        {/* Contenedor principal de la vista */}
+        {/* Contenedor principal de la vista - Ajustado para evitar desbordamiento */}
         <motion.div 
-            className={`flex-1 flex flex-col ${isFullScreenView ? 'overflow-hidden' : 'overflow-y-auto'}`}
+            className={`flex-1 flex flex-col min-w-0 ${isFullScreenView ? 'overflow-hidden' : 'overflow-y-auto overflow-x-hidden'}`}
             onPanEnd={handleSwipe}
         >
             <AnimatePresence mode="wait">
@@ -252,7 +252,7 @@ const App: React.FC = () => {
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: -10 }}
                     transition={{ duration: 0.2 }}
-                    className={`flex-1 p-4 sm:p-6 lg:p-8 min-h-0 flex flex-col ${isFullScreenView ? 'h-full' : ''}`}
+                    className={`flex-1 p-3 sm:p-5 lg:p-6 min-h-0 min-w-0 flex flex-col ${isFullScreenView ? 'h-full' : ''}`}
                 >
                     {renderView()}
                 </motion.div>
