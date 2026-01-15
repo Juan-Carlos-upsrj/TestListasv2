@@ -322,11 +322,14 @@ const appReducer = (state: AppState, action: AppAction): AppState => {
 
         if (evaluation?.isTeamBased && group) {
             const currentStudent = group.students.find(s => s.id === studentId);
-            const teamName = currentStudent?.team;
+            // Selección dinámica del tipo de equipo según la configuración de la evaluación
+            const teamFieldName = evaluation.teamType === 'coyote' ? 'teamCoyote' : 'team';
+            const teamName = currentStudent ? (currentStudent as any)[teamFieldName] : undefined;
             
             if (teamName) {
                 group.students.forEach(s => {
-                    if (s.team === teamName && s.id !== studentId) {
+                    const studentTeamName = (s as any)[teamFieldName];
+                    if (studentTeamName === teamName && s.id !== studentId) {
                         const otherStudentGrades = { ...(updatedGroupGrades[s.id] || {}) };
                         otherStudentGrades[evaluationId] = score;
                         updatedGroupGrades[s.id] = otherStudentGrades;

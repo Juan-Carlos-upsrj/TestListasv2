@@ -61,6 +61,7 @@ export interface Evaluation {
   partial: 1 | 2;
   typeId: string; // Links to EvaluationType id
   isTeamBased?: boolean; // If true, grades are shared across team members
+  teamType?: 'base' | 'coyote'; // NUEVO: Define qué tipo de equipo usa la tarea
 }
 
 export type SidebarGroupDisplayMode = 'name' | 'name-abbrev' | 'abbrev';

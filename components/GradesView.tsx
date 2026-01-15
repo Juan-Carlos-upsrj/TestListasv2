@@ -27,9 +27,14 @@ const EvaluationForm: React.FC<{
     const [maxScore, setMaxScore] = useState(evaluation?.maxScore || 10);
     const [partial, setPartial] = useState<1 | 2>(evaluation?.partial || 1);
     const [isTeamBased, setIsTeamBased] = useState(evaluation?.isTeamBased || false);
+    const [teamType, setTeamType] = useState<'base' | 'coyote'>(evaluation?.teamType || 'base');
     
     const availableTypes = (partial === 1 ? group.evaluationTypes.partial1 : group.evaluationTypes.partial2).filter(t => !t.isAttendance);
     const [typeId, setTypeId] = useState(evaluation?.typeId || availableTypes[0]?.id || '');
+
+    // Detectar qué tipos de equipos existen en el grupo
+    const hasBaseTeams = useMemo(() => group.students.some(s => s.team), [group]);
+    const hasCoyoteTeams = useMemo(() => group.students.some(s => s.teamCoyote), [group]);
 
     useEffect(() => {
         const newAvailableTypes = (partial === 1 ? group.evaluationTypes.partial1 : group.evaluationTypes.partial2).filter(t => !t.isAttendance);
@@ -44,7 +49,15 @@ const EvaluationForm: React.FC<{
             alert('Por favor, completa todos los campos.');
             return;
         }
-        onSave({ id: evaluation?.id || uuidv4(), name, maxScore, partial, typeId, isTeamBased });
+        onSave({ 
+            id: evaluation?.id || uuidv4(), 
+            name, 
+            maxScore, 
+            partial, 
+            typeId, 
+            isTeamBased, 
+            teamType: isTeamBased ? teamType : undefined 
+        });
     };
 
     return (
@@ -73,11 +86,36 @@ const EvaluationForm: React.FC<{
                         {availableTypes.map(type => <option key={type.id} value={type.id}>{type.name} ({type.weight}%)</option>)}
                     </select>
                 </div>
-                <div className="flex items-center gap-3 p-3 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg border border-indigo-100 dark:border-indigo-900/40">
-                    <input type="checkbox" id="isTeamBased" checked={isTeamBased} onChange={e => setIsTeamBased(e.target.checked)} className="h-5 w-5 rounded text-indigo-600 focus:ring-indigo-500"/>
-                    <label htmlFor="isTeamBased" className="text-sm font-bold text-indigo-700 dark:text-indigo-400 cursor-pointer">
-                        ¿Evaluación por EQUIPOS? <span className="font-normal block text-xs opacity-80">La calificación se compartirá con todos los integrantes del mismo equipo.</span>
-                    </label>
+                <div className="p-4 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg border border-indigo-100 dark:border-indigo-900/40 space-y-4">
+                    <div className="flex items-center gap-3">
+                        <input type="checkbox" id="isTeamBased" checked={isTeamBased} onChange={e => setIsTeamBased(e.target.checked)} className="h-5 w-5 rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer"/>
+                        <label htmlFor="isTeamBased" className="text-sm font-bold text-indigo-700 dark:text-indigo-400 cursor-pointer">
+                            ¿Evaluación por EQUIPOS?
+                        </label>
+                    </div>
+                    
+                    {isTeamBased && (
+                        <div className="animate-in fade-in slide-in-from-top-2 duration-200">
+                            <label className="block text-[10px] font-black uppercase text-indigo-600 mb-2">Usar integrantes de:</label>
+                            <div className="grid grid-cols-2 gap-2">
+                                <button 
+                                    type="button"
+                                    onClick={() => setTeamType('base')}
+                                    className={`flex items-center justify-center gap-2 p-2 rounded-lg border-2 text-xs font-bold transition-all ${teamType === 'base' ? 'bg-white border-indigo-600 text-indigo-700 shadow-sm' : 'bg-transparent border-transparent text-slate-400 opacity-60'}`}
+                                >
+                                    <Icon name="users" className="w-4 h-4"/> Equipos Base {!hasBaseTeams && '(Vacío)'}
+                                </button>
+                                <button 
+                                    type="button"
+                                    onClick={() => setTeamType('coyote')}
+                                    className={`flex items-center justify-center gap-2 p-2 rounded-lg border-2 text-xs font-bold transition-all ${teamType === 'coyote' ? 'bg-orange-50 border-orange-500 text-orange-700 shadow-sm' : 'bg-transparent border-transparent text-slate-400 opacity-60'}`}
+                                >
+                                    <Icon name="dog" className="w-4 h-4"/> Equipos Coyote {!hasCoyoteTeams && '(Vacío)'}
+                                </button>
+                            </div>
+                            <p className="mt-2 text-[10px] text-indigo-500 italic">La nota se copiará automáticamente a todos los integrantes del tipo de equipo seleccionado.</p>
+                        </div>
+                    )}
                 </div>
             </div>
             <div className="flex justify-end gap-3 mt-6">
@@ -100,12 +138,24 @@ const GradesView: React.FC = () => {
     const [viewMode, setViewMode] = useState<'ordinary' | 'recovery'>('ordinary');
     const [searchTerm, setSearchTerm] = useState('');
     const [confirmDeleteEval, setConfirmDeleteEval] = useState<Evaluation | null>(null);
+    
+    // Nuevo estado para controlar qué equipo se muestra en la columna Eq.
+    const [displayTeamType, setDisplayTeamType] = useState<'base' | 'coyote'>('base');
 
     const setSelectedGroupId = useCallback((id: string | null) => {
         dispatch({ type: 'SET_SELECTED_GROUP', payload: id });
     }, [dispatch]);
 
     const group = useMemo(() => groups.find(g => g.id === selectedGroupId), [groups, selectedGroupId]);
+    
+    // Detectar si existen ambos tipos para mostrar el switch
+    const hasBothTeamTypes = useMemo(() => {
+        if (!group) return false;
+        const hasBase = group.students.some(s => s.team);
+        const hasCoyote = group.students.some(s => s.teamCoyote);
+        return hasBase && hasCoyote;
+    }, [group]);
+
     const groupEvaluations = useMemo(() => (evaluations[selectedGroupId || ''] || []), [evaluations, selectedGroupId]);
     const groupGrades = useMemo(() => grades[selectedGroupId || ''] || {}, [grades, selectedGroupId]);
     const p1Evaluations = useMemo(() => groupEvaluations.filter(e => e.partial === 1), [groupEvaluations]);
@@ -144,6 +194,7 @@ const GradesView: React.FC = () => {
 
     const deleteEvaluationAction = () => {
         if (confirmDeleteEval && selectedGroupId) {
+            dispatch({ type: 'DELETE_STUDENT_TEAM' as any, payload: confirmDeleteEval.id }); // Fallback logic
             dispatch({ type: 'DELETE_EVALUATION', payload: { groupId: selectedGroupId, evaluationId: confirmDeleteEval.id } });
             setConfirmDeleteEval(null);
         }
@@ -158,14 +209,23 @@ const GradesView: React.FC = () => {
         dispatch({ type: 'UPDATE_SETTINGS', payload: { showTeamsInGrades: !settings.showTeamsInGrades } });
     };
 
+    const toggleDisplayTeamType = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        setDisplayTeamType(prev => prev === 'base' ? 'coyote' : 'base');
+    };
+
     const renderHeaderButtons = (ev: Evaluation) => (
         <div className="flex flex-col items-center justify-center p-2 relative group w-full">
             <div className="absolute top-0 right-0 flex sm:opacity-0 sm:group-hover:opacity-100 transition-opacity bg-white/80 rounded-md shadow-sm z-10">
                 <button onClick={() => handleEditEvaluation(ev)} className="p-1 text-blue-600 hover:bg-blue-50 rounded" title="Editar"><Icon name="edit-3" className="w-3 h-3"/></button>
                 <button onClick={() => setConfirmDeleteEval(ev)} className="p-1 text-red-600 hover:bg-red-50 rounded" title="Borrar"><Icon name="trash-2" className="w-3 h-3"/></button>
             </div>
-            {ev.isTeamBased && <Icon name="users" className="w-3 h-3 text-indigo-500 mb-0.5" />}
-            <span className="text-[10px] font-bold leading-tight line-clamp-2 px-1 text-center" title={ev.name}>{ev.name}</span>
+            {ev.isTeamBased && (
+                <div className="flex items-center gap-1 mb-0.5">
+                    <Icon name={ev.teamType === 'coyote' ? "dog" : "users"} className={`w-3 h-3 ${ev.teamType === 'coyote' ? 'text-orange-500' : 'text-indigo-500'}`} />
+                </div>
+            )}
+            <span className={`text-[10px] font-bold leading-tight line-clamp-2 px-1 text-center ${ev.isTeamBased ? (ev.teamType === 'coyote' ? 'text-orange-800' : 'text-indigo-800') : ''}`} title={ev.name}>{ev.name}</span>
             <span className="text-[9px] opacity-60 font-normal">({ev.maxScore} pts)</span>
         </div>
     );
@@ -234,7 +294,23 @@ const GradesView: React.FC = () => {
                                     <tr>
                                         <th rowSpan={2} className="sticky left-0 bg-slate-50 p-3 text-left font-bold border-b border-r border-slate-200 z-30 min-w-max">Alumno</th>
                                         {settings.showTeamsInGrades && (
-                                            <th rowSpan={2} className="p-2 font-bold text-center border-b border-r border-slate-200 bg-slate-100 text-[10px]">Eq.</th>
+                                            <th rowSpan={2} className="p-0 font-bold text-center border-b border-r border-slate-200 bg-slate-100 text-[10px] w-20">
+                                                <div className="flex flex-col h-full items-center justify-center gap-1 group/eq">
+                                                    <span className="uppercase tracking-tighter opacity-60">Eq.</span>
+                                                    {hasBothTeamTypes ? (
+                                                        <button 
+                                                            onClick={toggleDisplayTeamType}
+                                                            className={`p-1 rounded-md transition-all flex items-center gap-1.5 ${displayTeamType === 'coyote' ? 'bg-orange-100 text-orange-700' : 'bg-indigo-100 text-indigo-700'}`}
+                                                            title="Alternar entre Base y Coyote"
+                                                        >
+                                                            <Icon name={displayTeamType === 'coyote' ? "dog" : "users"} className="w-3 h-3"/>
+                                                            <Icon name="layout" className="w-2.5 h-2.5 opacity-40"/>
+                                                        </button>
+                                                    ) : (
+                                                        <Icon name={displayTeamType === 'coyote' ? "dog" : "users"} className="w-3.5 h-3.5 text-slate-400"/>
+                                                    )}
+                                                </div>
+                                            </th>
                                         )}
                                         <th colSpan={p1Evaluations.length + (p1AttendanceType ? 1 : 0) + 1} className="p-1.5 font-bold text-center border-b border-r border-slate-200 bg-indigo-50 text-indigo-700">Primer Parcial</th>
                                         <th colSpan={p2Evaluations.length + (p2AttendanceType ? 1 : 0) + 1} className="p-1.5 font-bold text-center border-b border-slate-200 bg-blue-50 text-blue-700">Segundo Parcial</th>
@@ -252,6 +328,10 @@ const GradesView: React.FC = () => {
                                     {filteredStudents.map((student, idx) => {
                                         const p1Avg = calculatePartialAverage(group, 1, groupEvaluations, groupGrades[student.id] || {}, settings, attendance[group.id]?.[student.id] || {});
                                         const p2Avg = calculatePartialAverage(group, 2, groupEvaluations, groupGrades[student.id] || {}, settings, attendance[group.id]?.[student.id] || {});
+                                        
+                                        // Valor dinámico de la columna Eq.
+                                        const teamValue = displayTeamType === 'coyote' ? student.teamCoyote : student.team;
+
                                         return (
                                             <tr key={student.id} className={`${idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/40'} border-b border-slate-100 hover:bg-indigo-50/20`}>
                                                 <td className="sticky left-0 bg-inherit p-2.5 font-medium border-r border-slate-100 z-10 whitespace-nowrap">
@@ -262,7 +342,9 @@ const GradesView: React.FC = () => {
                                                     </div>
                                                 </td>
                                                 {settings.showTeamsInGrades && (
-                                                    <td className="p-1 text-center font-bold text-indigo-600 border-r border-slate-100">{student.team || '-'}</td>
+                                                    <td className={`p-1 text-center font-bold border-r border-slate-100 text-[10px] truncate max-w-[80px] ${displayTeamType === 'coyote' ? 'text-orange-600 bg-orange-50/20' : 'text-indigo-600 bg-indigo-50/20'}`} title={teamValue || ''}>
+                                                        {teamValue || '-'}
+                                                    </td>
                                                 )}
                                                 {p1Evaluations.map(ev => (
                                                     <td key={ev.id} className="p-1 border-r border-slate-100">
