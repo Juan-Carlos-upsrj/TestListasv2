@@ -54,7 +54,6 @@ const calculateStats = (studentAttendance: any, dates: string[], todayStr: strin
         const date = dates[i];
         const status = (studentAttendance[date] || AttendanceStatus.Pending) as AttendanceStatus;
         
-        // Contar si la clase ya pasó O si ya se capturó algún estado manualmente
         if (date <= todayStr || status !== AttendanceStatus.Pending) {
              total++;
              if (status === AttendanceStatus.Present || status === AttendanceStatus.Late || status === AttendanceStatus.Justified || status === AttendanceStatus.Exchange) {
@@ -79,7 +78,6 @@ const StickyHeader = () => {
             className="absolute top-0 left-0 z-40 bg-slate-50 border-b border-slate-300 shadow-sm"
             style={{ width: totalWidth, height: HEADER_HEIGHT }}
         >
-            {/* ROW 1: PERIODS */}
             <div className="flex h-8 w-full border-b border-slate-300">
                 <div className="sticky left-0 z-50 bg-slate-100 border-r border-slate-300 flex items-center px-2 font-bold text-[10px] text-slate-600 uppercase tracking-wider" style={{ width: nameColWidth }}>
                     Periodo
@@ -95,7 +93,6 @@ const StickyHeader = () => {
                 </div>
             </div>
 
-            {/* ROW 2: MONTHS */}
             <div className="flex h-8 w-full border-b border-slate-300">
                 <div className="sticky left-0 z-50 bg-slate-100 border-r border-slate-300 flex items-center px-2 font-bold text-[10px] text-slate-600 uppercase" style={{ width: nameColWidth }}>
                     Mes
@@ -111,9 +108,8 @@ const StickyHeader = () => {
                 </div>
             </div>
 
-            {/* ROW 3: DAYS */}
             <div className="flex h-8 w-full">
-                <div className="sticky left-0 z-50 bg-white border-r border-slate-300 flex items-center px-2 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]" style={{ width: nameColWidth }}>
+                <div className="sticky left-0 z-50 bg-white border-r border-slate-300 flex items-center px-2 shadow-[2px_0_5_px_-2px_rgba(0,0,0,0.1)]" style={{ width: nameColWidth }}>
                     <span className="font-bold text-[11px] sm:text-sm text-slate-700">Alumno</span>
                 </div>
                 {classDates.map(date => {
@@ -127,7 +123,7 @@ const StickyHeader = () => {
                         </div>
                     );
                 })}
-                <div className="sticky right-0 z-50 flex shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.1)]">
+                <div className="sticky right-0 z-50 flex shadow-[-2px_0_5_px_-2px_rgba(0,0,0,0.1)]">
                     <div className="bg-amber-50 border-l border-slate-300 flex flex-col items-center justify-center text-[8px] font-bold text-amber-800" style={{ width: STAT_COL_WIDTH }}>
                         <span>% P1</span>
                         <span className="text-[7px] opacity-70">({isNaN(globalP1Avg) ? '-' : globalP1Avg}%)</span>
@@ -180,7 +176,7 @@ const Row = React.memo(({ index, style }: ListChildComponentProps) => {
             style={{ ...style, top, height: ROW_HEIGHT, width: totalWidth }}
         >
             <div 
-                className="sticky left-0 z-10 bg-white border-r border-slate-300 flex items-center px-2 h-full shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]"
+                className="sticky left-0 z-10 bg-white border-r border-slate-300 flex items-center px-2 h-full shadow-[2px_0_5_px_-2px_rgba(0,0,0,0.1)]"
                 style={{ width: nameColWidth }}
             >
                 <div className="truncate w-full">
@@ -236,10 +232,12 @@ const AttendanceView: React.FC = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [nameColWidth, setNameColWidth] = useState(getResponsiveNameColWidth());
 
+    // Reiniciar isReady al cambiar de grupo para forzar un re-layout de AutoSizer
     useEffect(() => {
         setIsReady(false);
-        setTimeout(() => setIsReady(true), 50);
-    }, []);
+        const timer = setTimeout(() => setIsReady(true), 150);
+        return () => clearTimeout(timer);
+    }, [selectedGroupId]);
 
     useEffect(() => {
         const handleResize = () => setNameColWidth(getResponsiveNameColWidth());
@@ -248,13 +246,11 @@ const AttendanceView: React.FC = () => {
     }, []);
 
     const listRef = useRef<any>(null);
-    const today = new Date();
-    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    const todayStr = useMemo(() => new Date().toISOString().split('T')[0], []);
 
     const [focusedCell, setFocusedCell] = useState<Coords | null>(null);
     const [selection, setSelection] = useState<{ start: Coords | null; end: Coords | null; isDragging: boolean }>({ start: null, end: null, isDragging: false });
     
-    // Stable state ref to prevent keyboard listener re-binding loops
     const stateRef = useRef({ focusedCell, selection, filteredStudents: [] as Student[], classDates: [] as string[] });
 
     const setSelectedGroupId = useCallback((id: string | null) => {
@@ -280,7 +276,6 @@ const AttendanceView: React.FC = () => {
 
     const classDates = useMemo(() => group ? getClassDates(settings.semesterStart, settings.semesterEnd, group.classDays) : [], [group, settings]);
     
-    // Update ref whenever values change, but don't trigger listener re-binding
     useEffect(() => { 
         stateRef.current = { focusedCell, selection, filteredStudents, classDates }; 
     }, [focusedCell, selection, filteredStudents, classDates]);
@@ -298,12 +293,10 @@ const AttendanceView: React.FC = () => {
         setSelection(prev => prev.isDragging ? { ...prev, end: { r, c } } : prev);
     }, []);
 
-    // FIX: Optimized and input-safe global keyboard listener
     useEffect(() => {
         const handleMouseUp = () => setSelection(prev => ({ ...prev, isDragging: false }));
         
         const handleKeyDown = (e: KeyboardEvent) => {
-            // CRITICAL FIX: If focus is inside a text input or textarea, IGNORE shortcuts.
             const target = e.target;
             if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || (target as HTMLElement).isContentEditable) {
                 return;
@@ -312,7 +305,6 @@ const AttendanceView: React.FC = () => {
             const { focusedCell, selection, filteredStudents, classDates } = stateRef.current;
             if (filteredStudents.length === 0) return;
 
-            // Navigation
             if (focusedCell && ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
                 e.preventDefault();
                 let { r, c } = focusedCell;
@@ -325,7 +317,6 @@ const AttendanceView: React.FC = () => {
                 return;
             }
 
-            // Shortcuts
             const keyMap: any = { 'p': 'Presente', 'a': 'Ausente', 'r': 'Retardo', 'j': 'Justificado', 'i': 'Intercambio', 'delete': 'Pendiente' };
             const status = keyMap[e.key.toLowerCase()];
             
@@ -355,7 +346,7 @@ const AttendanceView: React.FC = () => {
             window.removeEventListener('mouseup', handleMouseUp);
             window.removeEventListener('keydown', handleKeyDown);
         };
-    }, [handleStatusChange]); // Minimal dependencies
+    }, [handleStatusChange]);
 
     const { p1Dates, p2Dates } = useMemo(() => ({
         p1Dates: classDates.filter(d => d <= settings.firstPartialEnd),
@@ -396,15 +387,20 @@ const AttendanceView: React.FC = () => {
     }, [classDates, settings.firstPartialEnd]);
 
     const totalWidth = useMemo(() => nameColWidth + (classDates.length * DATE_COL_WIDTH) + (STAT_COL_WIDTH * 3), [classDates.length, nameColWidth]);
-    const handleScrollToToday = () => {
+    
+    const handleScrollToToday = useCallback(() => {
         const idx = classDates.findIndex(d => d >= todayStr);
-        if(idx >= 0) {
+        if(idx >= 0 && listRef.current) {
              const outer = document.querySelector('.react-window-outer');
              if(outer) outer.scrollLeft = (idx * DATE_COL_WIDTH);
         }
-    };
+    }, [classDates, todayStr]);
     
-    useEffect(() => { if (isReady && group && classDates.length > 0) setTimeout(handleScrollToToday, 100); }, [isReady, group?.id, classDates.length]);
+    useEffect(() => { 
+        if (isReady && group && classDates.length > 0) {
+            setTimeout(handleScrollToToday, 200);
+        }
+    }, [isReady, group?.id, classDates.length, handleScrollToToday]);
 
     const contextValue: AttendanceContextValue | null = useMemo(() => (!group ? null : {
         students: filteredStudents, classDates, attendance, groupId: group.id, focusedCell, selection, todayStr, headerStructure, totalWidth, nameColWidth, handleStatusChange, onMouseDown: handleMouseDown, onMouseEnter: handleMouseEnter, precalcStats
@@ -412,7 +408,7 @@ const AttendanceView: React.FC = () => {
 
     return (
         <div className="flex flex-col h-full overflow-hidden">
-            <div className="bg-surface p-3 mb-4 rounded-xl border border-border-color shadow-sm flex flex-col gap-3 sm:flex-row sm:items-center">
+            <div className="bg-surface p-3 mb-4 rounded-xl border border-border-color shadow-sm flex flex-col gap-3 sm:flex-row sm:items-center shrink-0">
                  <div className="flex-1 flex flex-col sm:flex-row gap-3">
                     <select value={selectedGroupId || ''} onChange={(e) => setSelectedGroupId(e.target.value)} className="w-full sm:w-56 p-2 border border-border-color rounded-md bg-white text-sm focus:ring-2 focus:ring-primary">
                         <option value="" disabled>Selecciona un grupo</option>
@@ -422,7 +418,7 @@ const AttendanceView: React.FC = () => {
                         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
                             <Icon name="search" className="h-4 w-4" />
                         </div>
-                        <input type="text" className="block w-full pl-9 pr-3 py-2 border border-border-color rounded-md bg-white text-sm focus:ring-1 focus:ring-primary" placeholder="Buscar alumno por nombre, matrícula o apodo..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+                        <input type="text" className="block w-full pl-9 pr-3 py-2 border border-border-color rounded-md bg-white text-sm focus:ring-1 focus:ring-primary" placeholder="Buscar alumno..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
                     </div>
                 </div>
                 <div className="flex flex-wrap gap-2 justify-end">
@@ -434,19 +430,33 @@ const AttendanceView: React.FC = () => {
             </div>
 
             {group && isReady ? (
-                <div className="flex-1 border border-border-color rounded-xl overflow-hidden bg-white shadow-sm">
+                <div className="flex-1 border border-border-color rounded-xl overflow-hidden bg-white shadow-sm min-h-[200px] relative">
                     <AttendanceInternalContext.Provider value={contextValue}>
                         <AutoSizer>
-                            {({ height, width }: any) => (
-                                <List ref={listRef} height={height} width={width} itemCount={filteredStudents.length} itemSize={ROW_HEIGHT} className="react-window-outer" innerElementType={InnerElement}>{Row}</List>
-                            )}
+                            {({ height, width }: any) => {
+                                // Evitar renderizado si la altura es nula
+                                if (!height || !width) return null;
+                                return (
+                                    <List 
+                                        ref={listRef} 
+                                        height={height} 
+                                        width={width} 
+                                        itemCount={filteredStudents.length} 
+                                        itemSize={ROW_HEIGHT} 
+                                        className="react-window-outer" 
+                                        innerElementType={InnerElement}
+                                    >
+                                        {Row}
+                                    </List>
+                                );
+                            }}
                         </AutoSizer>
                     </AttendanceInternalContext.Provider>
                 </div>
             ) : (
-                <div className="flex-1 flex flex-col items-center justify-center bg-surface/50 rounded-xl border border-dashed border-border-color">
-                    <Icon name="check-square" className="w-16 h-16 text-border-color"/>
-                    <p className="mt-4 text-text-secondary">{group ? 'Cargando...' : 'Selecciona un grupo para comenzar.'}</p>
+                <div className="flex-1 flex flex-col items-center justify-center bg-surface/50 rounded-xl border border-dashed border-border-color min-h-[300px]">
+                    <Icon name="check-square" className="w-16 h-16 text-border-color animate-pulse"/>
+                    <p className="mt-4 text-text-secondary font-bold uppercase tracking-widest text-xs">{group ? 'Cargando Tabla...' : 'Selecciona un grupo para comenzar.'}</p>
                 </div>
             )}
             

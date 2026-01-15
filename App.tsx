@@ -172,6 +172,9 @@ const App: React.FC = () => {
     reports: 'Reportes',
   };
 
+  // Vistas que requieren pantalla completa y scroll interno (como Asistencia)
+  const isFullScreenView = state.activeView === 'attendance' || state.activeView === 'grades';
+
   const showFridayBanner = isFriday && !isBirthday;
 
   return (
@@ -237,9 +240,9 @@ const App: React.FC = () => {
           )}
         </header>
         
-        {/* Contenedor animado con soporte para Swipes en móvil */}
+        {/* Contenedor principal de la vista */}
         <motion.div 
-            className="flex-1 overflow-y-auto"
+            className={`flex-1 flex flex-col ${isFullScreenView ? 'overflow-hidden' : 'overflow-y-auto'}`}
             onPanEnd={handleSwipe}
         >
             <AnimatePresence mode="wait">
@@ -249,7 +252,7 @@ const App: React.FC = () => {
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: -10 }}
                     transition={{ duration: 0.2 }}
-                    className="p-4 sm:p-6 lg:p-8 min-h-full"
+                    className={`flex-1 p-4 sm:p-6 lg:p-8 min-h-0 flex flex-col ${isFullScreenView ? 'h-full' : ''}`}
                 >
                     {renderView()}
                 </motion.div>
