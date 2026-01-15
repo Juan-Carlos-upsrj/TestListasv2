@@ -1,6 +1,6 @@
 
 {
-  "version": "1.8.0",
-  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v1.8.0/app-debug.apk",
-  "notes": "¡Versión 1.8.0! Solución al error de visualización de la tabla de asistencia. Se ajustó el sistema de layouts para permitir que la tabla ocupe toda la pantalla correctamente."
+  "version": "1.8.1",
+  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v1.8.1/app-debug.apk",
+  "notes": "¡Versión 1.8.1! Mejoras estéticas en el Dashboard: se atenuó el fondo para mejorar la lectura y se reorganizaron los widgets para un diseño más equilibrado."
 }
