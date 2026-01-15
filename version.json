@@ -1,6 +1,6 @@
 
 {
-  "version": "1.7.8",
-  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v1.7.8/app-debug.apk",
-  "notes": "¡Versión 1.7.8! Solución definitiva a problemas de build de JSZip. La exportación masiva PDF funciona ahora perfectamente en versiones Web y de Escritorio (Electron)."
+  "version": "1.7.9",
+  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v1.7.9/app-debug.apk",
+  "notes": "¡Versión 1.7.9! Solución definitiva al error de build 'Rollup failed to resolve JSZip'. Ahora la aplicación de escritorio compila perfectamente manteniendo la exportación masiva PDF."
 }

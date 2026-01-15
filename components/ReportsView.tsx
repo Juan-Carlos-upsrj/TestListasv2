@@ -11,9 +11,24 @@ import ReportChart from './ReportChart';
 import { motion } from 'framer-motion';
 import { STATUS_STYLES, GROUP_COLORS } from '../constants';
 
-// Fix for dynamic build environments (Vite/TSC)
-// @ts-ignore
-import JSZip from 'jszip';
+// Helper to load JSZip from CDN dynamically to avoid static build errors in Rollup/Vite
+const getJSZip = (): Promise<any> => {
+    return new Promise((resolve, reject) => {
+        // @ts-ignore
+        if (window.JSZip) {
+            // @ts-ignore
+            return resolve(window.JSZip);
+        }
+        const script = document.createElement('script');
+        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
+        script.onload = () => {
+             // @ts-ignore
+            resolve(window.JSZip);
+        };
+        script.onerror = () => reject(new Error('No se pudo cargar JSZip desde el CDN.'));
+        document.head.appendChild(script);
+    });
+};
 
 const ReportsView: React.FC = () => {
     const { state, dispatch } = useContext(AppContext);
@@ -113,9 +128,9 @@ const ReportsView: React.FC = () => {
         dispatch({ type: 'ADD_TOAST', payload: { message: 'Iniciando generación masiva de PDFs...', type: 'info' } });
 
         try {
-            // Handle both default and commonJS exports of JSZip
-            const ZipConstructor = (JSZip as any).default || JSZip;
-            const zip = new ZipConstructor();
+            // Load library dynamically to satisfy static analysis of Vite during dist
+            const JSZipConstructor = await getJSZip();
+            const zip = new JSZipConstructor();
             const rootFolder = zip.folder(`Reportes_IAEV_PDF_${new Date().toISOString().split('T')[0]}`);
 
             for (let i = 0; i < groups.length; i++) {
@@ -131,7 +146,7 @@ const ReportsView: React.FC = () => {
                 const gDates = getClassDates(settings.semesterStart, settings.semesterEnd, g.classDays);
                 const gEvals = evaluations[g.id] || [];
 
-                // Generar PDF como Blob usando el servicio robusto
+                // Generate PDF as Blob
                 const pdfBlob = await generateReportPDFBlob(
                     g,
                     summary,
