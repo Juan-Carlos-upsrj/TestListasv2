@@ -1,6 +1,6 @@
 
 {
-  "version": "1.8.7",
-  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v1.8.7/app-debug.apk",
-  "notes": "¡Versión 1.8.7! Grupos organizados por cuatrimestre con nuevo indicador visual. Mejoras críticas de visualización en la tabla de asistencia y nueva ventana de novedades del sistema."
+  "version": "1.8.9",
+  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v1.8.9/app-debug.apk",
+  "notes": "¡Versión 1.8.9! Corrección de errores de compilación de TypeScript para permitir la distribución del paquete."
 }

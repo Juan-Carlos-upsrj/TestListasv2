@@ -4,7 +4,7 @@ import { AppContext } from '../context/AppContext';
 import SettingsModal from './SettingsModal';
 import Icon from './icons/Icon';
 import { motion } from 'framer-motion';
-import { ActiveView, SidebarGroupDisplayMode, Group } from '../types';
+import { ActiveView, SidebarGroupDisplayMode } from '../types';
 import { GROUP_COLORS } from '../constants';
 import { startTour } from '../services/tourService';
 import useLocalStorage from '../hooks/useLocalStorage';
