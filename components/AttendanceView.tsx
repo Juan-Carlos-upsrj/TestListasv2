@@ -86,7 +86,7 @@ const StickyHeader = () => {
 
     return (
         <div 
-            className="absolute top-0 left-0 z-40 bg-slate-50 border-b border-slate-300 shadow-sm"
+            className="absolute top-0 left-0 z-[60] bg-slate-50 border-b border-slate-300 shadow-sm"
             style={{ width: totalWidth, height: HEADER_HEIGHT }}
         >
             <div className="flex h-8 w-full border-b border-slate-300">
@@ -177,6 +177,8 @@ const Row = React.memo(({ index, style }: ListChildComponentProps) => {
     } = context;
 
     const student = students[index];
+    if (!student) return null;
+
     const studentAttendance = attendance[groupId]?.[student.id] || {};
     const { p1, p2, global } = precalcStats[index];
     const top = parseFloat((style.top ?? 0).toString()) + HEADER_HEIGHT;
@@ -193,16 +195,16 @@ const Row = React.memo(({ index, style }: ListChildComponentProps) => {
     return (
         <div 
             className={`flex items-center border-b border-slate-200 transition-colors box-border ${isFailing ? 'bg-rose-50 dark:bg-rose-900/10 hover:bg-rose-100/50' : 'hover:bg-blue-50/30'}`}
-            style={{ ...style, top, height: ROW_HEIGHT, width: totalWidth }}
+            style={{ ...style, top, height: ROW_HEIGHT, width: totalWidth, zIndex: 1 }}
         >
             <div 
-                className={`sticky left-0 z-10 border-r border-slate-300 flex items-center px-2 h-full shadow-[2px_0_5_px_-2px_rgba(0,0,0,0.1)] ${isFailing ? 'bg-rose-100/30' : 'bg-white'}`}
+                className={`sticky left-0 z-20 border-r border-slate-300 flex items-center px-2 h-full shadow-[2px_0_5_px_-2px_rgba(0,0,0,0.1)] ${isFailing ? 'bg-rose-100/50' : 'bg-white'}`}
                 style={{ width: nameColWidth }}
             >
-                <div className="truncate w-full">
+                <div className="truncate w-full relative z-10">
                     <span className="text-[10px] font-black text-slate-400 mr-1 w-4 inline-block text-right">{index + 1}.</span>
                     <span className={`font-bold text-[11px] sm:text-xs ${isFailing ? 'text-rose-700' : 'text-slate-800'}`}>{student.name}</span>
-                    {isFailing && <span className="ml-2 text-[8px] bg-rose-600 text-white px-1 rounded animate-pulse">BAJA</span>}
+                    {isFailing && <span className="ml-2 text-[8px] bg-rose-600 text-white px-1.5 py-0.5 rounded-full font-black animate-pulse shadow-sm">RIESGO</span>}
                 </div>
             </div>
 
@@ -221,19 +223,19 @@ const Row = React.memo(({ index, style }: ListChildComponentProps) => {
                 return (
                     <div 
                         key={date}
-                        className={`flex items-center justify-center border-r border-slate-200 h-full cursor-pointer select-none relative ${date === todayStr ? 'bg-blue-50/30' : ''} ${isSelected ? '!bg-blue-100' : ''}`}
+                        className={`flex items-center justify-center border-r border-slate-200 h-full cursor-pointer select-none relative z-0 ${date === todayStr ? 'bg-blue-50/30' : ''} ${isSelected ? '!bg-blue-100' : ''}`}
                         style={{ width: DATE_COL_WIDTH }}
                         onMouseDown={() => onMouseDown(index, colIndex)}
                         onMouseEnter={() => onMouseEnter(index, colIndex)}
                     >
-                        <div className={`w-6 h-6 rounded flex items-center justify-center text-[10px] font-bold transition-transform ${STATUS_STYLES[status].color} ${isFocused ? 'ring-2 ring-primary ring-offset-1 scale-110 z-20' : ''}`}>
+                        <div className={`w-6 h-6 rounded flex items-center justify-center text-[10px] font-bold transition-transform ${STATUS_STYLES[status].color} ${isFocused ? 'ring-2 ring-primary ring-offset-1 scale-110 z-10' : ''}`}>
                             {STATUS_STYLES[status].symbol}
                         </div>
                     </div>
                 );
             })}
 
-             <div className="sticky right-0 z-10 flex h-full shadow-[-2px_0_5_px_-2px_rgba(0,0,0,0.1)]">
+             <div className="sticky right-0 z-20 flex h-full shadow-[-2px_0_5_px_-2px_rgba(0,0,0,0.1)]">
                 <div className={`border-l border-slate-300 flex items-center justify-center text-[10px] font-black ${getScoreColor(p1.percent)}`} style={{ width: STAT_COL_WIDTH }}>{formatValue(p1)}</div>
                 <div className={`border-l border-slate-300 flex items-center justify-center text-[10px] font-black ${getScoreColor(p2.percent)}`} style={{ width: STAT_COL_WIDTH }}>{formatValue(p2)}</div>
                 <div className={`border-l border-slate-300 flex items-center justify-center text-[10px] font-black ${getScoreColor(global.percent)}`} style={{ width: STAT_COL_WIDTH }}>{formatValue(global)}</div>
@@ -254,7 +256,6 @@ const AttendanceView: React.FC = () => {
     const [nameColWidth, setNameColWidth] = useState(getResponsiveNameColWidth());
     const [displayMode, setDisplayMode] = useState<StatDisplayMode>('percent');
 
-    // Reiniciar isReady al cambiar de grupo para forzar un re-layout de AutoSizer
     useEffect(() => {
         setIsReady(false);
         const timer = setTimeout(() => setIsReady(true), 150);
@@ -459,7 +460,6 @@ const AttendanceView: React.FC = () => {
                     </div>
                 </div>
                 <div className="flex flex-wrap gap-2 justify-end">
-                    {/* TOGGLE STATS MODE */}
                     <div className="flex items-center bg-surface-secondary border border-border-color rounded-md p-0.5" title="Cambiar visualización de estadísticas">
                         <button 
                             onClick={() => setDisplayMode('percent')} 
@@ -483,11 +483,10 @@ const AttendanceView: React.FC = () => {
             </div>
 
             {group && isReady ? (
-                <div className="flex-1 border border-border-color rounded-xl overflow-hidden bg-white shadow-sm min-h-[200px] relative">
+                <div className="flex-1 border border-border-color rounded-xl overflow-hidden bg-white shadow-sm min-h-[200px] relative z-0">
                     <AttendanceInternalContext.Provider value={contextValue}>
                         <AutoSizer>
                             {({ height, width }: any) => {
-                                // Evitar renderizado si la altura es nula
                                 if (!height || !width) return null;
                                 return (
                                     <List 

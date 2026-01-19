@@ -1,17 +1,19 @@
 
-import React, { useContext, useState, SetStateAction } from 'react';
+import React, { useContext, useState, SetStateAction, useMemo } from 'react';
 import { AppContext } from '../context/AppContext';
 import SettingsModal from './SettingsModal';
 import Icon from './icons/Icon';
 import { motion } from 'framer-motion';
-import { ActiveView, SidebarGroupDisplayMode } from '../types';
+import { ActiveView, SidebarGroupDisplayMode, Group } from '../types';
 import { GROUP_COLORS } from '../constants';
 import { startTour } from '../services/tourService';
 import useLocalStorage from '../hooks/useLocalStorage';
 
-type View = ActiveView;
+// Helper to parse quarter for sorting (e.g. "5º" -> 5)
+const parseQ = (q?: string) => parseInt(q || '0') || 0;
 
-const navItems: { view: View; label: string; icon: string; id: string }[] = [
+// FIX: Changed 'View' to 'ActiveView' to match the imported type from types.ts
+const navItems: { view: ActiveView; label: string; icon: string; id: string }[] = [
   { view: 'dashboard', label: 'Inicio', icon: 'home', id: 'nav-item-dashboard' },
   { view: 'groups', label: 'Grupos', icon: 'users', id: 'nav-item-groups' },
   { view: 'attendance', label: 'Asistencia', icon: 'check-square', id: 'nav-item-attendance' },
@@ -30,19 +32,23 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
   const { groups, selectedGroupId, settings } = state;
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   
-  // State for collapsible mode (desktop only logic)
   const [isCollapsed, setIsCollapsed] = useLocalStorage('sidebarCollapsed', false);
 
-  const handleNavClick = (view: View) => {
+  // Grupos ordenados por cuatrimestre
+  const sortedGroups = useMemo(() => {
+    return [...groups].sort((a, b) => parseQ(a.quarter) - parseQ(b.quarter) || a.name.localeCompare(b.name));
+  }, [groups]);
+
+  const handleNavClick = (view: ActiveView) => {
     dispatch({ type: 'SET_VIEW', payload: view });
-    if (window.innerWidth < 768) { // md breakpoint
+    if (window.innerWidth < 768) { 
         setIsOpen(false);
     }
   };
   
   const handleGroupClick = (groupId: string) => {
     dispatch({ type: 'SET_SELECTED_GROUP', payload: groupId });
-    if (window.innerWidth < 768) { // md breakpoint
+    if (window.innerWidth < 768) { 
         setIsOpen(false);
     }
   };
@@ -53,8 +59,6 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
 
   const toggleAbbreviationDisplay = (e: React.MouseEvent) => {
     e.stopPropagation();
-    
-    // Cycle between: name -> name-abbrev -> abbrev -> name
     const modes: SidebarGroupDisplayMode[] = ['name', 'name-abbrev', 'abbrev'];
     const currentIndex = modes.indexOf(settings.sidebarGroupDisplayMode || 'name-abbrev');
     const nextMode = modes[(currentIndex + 1) % modes.length];
@@ -83,7 +87,6 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
         aria-label="Barra lateral principal" 
         id="sidebar-main"
       >
-        {/* Toggle Button (Desktop Only) */}
         <button 
             onClick={toggleCollapse}
             className="hidden md:flex absolute -right-3 top-20 bg-surface border border-border-color rounded-full p-1 text-text-secondary hover:text-primary shadow-sm z-40"
@@ -111,7 +114,6 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
             )}
         </div>
         
-        {/* Quick Group Selector Buttons */}
         <div className={`p-4 border-b border-border-color ${isCollapsed ? 'flex flex-col items-center' : ''}`} id="sidebar-quick-groups">
             {!isCollapsed && (
                 <div className="flex items-center justify-between mb-3">
@@ -126,16 +128,15 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
                 </div>
             )}
             
-            {groups.length > 0 ? (
+            {sortedGroups.length > 0 ? (
                 <div className={`flex flex-wrap gap-2 ${isCollapsed ? 'justify-center flex-col w-full' : ''}`}>
-                    {groups.map(g => {
+                    {sortedGroups.map(g => {
                         const colorObj = GROUP_COLORS.find(c => c.name === g.color) || GROUP_COLORS[0];
                         const isActive = selectedGroupId === g.id;
                         
                         const activeClass = `${colorObj.bg} !text-white shadow-md ring-2 ring-offset-1 ring-offset-surface ${colorObj.ring || 'ring-primary'}`;
                         const inactiveClass = `bg-surface-secondary text-text-secondary hover:bg-border-color hover:text-text-primary`;
 
-                        // Lógica de visualización de 3 estados
                         let displayLabel = g.name;
                         const abbrev = g.subjectShortName || g.subject.substring(0, 3).toUpperCase();
                         
@@ -146,19 +147,20 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
                         }
 
                         if (isCollapsed) {
-                            // Collapsed view: Color dots with first letter
                             return (
                                 <motion.button
                                     key={g.id}
                                     onClick={() => handleGroupClick(g.id)}
                                     whileHover={{ scale: 1.1 }}
                                     whileTap={{ scale: 0.95 }}
-                                    title={`${g.name} - ${g.subject}`}
-                                    className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-200 border border-transparent mx-auto ${
+                                    title={`${g.name} - ${g.subject} (${g.quarter || '?'})`}
+                                    className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-200 border border-transparent mx-auto relative ${
                                         isActive ? activeClass : inactiveClass
                                     }`}
                                 >
                                     {displayLabel.charAt(0).toUpperCase()}
+                                    {/* Mini badge for quarter in collapsed mode */}
+                                    <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-white text-slate-800 rounded-full flex items-center justify-center text-[7px] font-black shadow-sm ring-1 ring-slate-200">{parseQ(g.quarter)}</span>
                                 </motion.button>
                             );
                         }
@@ -170,11 +172,12 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
                                 whileHover={{ scale: 1.05 }}
                                 whileTap={{ scale: 0.95 }}
                                 title={`${g.name} - ${g.subject}`}
-                                className={`px-3 py-1.5 rounded-md text-[11px] font-bold transition-all duration-200 border border-transparent whitespace-nowrap overflow-hidden text-ellipsis max-w-full ${
+                                className={`px-3 py-1.5 rounded-md text-[11px] font-bold transition-all duration-200 border border-transparent whitespace-nowrap overflow-hidden text-ellipsis max-w-full flex items-center justify-between gap-2 ${
                                     isActive ? activeClass : inactiveClass
                                 }`}
                             >
-                                {displayLabel}
+                                <span className="truncate">{displayLabel}</span>
+                                <span className={`flex-shrink-0 w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-black border ${isActive ? 'bg-white/20 border-white/30' : 'bg-slate-200 border-slate-300 text-slate-600'}`}>{parseQ(g.quarter)}</span>
                             </motion.button>
                         );
                     })}

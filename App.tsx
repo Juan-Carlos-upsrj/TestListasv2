@@ -11,14 +11,15 @@ import ToastContainer from './components/ToastContainer';
 import CalendarView from './components/CalendarView';
 import UpdateNotification from './components/UpdateNotification';
 import MobileUpdateModal from './components/MobileUpdateModal';
+import ChangelogModal from './components/ChangelogModal';
 import { PROFESSOR_BIRTHDAYS, APP_VERSION } from './constants';
 import { motion, AnimatePresence, PanInfo } from 'framer-motion';
 import Icon from './components/icons/Icon';
 import BackgroundShapesV2 from './components/common/BackgroundShapesV2';
 import { checkForMobileUpdate } from './services/mobileUpdateService';
 import { MobileUpdateInfo } from './types';
+import useLocalStorage from './hooks/useLocalStorage';
 
-// Helper para normalizar nombres de días y evitar fallos por acentos/mayúsculas
 const normalizeStr = (s: string) => s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
 const App: React.FC = () => {
@@ -29,11 +30,13 @@ const App: React.FC = () => {
   const [updateAvailable, setUpdateAvailable] = useState(false);
   const [mobileUpdateInfo, setMobileUpdateInfo] = useState<MobileUpdateInfo | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isChangelogOpen, setIsChangelogOpen] = useState(false);
   
-  // Seguimiento de notificaciones enviadas para no repetir en el mismo minuto/día
+  // Control de versión vista para el Changelog
+  const [lastSeenVersion, setLastSeenVersion] = useLocalStorage('lastSeenVersion', '0.0.0');
+
   const notifiedClassesRef = useRef<Set<string>>(new Set());
 
-  // Solicitar permisos de notificación al cargar
   useEffect(() => {
     document.documentElement.classList.remove('dark');
     
@@ -46,9 +49,14 @@ const App: React.FC = () => {
         });
       }
     }
+
+    // Lógica para mostrar Changelog
+    if (lastSeenVersion !== APP_VERSION) {
+        setIsChangelogOpen(true);
+        setLastSeenVersion(APP_VERSION);
+    }
   }, []);
 
-  // Lógica de Alertas de Clase (Inicio y Fin)
   useEffect(() => {
     if (!teacherSchedule || teacherSchedule.length === 0 || !settings.enableReminders) return;
 
@@ -61,7 +69,6 @@ const App: React.FC = () => {
       const currentMin = now.getMinutes();
       const currentTimeInMins = currentHour * 60 + currentMin;
 
-      // Buscar clases de hoy comparando nombres normalizados
       const todaysClasses = teacherSchedule.filter(c => normalizeStr(c.day) === currentDayStr);
 
       todaysClasses.forEach(clase => {
@@ -75,7 +82,6 @@ const App: React.FC = () => {
         const startKey = `START-${clase.id}-${todayKey}`;
         const endKey = `END-${clase.id}-${todayKey}`;
 
-        // ALERTA: PRÓXIMA CLASE
         const reminderTime = settings.reminderTime || 20;
         if (diffToStart > 0 && diffToStart <= reminderTime && !notifiedClassesRef.current.has(startKey)) {
            new Notification("🍎 Próxima Clase", {
@@ -87,7 +93,6 @@ const App: React.FC = () => {
             notifiedClassesRef.current.add(startKey);
         }
 
-        // ALERTA: CLASE POR TERMINAR (Aviso a los 5 minutos del final)
         if (diffToEnd > 0 && diffToEnd <= 5 && !notifiedClassesRef.current.has(endKey)) {
             new Notification("🔔 Fin de Clase", {
               body: `La clase de ${clase.subjectName} está por terminar en 5 minutos.`,
@@ -100,7 +105,7 @@ const App: React.FC = () => {
     };
 
     checkSchedule();
-    const interval = setInterval(checkSchedule, 30000); // Revisar cada 30 segundos para mayor precisión
+    const interval = setInterval(checkSchedule, 30000);
     return () => clearInterval(interval);
   }, [teacherSchedule, settings.enableReminders, settings.reminderTime]);
 
@@ -200,6 +205,11 @@ const App: React.FC = () => {
          isOpen={!!mobileUpdateInfo} 
          onClose={() => setMobileUpdateInfo(null)} 
          updateInfo={mobileUpdateInfo}
+      />
+
+      <ChangelogModal 
+        isOpen={isChangelogOpen} 
+        onClose={() => setIsChangelogOpen(false)} 
       />
       
       <Sidebar isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />

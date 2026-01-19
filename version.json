@@ -1,6 +1,6 @@
 
 {
-  "version": "1.8.6",
-  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v1.8.6/app-debug.apk",
-  "notes": "¡Versión 1.8.6! Mejoras en Asistencia: Nuevo selector para ver porcentaje vs número de faltas y resaltado automático de alumnos con asistencia baja para prevenir riesgos académicos."
+  "version": "1.8.7",
+  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v1.8.7/app-debug.apk",
+  "notes": "¡Versión 1.8.7! Grupos organizados por cuatrimestre con nuevo indicador visual. Mejoras críticas de visualización en la tabla de asistencia y nueva ventana de novedades del sistema."
 }
