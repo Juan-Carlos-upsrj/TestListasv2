@@ -1,6 +1,6 @@
 
 {
-  "version": "1.8.5",
-  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v1.8.5/app-debug.apk",
-  "notes": "¡Versión 1.8.5! Corrección de notificaciones: Se restauraron las alertas de clase con soporte para fin de sesión y mayor robustez en la detección de horarios."
+  "version": "1.8.6",
+  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v1.8.6/app-debug.apk",
+  "notes": "¡Versión 1.8.6! Mejoras en Asistencia: Nuevo selector para ver porcentaje vs número de faltas y resaltado automático de alumnos con asistencia baja para prevenir riesgos académicos."
 }
