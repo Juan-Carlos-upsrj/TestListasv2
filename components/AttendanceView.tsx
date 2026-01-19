@@ -23,7 +23,7 @@ const List = (ReactWindow as any).FixedSizeList || (ReactWindow as any).default?
 // --- CONSTANTS & CONFIG ---
 const getResponsiveNameColWidth = () => window.innerWidth < 768 ? 140 : 300;
 const DATE_COL_WIDTH = 45;
-const STAT_COL_WIDTH = 60; // Slightly wider for labels
+const STAT_COL_WIDTH = 60; 
 const ROW_HEIGHT = 38;
 const HEADER_HEIGHT = 96; // 32px * 3 rows
 
@@ -86,11 +86,11 @@ const StickyHeader = () => {
 
     return (
         <div 
-            className="absolute top-0 left-0 z-[60] bg-slate-50 border-b border-slate-300 shadow-sm"
+            className="absolute top-0 left-0 z-[100] bg-slate-50 border-b border-slate-300 shadow-sm"
             style={{ width: totalWidth, height: HEADER_HEIGHT }}
         >
             <div className="flex h-8 w-full border-b border-slate-300">
-                <div className="sticky left-0 z-50 bg-slate-100 border-r border-slate-300 flex items-center px-2 font-bold text-[10px] text-slate-600 uppercase tracking-wider" style={{ width: nameColWidth }}>
+                <div className="sticky left-0 z-[110] bg-slate-100 border-r border-slate-300 flex items-center px-2 font-bold text-[10px] text-slate-600 uppercase tracking-wider" style={{ width: nameColWidth }}>
                     Periodo
                 </div>
                 {headerStructure.map((part: any, i: number) => (
@@ -98,14 +98,14 @@ const StickyHeader = () => {
                         {part.label}
                     </div>
                 ))}
-                <div className="sticky right-0 z-50 flex">
+                <div className="sticky right-0 z-[110] flex">
                     <div className="bg-amber-50 border-l border-slate-300 flex items-center justify-center font-bold text-[10px] text-amber-700" style={{ width: STAT_COL_WIDTH * 2 }}>PARCIALES</div>
                     <div className="bg-slate-100 border-l border-slate-300 flex items-center justify-center font-bold text-[10px] text-slate-700" style={{ width: STAT_COL_WIDTH }}>TOTAL</div>
                 </div>
             </div>
 
             <div className="flex h-8 w-full border-b border-slate-300">
-                <div className="sticky left-0 z-50 bg-slate-100 border-r border-slate-300 flex items-center px-2 font-bold text-[10px] text-slate-600 uppercase" style={{ width: nameColWidth }}>
+                <div className="sticky left-0 z-[110] bg-slate-100 border-r border-slate-300 flex items-center px-2 font-bold text-[10px] text-slate-600 uppercase" style={{ width: nameColWidth }}>
                     Mes
                 </div>
                 {headerStructure.flatMap((part: any) => part.months.map((month: any, j: number) => (
@@ -113,14 +113,14 @@ const StickyHeader = () => {
                         {month.label}
                     </div>
                 )))}
-                <div className="sticky right-0 z-50 flex">
+                <div className="sticky right-0 z-[110] flex">
                      <div className="bg-amber-50 border-l border-slate-300" style={{ width: STAT_COL_WIDTH * 2 }}></div>
                     <div className="bg-slate-100 border-l border-slate-300" style={{ width: STAT_COL_WIDTH }}></div>
                 </div>
             </div>
 
             <div className="flex h-8 w-full">
-                <div className="sticky left-0 z-50 bg-white border-r border-slate-300 flex items-center px-2 shadow-[2px_0_5_px_-2px_rgba(0,0,0,0.1)]" style={{ width: nameColWidth }}>
+                <div className="sticky left-0 z-[110] bg-white border-r border-slate-300 flex items-center px-2" style={{ width: nameColWidth }}>
                     <span className="font-bold text-[11px] sm:text-sm text-slate-700">Alumno</span>
                 </div>
                 {classDates.map(date => {
@@ -134,7 +134,7 @@ const StickyHeader = () => {
                         </div>
                     );
                 })}
-                <div className="sticky right-0 z-50 flex shadow-[-2px_0_5_px_-2px_rgba(0,0,0,0.1)]">
+                <div className="sticky right-0 z-[110] flex">
                     <div className="bg-amber-50 border-l border-slate-300 flex flex-col items-center justify-center text-[8px] font-bold text-amber-800" style={{ width: STAT_COL_WIDTH }}>
                         <span>{labelPrefix} P1</span>
                         <span className="text-[7px] opacity-70">({isNaN(globalP1Avg) ? '-' : globalP1Avg}%)</span>
@@ -183,7 +183,6 @@ const Row = React.memo(({ index, style }: ListChildComponentProps) => {
     const { p1, p2, global } = precalcStats[index];
     const top = parseFloat((style.top ?? 0).toString()) + HEADER_HEIGHT;
     
-    // Alerta de asistencia baja: Menor al umbral global
     const isFailing = global.percent < threshold;
     
     const getScoreColor = (pct: number) => pct >= threshold ? 'text-emerald-600 bg-emerald-50' : pct >= 70 ? 'text-amber-600 bg-amber-50' : 'text-rose-600 bg-rose-50';
@@ -194,17 +193,17 @@ const Row = React.memo(({ index, style }: ListChildComponentProps) => {
 
     return (
         <div 
-            className={`flex items-center border-b border-slate-200 transition-colors box-border ${isFailing ? 'bg-rose-50 dark:bg-rose-900/10 hover:bg-rose-100/50' : 'hover:bg-blue-50/30'}`}
+            className={`flex items-center border-b border-slate-200 transition-colors box-border ${isFailing ? 'bg-rose-50 dark:bg-rose-900/10 hover:bg-rose-100/50' : 'bg-white hover:bg-blue-50/30'}`}
             style={{ ...style, top, height: ROW_HEIGHT, width: totalWidth, zIndex: 1 }}
         >
             <div 
-                className={`sticky left-0 z-20 border-r border-slate-300 flex items-center px-2 h-full shadow-[2px_0_5_px_-2px_rgba(0,0,0,0.1)] ${isFailing ? 'bg-rose-100/50' : 'bg-white'}`}
+                className={`sticky left-0 z-[50] border-r border-slate-300 flex items-center px-2 h-full ${isFailing ? 'bg-rose-100 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]' : 'bg-white shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]'}`}
                 style={{ width: nameColWidth }}
             >
                 <div className="truncate w-full relative z-10">
                     <span className="text-[10px] font-black text-slate-400 mr-1 w-4 inline-block text-right">{index + 1}.</span>
                     <span className={`font-bold text-[11px] sm:text-xs ${isFailing ? 'text-rose-700' : 'text-slate-800'}`}>{student.name}</span>
-                    {isFailing && <span className="ml-2 text-[8px] bg-rose-600 text-white px-1.5 py-0.5 rounded-full font-black animate-pulse shadow-sm">RIESGO</span>}
+                    {isFailing && <span className="ml-2 text-[8px] bg-rose-600 text-white px-1.5 py-0.5 rounded-full font-black animate-pulse">RIESGO</span>}
                 </div>
             </div>
 
@@ -235,7 +234,7 @@ const Row = React.memo(({ index, style }: ListChildComponentProps) => {
                 );
             })}
 
-             <div className="sticky right-0 z-20 flex h-full shadow-[-2px_0_5_px_-2px_rgba(0,0,0,0.1)]">
+             <div className="sticky right-0 z-[50] flex h-full shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.1)]">
                 <div className={`border-l border-slate-300 flex items-center justify-center text-[10px] font-black ${getScoreColor(p1.percent)}`} style={{ width: STAT_COL_WIDTH }}>{formatValue(p1)}</div>
                 <div className={`border-l border-slate-300 flex items-center justify-center text-[10px] font-black ${getScoreColor(p2.percent)}`} style={{ width: STAT_COL_WIDTH }}>{formatValue(p2)}</div>
                 <div className={`border-l border-slate-300 flex items-center justify-center text-[10px] font-black ${getScoreColor(global.percent)}`} style={{ width: STAT_COL_WIDTH }}>{formatValue(global)}</div>

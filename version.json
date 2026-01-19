@@ -1,6 +1,6 @@
 
 {
-  "version": "1.8.9",
-  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v1.8.9/app-debug.apk",
-  "notes": "¡Versión 1.8.9! Corrección de errores de compilación de TypeScript para permitir la distribución del paquete."
+  "version": "1.9.0",
+  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v1.9.0/app-debug.apk",
+  "notes": "¡Versión 1.9.0! Correcciones visuales mayores en Asistencia: Se solucionó el problema de capas (z-index) donde los días se encimaban a los nombres al hacer scroll."
 }
