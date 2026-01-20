@@ -52,23 +52,27 @@ interface AttendanceContextValue {
 
 const AttendanceInternalContext = createContext<AttendanceContextValue | null>(null);
 
-const calculateStats = (studentAttendance: any, dates: string[], todayStr: string) => {
-    let present = 0, total = 0, absences = 0;
+/**
+ * UPDATED: Calculate stats based on TOTAL scheduled classes for the period,
+ * not just classes that have occurred to date.
+ */
+const calculateStats = (studentAttendance: any, dates: string[]) => {
+    let absences = 0;
+    const totalPossible = dates.length;
+
     for (let i = 0; i < dates.length; i++) {
         const date = dates[i];
         const status = (studentAttendance[date] || AttendanceStatus.Pending) as AttendanceStatus;
         
-        if (date <= todayStr || status !== AttendanceStatus.Pending) {
-             total++;
-             if (status === AttendanceStatus.Present || status === AttendanceStatus.Late || status === AttendanceStatus.Justified || status === AttendanceStatus.Exchange) {
-                present++;
-            } else if (status === AttendanceStatus.Absent) {
-                absences++;
-            }
+        // Solo las faltas reducen el porcentaje respecto al total del curso
+        if (status === AttendanceStatus.Absent) {
+            absences++;
         }
     }
+
     return { 
-        percent: total > 0 ? Math.round((present / total) * 100) : 100,
+        // Porcentaje = (Clases Totales - Faltas) / Clases Totales
+        percent: totalPossible > 0 ? Math.round(((totalPossible - absences) / totalPossible) * 100) : 100,
         absences 
     };
 };
@@ -380,12 +384,31 @@ const AttendanceView: React.FC = () => {
         return filteredStudents.map(s => {
             const att = attendance[selectedGroupId]?.[s.id] || {};
             return {
-                p1: calculateStats(att, p1Dates, todayStr),
-                p2: calculateStats(att, p2Dates, todayStr),
-                global: calculateStats(att, classDates, todayStr)
+                p1: calculateStats(att, p1Dates),
+                p2: calculateStats(att, p2Dates),
+                global: calculateStats(att, classDates)
             };
         });
-    }, [filteredStudents, attendance, selectedGroupId, p1Dates, p2Dates, classDates, todayStr]);
+    }, [filteredStudents, attendance, selectedGroupId, p1Dates, p2Dates, classDates]);
+
+    // NEW: Calculate allowed absences based on total classes and threshold
+    const allowedAbsencesInfo = useMemo(() => {
+        if (!group || classDates.length === 0) return null;
+        const totalClasses = classDates.length;
+        const p1Total = p1Dates.length;
+        const p2Total = p2Dates.length;
+        const threshold = settings.lowAttendanceThreshold / 100;
+
+        // Max Absences = Total * (1 - Threshold)
+        return {
+            p1: Math.floor(p1Total * (1 - threshold)),
+            p2: Math.floor(p2Total * (1 - threshold)),
+            global: Math.floor(totalClasses * (1 - threshold)),
+            totalClasses,
+            p1Total,
+            p2Total
+        };
+    }, [group, classDates, p1Dates, p2Dates, settings.lowAttendanceThreshold]);
 
     const headerStructure = useMemo(() => {
         const structure = [];
@@ -445,8 +468,8 @@ const AttendanceView: React.FC = () => {
 
     return (
         <div className="flex flex-col h-full overflow-hidden">
-            <div className="bg-surface p-3 mb-4 rounded-xl border border-border-color shadow-sm flex flex-col gap-3 sm:flex-row sm:items-center shrink-0">
-                 <div className="flex-1 flex flex-col sm:flex-row gap-3">
+            <div className="bg-surface p-3 mb-4 rounded-xl border border-border-color shadow-sm flex flex-col gap-3 shrink-0">
+                 <div className="flex flex-col sm:flex-row gap-3">
                     <select value={selectedGroupId || ''} onChange={(e) => setSelectedGroupId(e.target.value)} className="w-full sm:w-56 p-2 border border-border-color rounded-md bg-white text-sm focus:ring-2 focus:ring-primary">
                         <option value="" disabled>Selecciona un grupo</option>
                         {groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
@@ -458,6 +481,31 @@ const AttendanceView: React.FC = () => {
                         <input type="text" className="block w-full pl-9 pr-3 py-2 border border-border-color rounded-md bg-white text-sm focus:ring-1 focus:ring-primary" placeholder="Buscar alumno..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
                     </div>
                 </div>
+
+                {allowedAbsencesInfo && (
+                    <div className="flex flex-wrap items-center gap-4 bg-indigo-50/50 p-2.5 rounded-lg border border-indigo-100">
+                        <div className="flex items-center gap-2">
+                            <Icon name="info" className="w-4 h-4 text-indigo-600" />
+                            <span className="text-[10px] font-black uppercase text-indigo-900 tracking-wider">Límite de Faltas ({settings.lowAttendanceThreshold}%):</span>
+                        </div>
+                        <div className="flex gap-4">
+                            <div className="flex items-center gap-1.5">
+                                <span className="text-[9px] font-bold text-slate-500 uppercase">P1:</span>
+                                <span className="text-xs font-black text-indigo-700 bg-white px-2 py-0.5 rounded shadow-sm">{allowedAbsencesInfo.p1} de {allowedAbsencesInfo.p1Total}</span>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                                <span className="text-[9px] font-bold text-slate-500 uppercase">P2:</span>
+                                <span className="text-xs font-black text-indigo-700 bg-white px-2 py-0.5 rounded shadow-sm">{allowedAbsencesInfo.p2} de {allowedAbsencesInfo.p2Total}</span>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                                <span className="text-[9px] font-bold text-slate-500 uppercase">Total:</span>
+                                <span className="text-xs font-black text-rose-700 bg-white px-2 py-0.5 rounded shadow-sm">{allowedAbsencesInfo.global} de {allowedAbsencesInfo.totalClasses}</span>
+                            </div>
+                        </div>
+                        <p className="hidden lg:block text-[9px] text-slate-400 italic flex-1 text-right">El % ahora se calcula sobre el total de clases programadas.</p>
+                    </div>
+                )}
+
                 <div className="flex flex-wrap gap-2 justify-end">
                     <div className="flex items-center bg-surface-secondary border border-border-color rounded-md p-0.5" title="Cambiar visualización de estadísticas">
                         <button 
