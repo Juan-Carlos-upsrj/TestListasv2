@@ -177,10 +177,10 @@ const Row = React.memo(({ index, style }: ListChildComponentProps) => {
     const context = useContext(AttendanceInternalContext);
     if (!context) return null;
     const { 
-        students, classDates, attendance, groupId, 
+        students, attendance, groupId, 
         focusedCell, selection, todayStr, totalWidth,
         onMouseDown, onMouseEnter, precalcStats, nameColWidth,
-        displayMode, threshold, limits, isCurrentP1, isCurrentP2
+        displayMode, threshold, limits, isCurrentP1, isCurrentP2, classDates
     } = context;
 
     const student = students[index];
@@ -190,11 +190,13 @@ const Row = React.memo(({ index, style }: ListChildComponentProps) => {
     const { p1, p2, global } = precalcStats[index];
     const top = parseFloat((style.top ?? 0).toString()) + HEADER_HEIGHT;
     
-    // BAJA: Excede faltas globales del cuatrimestre
+    /**
+     * LOGIC REFACTORED:
+     * BAJA: Excede faltas globales permitidas para TODO el cuatrimestre (redondeado arriba).
+     * RIESGO: Excede faltas permitidas específicamente en el parcial actual (redondeado arriba).
+     */
     const isBaja = global.absences > limits.global;
-    
-    // RIESGO: Excede faltas del parcial actual
-    const isRisk = (isCurrentP1 && p1.absences > limits.p1) || (isCurrentP2 && p2.absences > limits.p2);
+    const isRisk = !isBaja && ((isCurrentP1 && p1.absences > limits.p1) || (isCurrentP2 && p2.absences > limits.p2));
     
     const getScoreColor = (pct: number) => pct >= threshold ? 'text-emerald-600 bg-emerald-50' : pct >= 70 ? 'text-amber-600 bg-amber-50' : 'text-rose-600 bg-rose-50';
     
@@ -215,7 +217,6 @@ const Row = React.memo(({ index, style }: ListChildComponentProps) => {
                     <span className="text-[10px] font-black text-slate-400 mr-1 w-4 inline-block text-right">{index + 1}.</span>
                     <span className={`font-bold text-[11px] sm:text-xs ${isBaja ? 'text-rose-700' : isRisk ? 'text-amber-700' : 'text-slate-800'}`}>{student.name}</span>
                     
-                    {/* Badge dinámico con prioridades */}
                     {isBaja ? (
                         <span className="ml-2 text-[8px] bg-rose-600 text-white px-1.5 py-0.5 rounded-full font-black animate-pulse shadow-sm">BAJA</span>
                     ) : isRisk ? (
@@ -404,13 +405,16 @@ const AttendanceView: React.FC = () => {
         });
     }, [filteredStudents, attendance, selectedGroupId, p1Dates, p2Dates, classDates]);
 
-    // DETECCIÓN DE PERIODO ACTUAL
     const { isCurrentP1, isCurrentP2 } = useMemo(() => ({
         isCurrentP1: todayStr <= settings.firstPartialEnd,
         isCurrentP2: todayStr > settings.firstPartialEnd
     }), [todayStr, settings.firstPartialEnd]);
 
-    // NEW: Calculate allowed absences based on total classes and threshold
+    /**
+     * UPDATED: Using Math.ceil for allowed absences calculation.
+     * Rule: If 80% attendance is required, 20% absences are allowed.
+     * Rounding UP ensures students get the benefit of the doubt in fractional cases.
+     */
     const allowedAbsencesLimits = useMemo(() => {
         if (!group || classDates.length === 0) return { p1: 0, p2: 0, global: 0, p1Total: 0, p2Total: 0, totalClasses: 0 };
         const totalClasses = classDates.length;
@@ -419,9 +423,9 @@ const AttendanceView: React.FC = () => {
         const threshold = settings.lowAttendanceThreshold / 100;
 
         return {
-            p1: Math.floor(p1Total * (1 - threshold)),
-            p2: Math.floor(p2Total * (1 - threshold)),
-            global: Math.floor(totalClasses * (1 - threshold)),
+            p1: Math.ceil(p1Total * (1 - threshold)),
+            p2: Math.ceil(p2Total * (1 - threshold)),
+            global: Math.ceil(totalClasses * (1 - threshold)),
             totalClasses,
             p1Total,
             p2Total
@@ -525,7 +529,7 @@ const AttendanceView: React.FC = () => {
                                 <span className="text-xs font-black text-rose-700 bg-white px-2 py-0.5 rounded shadow-sm">{allowedAbsencesLimits.global} de {allowedAbsencesLimits.totalClasses}</span>
                             </div>
                         </div>
-                        <p className="hidden lg:block text-[9px] text-slate-400 italic flex-1 text-right">Faltas excesivas en el periodo actual marcarán <span className="text-amber-600 font-bold">RIESGO</span>.</p>
+                        <p className="hidden lg:block text-[9px] text-slate-400 italic flex-1 text-right">Redondeo a favor del alumno aplicado (Math.ceil).</p>
                     </div>
                 )}
 
