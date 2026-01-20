@@ -48,6 +48,9 @@ interface AttendanceContextValue {
     onMouseDown: (r: number, c: number) => void;
     onMouseEnter: (r: number, c: number) => void;
     precalcStats: any[];
+    limits: { p1: number; p2: number; global: number };
+    isCurrentP1: boolean;
+    isCurrentP2: boolean;
 }
 
 const AttendanceInternalContext = createContext<AttendanceContextValue | null>(null);
@@ -177,7 +180,7 @@ const Row = React.memo(({ index, style }: ListChildComponentProps) => {
         students, classDates, attendance, groupId, 
         focusedCell, selection, todayStr, totalWidth,
         onMouseDown, onMouseEnter, precalcStats, nameColWidth,
-        displayMode, threshold
+        displayMode, threshold, limits, isCurrentP1, isCurrentP2
     } = context;
 
     const student = students[index];
@@ -187,7 +190,11 @@ const Row = React.memo(({ index, style }: ListChildComponentProps) => {
     const { p1, p2, global } = precalcStats[index];
     const top = parseFloat((style.top ?? 0).toString()) + HEADER_HEIGHT;
     
-    const isFailing = global.percent < threshold;
+    // BAJA: Excede faltas globales del cuatrimestre
+    const isBaja = global.absences > limits.global;
+    
+    // RIESGO: Excede faltas del parcial actual
+    const isRisk = (isCurrentP1 && p1.absences > limits.p1) || (isCurrentP2 && p2.absences > limits.p2);
     
     const getScoreColor = (pct: number) => pct >= threshold ? 'text-emerald-600 bg-emerald-50' : pct >= 70 ? 'text-amber-600 bg-amber-50' : 'text-rose-600 bg-rose-50';
     
@@ -197,17 +204,23 @@ const Row = React.memo(({ index, style }: ListChildComponentProps) => {
 
     return (
         <div 
-            className={`flex items-center border-b border-slate-200 transition-colors box-border ${isFailing ? 'bg-rose-50 dark:bg-rose-900/10 hover:bg-rose-100/50' : 'bg-white hover:bg-blue-50/30'}`}
+            className={`flex items-center border-b border-slate-200 transition-colors box-border ${isBaja ? 'bg-rose-50 dark:bg-rose-900/10 hover:bg-rose-100/50' : isRisk ? 'bg-amber-50 dark:bg-amber-900/10 hover:bg-amber-100/50' : 'bg-white hover:bg-blue-50/30'}`}
             style={{ ...style, top, height: ROW_HEIGHT, width: totalWidth, zIndex: 1 }}
         >
             <div 
-                className={`sticky left-0 z-[50] border-r border-slate-300 flex items-center px-2 h-full ${isFailing ? 'bg-rose-100 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]' : 'bg-white shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]'}`}
+                className={`sticky left-0 z-[50] border-r border-slate-300 flex items-center px-2 h-full ${isBaja ? 'bg-rose-100' : isRisk ? 'bg-amber-100' : 'bg-white shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]'}`}
                 style={{ width: nameColWidth }}
             >
                 <div className="truncate w-full relative z-10">
                     <span className="text-[10px] font-black text-slate-400 mr-1 w-4 inline-block text-right">{index + 1}.</span>
-                    <span className={`font-bold text-[11px] sm:text-xs ${isFailing ? 'text-rose-700' : 'text-slate-800'}`}>{student.name}</span>
-                    {isFailing && <span className="ml-2 text-[8px] bg-rose-600 text-white px-1.5 py-0.5 rounded-full font-black animate-pulse">RIESGO</span>}
+                    <span className={`font-bold text-[11px] sm:text-xs ${isBaja ? 'text-rose-700' : isRisk ? 'text-amber-700' : 'text-slate-800'}`}>{student.name}</span>
+                    
+                    {/* Badge dinámico con prioridades */}
+                    {isBaja ? (
+                        <span className="ml-2 text-[8px] bg-rose-600 text-white px-1.5 py-0.5 rounded-full font-black animate-pulse shadow-sm">BAJA</span>
+                    ) : isRisk ? (
+                        <span className="ml-2 text-[8px] bg-amber-500 text-white px-1.5 py-0.5 rounded-full font-black shadow-sm">RIESGO</span>
+                    ) : null}
                 </div>
             </div>
 
@@ -391,15 +404,20 @@ const AttendanceView: React.FC = () => {
         });
     }, [filteredStudents, attendance, selectedGroupId, p1Dates, p2Dates, classDates]);
 
+    // DETECCIÓN DE PERIODO ACTUAL
+    const { isCurrentP1, isCurrentP2 } = useMemo(() => ({
+        isCurrentP1: todayStr <= settings.firstPartialEnd,
+        isCurrentP2: todayStr > settings.firstPartialEnd
+    }), [todayStr, settings.firstPartialEnd]);
+
     // NEW: Calculate allowed absences based on total classes and threshold
-    const allowedAbsencesInfo = useMemo(() => {
-        if (!group || classDates.length === 0) return null;
+    const allowedAbsencesLimits = useMemo(() => {
+        if (!group || classDates.length === 0) return { p1: 0, p2: 0, global: 0, p1Total: 0, p2Total: 0, totalClasses: 0 };
         const totalClasses = classDates.length;
         const p1Total = p1Dates.length;
         const p2Total = p2Dates.length;
         const threshold = settings.lowAttendanceThreshold / 100;
 
-        // Max Absences = Total * (1 - Threshold)
         return {
             p1: Math.floor(p1Total * (1 - threshold)),
             p2: Math.floor(p2Total * (1 - threshold)),
@@ -463,8 +481,11 @@ const AttendanceView: React.FC = () => {
         handleStatusChange, 
         onMouseDown: handleMouseDown, 
         onMouseEnter: handleMouseEnter, 
-        precalcStats
-    }), [filteredStudents, classDates, attendance, group, focusedCell, selection, todayStr, headerStructure, totalWidth, handleStatusChange, handleMouseDown, handleMouseEnter, precalcStats, nameColWidth, displayMode, settings.lowAttendanceThreshold]);
+        precalcStats,
+        limits: { p1: allowedAbsencesLimits.p1, p2: allowedAbsencesLimits.p2, global: allowedAbsencesLimits.global },
+        isCurrentP1,
+        isCurrentP2
+    }), [filteredStudents, classDates, attendance, group, focusedCell, selection, todayStr, headerStructure, totalWidth, handleStatusChange, handleMouseDown, handleMouseEnter, precalcStats, nameColWidth, displayMode, settings.lowAttendanceThreshold, allowedAbsencesLimits, isCurrentP1, isCurrentP2]);
 
     return (
         <div className="flex flex-col h-full overflow-hidden">
@@ -482,27 +503,29 @@ const AttendanceView: React.FC = () => {
                     </div>
                 </div>
 
-                {allowedAbsencesInfo && (
+                {allowedAbsencesLimits && group && (
                     <div className="flex flex-wrap items-center gap-4 bg-indigo-50/50 p-2.5 rounded-lg border border-indigo-100">
                         <div className="flex items-center gap-2">
                             <Icon name="info" className="w-4 h-4 text-indigo-600" />
                             <span className="text-[10px] font-black uppercase text-indigo-900 tracking-wider">Límite de Faltas ({settings.lowAttendanceThreshold}%):</span>
                         </div>
                         <div className="flex gap-4">
-                            <div className="flex items-center gap-1.5">
-                                <span className="text-[9px] font-bold text-slate-500 uppercase">P1:</span>
-                                <span className="text-xs font-black text-indigo-700 bg-white px-2 py-0.5 rounded shadow-sm">{allowedAbsencesInfo.p1} de {allowedAbsencesInfo.p1Total}</span>
+                            <div className={`flex items-center gap-1.5 p-1 rounded ${isCurrentP1 ? 'bg-indigo-100/50 ring-1 ring-indigo-200 shadow-inner' : ''}`}>
+                                <span className={`text-[9px] font-bold uppercase ${isCurrentP1 ? 'text-indigo-800' : 'text-slate-500'}`}>P1:</span>
+                                <span className={`text-xs font-black px-2 py-0.5 rounded shadow-sm ${isCurrentP1 ? 'text-white bg-indigo-600' : 'text-indigo-700 bg-white'}`}>{allowedAbsencesLimits.p1} de {allowedAbsencesLimits.p1Total}</span>
+                                {isCurrentP1 && <span className="text-[7px] font-black text-indigo-400 uppercase tracking-tighter ml-1">ACTUAL</span>}
                             </div>
-                            <div className="flex items-center gap-1.5">
-                                <span className="text-[9px] font-bold text-slate-500 uppercase">P2:</span>
-                                <span className="text-xs font-black text-indigo-700 bg-white px-2 py-0.5 rounded shadow-sm">{allowedAbsencesInfo.p2} de {allowedAbsencesInfo.p2Total}</span>
+                            <div className={`flex items-center gap-1.5 p-1 rounded ${isCurrentP2 ? 'bg-indigo-100/50 ring-1 ring-indigo-200 shadow-inner' : ''}`}>
+                                <span className={`text-[9px] font-bold uppercase ${isCurrentP2 ? 'text-indigo-800' : 'text-slate-500'}`}>P2:</span>
+                                <span className={`text-xs font-black px-2 py-0.5 rounded shadow-sm ${isCurrentP2 ? 'text-white bg-indigo-600' : 'text-indigo-700 bg-white'}`}>{allowedAbsencesLimits.p2} de {allowedAbsencesLimits.p2Total}</span>
+                                {isCurrentP2 && <span className="text-[7px] font-black text-indigo-400 uppercase tracking-tighter ml-1">ACTUAL</span>}
                             </div>
                             <div className="flex items-center gap-1.5">
                                 <span className="text-[9px] font-bold text-slate-500 uppercase">Total:</span>
-                                <span className="text-xs font-black text-rose-700 bg-white px-2 py-0.5 rounded shadow-sm">{allowedAbsencesInfo.global} de {allowedAbsencesInfo.totalClasses}</span>
+                                <span className="text-xs font-black text-rose-700 bg-white px-2 py-0.5 rounded shadow-sm">{allowedAbsencesLimits.global} de {allowedAbsencesLimits.totalClasses}</span>
                             </div>
                         </div>
-                        <p className="hidden lg:block text-[9px] text-slate-400 italic flex-1 text-right">El % ahora se calcula sobre el total de clases programadas.</p>
+                        <p className="hidden lg:block text-[9px] text-slate-400 italic flex-1 text-right">Faltas excesivas en el periodo actual marcarán <span className="text-amber-600 font-bold">RIESGO</span>.</p>
                     </div>
                 )}
 

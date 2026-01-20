@@ -1,6 +1,6 @@
 
 {
-  "version": "1.9.1",
-  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v1.9.1/app-debug.apk",
-  "notes": "¡Versión 1.9.1! Nuevo cálculo de asistencia basado en clases totales del parcial. Se añadió un indicador de faltas permitidas por materia según el umbral de riesgo."
+  "version": "1.9.2",
+  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v1.9.2/app-debug.apk",
+  "notes": "¡Versión 1.9.2! Doble sistema de alertas: 'Riesgo' para faltas excesivas en el parcial actual y 'Baja' para faltas totales del cuatrimestre."
 }
