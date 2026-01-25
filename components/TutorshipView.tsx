@@ -82,7 +82,14 @@ const TutorshipView: React.FC = () => {
         );
     }, [group, searchTerm]);
 
-    const currentTutor = group ? groupTutors[group.id] || 'Buscando tutor...' : '';
+    // Lógica para obtener el tutor actual o manejar el estado vacío
+    const currentTutor = useMemo(() => {
+        if (!group) return '';
+        const tutor = groupTutors[group.id];
+        if (tutor) return tutor;
+        return isSyncing ? 'Buscando tutor...' : 'Sin asignar en servidor';
+    }, [group, groupTutors, isSyncing]);
+
     const canEdit = settings.professorName.trim().toLowerCase() === currentTutor.trim().toLowerCase();
 
     const handleSaveEntry = (entry: TutorshipEntry) => {
@@ -90,20 +97,25 @@ const TutorshipView: React.FC = () => {
             dispatch({ type: 'UPDATE_TUTORSHIP', payload: { studentId: editingStudent.id, entry } });
             setIsEditorOpen(false);
             setEditingStudent(null);
-            // Opcional: Auto-subir cambios tras editar
-            setTimeout(() => handleSync(true), 1000);
+            // Auto-subir cambios tras editar para que los demás profes lo vean
+            setTimeout(() => handleSync(true), 500);
         }
     };
 
     const handleSync = async (silent = false) => {
         if (!silent) setIsSyncing(true);
-        await syncTutorshipData(state, dispatch);
-        if (!silent) setIsSyncing(false);
+        try {
+            await syncTutorshipData(state, dispatch);
+        } catch (e) {
+            console.error("Tutorship sync failed", e);
+        } finally {
+            if (!silent) setIsSyncing(false);
+        }
     };
 
     const handleManualSetTutor = () => {
         if (!group) return;
-        const name = prompt("Escribe el nombre del Tutor de este grupo:", currentTutor !== 'Buscando tutor...' ? currentTutor : settings.professorName);
+        const name = prompt("Escribe el nombre del Tutor de este grupo:", currentTutor.includes('Sin') ? settings.professorName : currentTutor);
         if (name !== null) {
             dispatch({ type: 'SET_GROUP_TUTOR', payload: { groupId: group.id, tutorName: name } });
         }
@@ -147,7 +159,7 @@ const TutorshipView: React.FC = () => {
                             className={`${canEdit ? 'bg-indigo-600 !text-white hover:bg-indigo-700' : 'bg-white border-indigo-200 text-indigo-700'}`}
                         >
                             <Icon name={isSyncing ? "loader" : "download-cloud"} className={`w-4 h-4 ${isSyncing ? 'animate-spin' : ''}`} />
-                            <span className="hidden sm:inline">Sincronizar Datos</span>
+                            <span className="hidden sm:inline">{isSyncing ? 'Sincronizando...' : 'Sincronizar Datos'}</span>
                         </Button>
                     </div>
                 </div>
@@ -158,7 +170,7 @@ const TutorshipView: React.FC = () => {
                         <p className="text-xs font-medium">
                             {canEdit ? 
                                 <span><b>Acceso de Tutor.</b> Tus notas se guardarán en la nube.</span> : 
-                                <span><b>Vista de Profesor.</b> Estás viendo las notas de <b>{currentTutor}</b>.</span>
+                                <span><b>Vista de Profesor.</b> Estás viendo las notas registradas por <b>{currentTutor}</b>.</span>
                             }
                         </p>
                     </div>

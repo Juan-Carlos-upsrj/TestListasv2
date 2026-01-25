@@ -245,7 +245,7 @@ export const syncGradesData = async (state: AppState, dispatch: Dispatch<AppActi
 export const syncTutorshipData = async (state: AppState, dispatch: Dispatch<AppAction>) => {
     if (!checkSettings(state.settings, dispatch)) return;
 
-    const { settings, tutorshipData = {}, groupTutors = {} } = state;
+    const { settings, tutorshipData = {}, groupTutors = {}, groups = [] } = state;
     const { apiUrl, apiKey, professorName } = settings;
 
     try {
@@ -271,10 +271,21 @@ export const syncTutorshipData = async (state: AppState, dispatch: Dispatch<AppA
                 });
             }
 
+            // --- LÓGICA DE MAPEO INTELIGENTE ---
             // Sincronizar tutores de grupos (lo que configuraste en asignar_tutor.php)
             if (serverData && serverData.groupTutors) {
-                Object.entries(serverData.groupTutors).forEach(([gid, tutor]) => {
-                    dispatch({ type: 'SET_GROUP_TUTOR', payload: { groupId: gid, tutorName: tutor as string } });
+                Object.entries(serverData.groupTutors).forEach(([serverKey, tutor]) => {
+                    // 1. Intentar emparejar por ID exacto
+                    const groupById = groups.find(g => g.id === serverKey);
+                    if (groupById) {
+                        dispatch({ type: 'SET_GROUP_TUTOR', payload: { groupId: serverKey, tutorName: tutor as string } });
+                    } else {
+                        // 2. Intentar emparejar por Nombre de Grupo (Ej: "IAEV-40")
+                        const groupByNombre = groups.find(g => g.name.toLowerCase() === serverKey.toLowerCase());
+                        if (groupByNombre) {
+                            dispatch({ type: 'SET_GROUP_TUTOR', payload: { groupId: groupByNombre.id, tutorName: tutor as string } });
+                        }
+                    }
                 });
             }
         }
