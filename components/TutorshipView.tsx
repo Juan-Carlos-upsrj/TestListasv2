@@ -7,6 +7,7 @@ import Button from './common/Button';
 import Modal from './common/Modal';
 import { motion, AnimatePresence } from 'framer-motion';
 import { calculatePartialAverage } from '../services/gradeCalculation';
+import { syncTutorshipData } from '../services/syncService';
 
 interface TutorshipFormProps {
     student: Student;
@@ -74,6 +75,7 @@ const TutorshipView: React.FC = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [editingStudent, setEditingStudent] = useState<Student | null>(null);
     const [isEditorOpen, setIsEditorOpen] = useState(false);
+    const [isSyncing, setIsSyncing] = useState(false);
     
     const group = useMemo(() => groups.find(g => g.id === selectedGroupId), [groups, selectedGroupId]);
     
@@ -104,9 +106,15 @@ const TutorshipView: React.FC = () => {
         }
     };
 
-    const handleSetTutor = () => {
+    const handleSync = async () => {
+        setIsSyncing(true);
+        await syncTutorshipData(state, dispatch);
+        setIsSyncing(false);
+    };
+
+    const handleSetTutorShortcut = () => {
         if (!group) return;
-        const name = prompt("Escribe el nombre del Tutor de este grupo:", settings.professorName);
+        const name = prompt("Escribe el nombre del Tutor de este grupo:", currentTutor !== 'No asignado' ? currentTutor : settings.professorName);
         if (name !== null) {
             dispatch({ type: 'SET_GROUP_TUTOR', payload: { groupId: group.id, tutorName: name } });
         }
@@ -116,7 +124,7 @@ const TutorshipView: React.FC = () => {
         <div className="flex flex-col h-full overflow-hidden">
             <div className="bg-surface p-4 mb-6 rounded-2xl border border-border-color shadow-sm space-y-4 shrink-0">
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                    <div className="flex items-center gap-3">
+                    <div className="flex flex-wrap items-center gap-4">
                         <select 
                             value={selectedGroupId || ''} 
                             onChange={(e) => dispatch({ type: 'SET_SELECTED_GROUP', payload: e.target.value })}
@@ -129,30 +137,48 @@ const TutorshipView: React.FC = () => {
                         <div className="flex flex-col">
                             <span className="text-[10px] font-black uppercase text-text-secondary tracking-widest leading-none">Tutor Académico</span>
                             <div className="flex items-center gap-2">
-                                <span className="text-sm font-bold text-indigo-700">{currentTutor}</span>
-                                <button onClick={handleSetTutor} className="p-1 hover:bg-slate-100 rounded text-slate-400 hover:text-primary transition-all"><Icon name="edit-3" className="w-3.5 h-3.5"/></button>
+                                <span className={`text-sm font-bold ${canEdit ? 'text-indigo-700' : 'text-slate-600'}`}>{currentTutor}</span>
+                                <button onClick={handleSetTutorShortcut} title="Cambiar Tutor" className="p-1 hover:bg-slate-100 rounded text-slate-400 hover:text-primary transition-all"><Icon name="edit-3" className="w-3.5 h-3.5"/></button>
                             </div>
                         </div>
                     </div>
                     
-                    <div className="relative w-full md:w-64">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                            <Icon name="search" className="h-4 w-4" />
+                    <div className="flex items-center gap-3 w-full md:w-auto">
+                        <div className="relative flex-1 md:w-64">
+                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                                <Icon name="search" className="h-4 w-4" />
+                            </div>
+                            <input 
+                                type="text" 
+                                className="block w-full pl-9 pr-3 py-2 border-2 border-border-color rounded-xl bg-white text-sm focus:ring-2 focus:ring-primary" 
+                                placeholder="Buscar alumno..." 
+                                value={searchTerm} 
+                                onChange={(e) => setSearchTerm(e.target.value)} 
+                            />
                         </div>
-                        <input 
-                            type="text" 
-                            className="block w-full pl-9 pr-3 py-2 border-2 border-border-color rounded-xl bg-white text-sm focus:ring-2 focus:ring-primary" 
-                            placeholder="Buscar alumno..." 
-                            value={searchTerm} 
-                            onChange={(e) => setSearchTerm(e.target.value)} 
-                        />
+                        <Button 
+                            variant="secondary" 
+                            size="sm" 
+                            onClick={handleSync} 
+                            disabled={isSyncing}
+                            className={`${canEdit ? 'bg-indigo-600 !text-white hover:bg-indigo-700 shadow-md' : 'bg-white border-indigo-200 text-indigo-700'}`}
+                            title={canEdit ? "Subir información al servidor" : "Descargar información actualizada"}
+                        >
+                            <Icon name={isSyncing ? "loader" : "download-cloud"} className={`w-4 h-4 ${isSyncing ? 'animate-spin' : ''}`} />
+                            <span className="hidden sm:inline">{canEdit ? 'Sincronizar (Subir)' : 'Actualizar (Bajar)'}</span>
+                        </Button>
                     </div>
                 </div>
                 
-                {!canEdit && group && (
-                    <div className="flex items-center gap-2 px-3 py-2 bg-amber-50 border border-amber-200 rounded-xl text-amber-700">
-                        <Icon name="info" className="w-4 h-4 shrink-0" />
-                        <p className="text-xs font-medium">Estás en modo <strong>Solo Lectura</strong>. Únicamente el tutor <b>({currentTutor})</b> puede actualizar las fichas.</p>
+                {group && (
+                    <div className={`flex items-center gap-2 px-3 py-2 border rounded-xl transition-all ${canEdit ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-amber-50 border-amber-200 text-amber-700'}`}>
+                        <Icon name={canEdit ? "check-circle-2" : "info"} className="w-4 h-4 shrink-0" />
+                        <p className="text-xs font-medium">
+                            {canEdit ? 
+                                <span>Eres el <strong>Tutor</strong> de este grupo. Tus cambios se guardarán y sincronizarán para los demás profes.</span> : 
+                                <span>Modo <strong>Solo Lectura</strong>. Únicamente <b>{currentTutor}</b> puede editar estas fichas.</span>
+                            }
+                        </p>
                     </div>
                 )}
             </div>
@@ -164,7 +190,6 @@ const TutorshipView: React.FC = () => {
                             {filteredStudents.map((student) => {
                                 const entry = tutorshipData[student.id];
                                 
-                                // Calcular mini-estadísticas para la ficha
                                 const studentGrades = grades[group.id]?.[student.id] || {};
                                 const groupEvals = evaluations[group.id] || [];
                                 const studentAtt = attendance[group.id]?.[student.id] || {};
