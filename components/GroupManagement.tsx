@@ -105,7 +105,7 @@ export const BulkStudentForm: React.FC<{
 /**
  * Form component for creating or editing group information.
  */
-export const GroupForm: React.FC<{ group?: Group; existingGroups?: Group[]; onSave: (group: Group) => void; onCancel: () => void; onImportCriteria: (groupId: string) => void; }> = ({ group, existingGroups = [], onSave, onCancel, onImportCriteria }) => {
+export const GroupForm: React.FC<{ group?: Group; existingGroups?: Group[]; onSave: (group: Group) => void; onCancel: () => void; }> = ({ group, existingGroups = [], onSave, onCancel }) => {
     const { state, dispatch } = useContext(AppContext);
     const { groupTutors = {}, settings } = state;
 
@@ -337,7 +337,7 @@ const GroupManagement: React.FC = () => {
             )}
 
             <Modal isOpen={isGroupModalOpen} onClose={() => setGroupModalOpen(false)} title={editingGroup ? 'Editar Grupo' : 'Nuevo Grupo'} size="xl">
-                <GroupForm group={editingGroup} existingGroups={groups} onSave={(g) => { dispatch({ type: 'SAVE_GROUP', payload: g }); setGroupModalOpen(false); }} onCancel={() => setGroupModalOpen(false)} onImportCriteria={(id) => {}} />
+                <GroupForm group={editingGroup} existingGroups={groups} onSave={(g) => { dispatch({ type: 'SAVE_GROUP', payload: g }); setGroupModalOpen(false); }} onCancel={() => setGroupModalOpen(false)} />
             </Modal>
 
             <Modal isOpen={isStudentModalOpen} onClose={() => setStudentModalOpen(false)} title="Agregar Alumno">

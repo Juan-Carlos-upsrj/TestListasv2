@@ -230,7 +230,6 @@ export const syncGradesData = async (state: AppState, dispatch: Dispatch<AppActi
         });
 
         if (syncResponse.ok) {
-            const responseData = await syncResponse.json();
             dispatch({
                 type: 'ADD_TOAST',
                 payload: { message: `Éxito: Se actualizaron calificaciones en el servidor.`, type: 'success' }
