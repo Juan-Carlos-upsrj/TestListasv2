@@ -45,6 +45,8 @@ const defaultState: AppState = {
   teamNotes: {},
   coyoteTeamNotes: {},
   teacherSchedule: [],
+  tutorshipData: {},
+  groupTutors: {},
 };
 
 const appReducer = (state: AppState, action: AppAction): AppState => {
@@ -170,6 +172,8 @@ const appReducer = (state: AppState, action: AppAction): AppState => {
             teamNotes: cleanNotes(recoveredTeamNotes),
             coyoteTeamNotes: cleanNotes(recoveredCoyoteNotes),
             teacherSchedule: loadedState.teacherSchedule ?? [], 
+            tutorshipData: loadedState.tutorshipData ?? {},
+            groupTutors: loadedState.groupTutors ?? {},
         };
     }
     case 'SET_VIEW':
@@ -194,12 +198,14 @@ const appReducer = (state: AppState, action: AppAction): AppState => {
         const newAttendance = {...state.attendance}; delete newAttendance[action.payload];
         const newEvaluations = {...state.evaluations}; delete newEvaluations[action.payload];
         const newGrades = {...state.grades}; delete newGrades[action.payload];
+        const newTutors = {...state.groupTutors}; delete newTutors[action.payload];
         return {
             ...state,
             groups: newGroups,
             attendance: newAttendance,
             evaluations: newEvaluations,
             grades: newGrades,
+            groupTutors: newTutors,
             selectedGroupId: state.selectedGroupId === action.payload ? null : state.selectedGroupId,
         };
     }
@@ -228,9 +234,12 @@ const appReducer = (state: AppState, action: AppAction): AppState => {
         const { groupId, studentId } = action.payload;
         const newGrades = {...state.grades};
         if(newGrades[groupId]) delete newGrades[groupId][studentId];
+        const newTutorship = {...state.tutorshipData};
+        delete newTutorship[studentId];
         return {
             ...state,
             grades: newGrades,
+            tutorshipData: newTutorship,
             groups: state.groups.map(g => (g.id === groupId ? { ...g, students: g.students.filter(s => s.id !== studentId) } : g)),
         };
     }
@@ -540,6 +549,22 @@ const appReducer = (state: AppState, action: AppAction): AppState => {
     }
     case 'SET_TEACHER_SCHEDULE':
         return { ...state, teacherSchedule: action.payload };
+    case 'UPDATE_TUTORSHIP':
+        return {
+            ...state,
+            tutorshipData: {
+                ...state.tutorshipData,
+                [action.payload.studentId]: action.payload.entry
+            }
+        };
+    case 'SET_GROUP_TUTOR':
+        return {
+            ...state,
+            groupTutors: {
+                ...state.groupTutors,
+                [action.payload.groupId]: action.payload.tutorName
+            }
+        };
     default:
       return state;
   }

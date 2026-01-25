@@ -16,6 +16,7 @@ const parseQ = (q?: string) => parseInt(q || '0') || 0;
 const navItems: { view: ActiveView; label: string; icon: string; id: string }[] = [
   { view: 'dashboard', label: 'Inicio', icon: 'home', id: 'nav-item-dashboard' },
   { view: 'groups', label: 'Grupos', icon: 'users', id: 'nav-item-groups' },
+  { view: 'tutorship', label: 'Tutoreo', icon: 'book-marked', id: 'nav-item-tutorship' },
   { view: 'attendance', label: 'Asistencia', icon: 'check-square', id: 'nav-item-attendance' },
   { view: 'calendar', label: 'Calendario', icon: 'calendar', id: 'nav-item-calendar' },
   { view: 'grades', label: 'Calificaciones', icon: 'graduation-cap', id: 'nav-item-grades' },

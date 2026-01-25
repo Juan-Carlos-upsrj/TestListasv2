@@ -7,6 +7,7 @@ import GroupManagement from './components/GroupManagement';
 import AttendanceView from './components/AttendanceView';
 import ReportsView from './components/ReportsView';
 import GradesView from './components/GradesView';
+import TutorshipView from './components/TutorshipView';
 import ToastContainer from './components/ToastContainer';
 import CalendarView from './components/CalendarView';
 import UpdateNotification from './components/UpdateNotification';
@@ -179,6 +180,7 @@ const App: React.FC = () => {
       case 'calendar': return <CalendarView />;
       case 'grades': return <GradesView />;
       case 'reports': return <ReportsView />;
+      case 'tutorship': return <TutorshipView />;
       default: return <Dashboard />;
     }
   };
@@ -190,6 +192,7 @@ const App: React.FC = () => {
     calendar: 'Calendario',
     grades: 'Calificaciones',
     reports: 'Reportes',
+    tutorship: 'Tutoreo'
   };
 
   const isFullScreenView = state.activeView === 'attendance' || state.activeView === 'grades';

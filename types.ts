@@ -85,7 +85,7 @@ export interface Settings {
   reminderTime: number;    
 }
 
-export type ActiveView = 'dashboard' | 'groups' | 'attendance' | 'grades' | 'reports' | 'calendar';
+export type ActiveView = 'dashboard' | 'groups' | 'attendance' | 'grades' | 'reports' | 'calendar' | 'tutorship';
 
 export interface Toast {
     id: number;
@@ -107,6 +107,12 @@ export interface TeacherClass {
     duration: number;
     subjectName: string;
     groupName: string;
+}
+
+export interface TutorshipEntry {
+  strengths: string;
+  opportunities: string;
+  summary: string;
 }
 
 export interface AppState {
@@ -138,6 +144,8 @@ export interface AppState {
   teamNotes?: { [teamName: string]: string }; 
   coyoteTeamNotes?: { [teamName: string]: string }; // NUEVO
   teacherSchedule?: TeacherClass[]; 
+  tutorshipData: { [studentId: string]: TutorshipEntry }; // NUEVO
+  groupTutors: { [groupId: string]: string }; // NUEVO: Almacena quién es el tutor de cada grupo
 }
 
 // Added missing types to resolve import errors across the application
@@ -196,4 +204,6 @@ export type AppAction =
   | { type: 'ASSIGN_STUDENT_TEAM'; payload: { studentId: string, teamName: string | undefined, isCoyote: boolean } }
   | { type: 'CONVERT_TEAM_TYPE'; payload: { teamName: string, fromCoyote: boolean, groupId: string } } // NUEVO
   | { type: 'GENERATE_RANDOM_TEAMS'; payload: { groupId: string, maxTeamSize: number } } // NUEVO
-  | { type: 'SET_TEACHER_SCHEDULE'; payload: TeacherClass[] };
+  | { type: 'SET_TEACHER_SCHEDULE'; payload: TeacherClass[] }
+  | { type: 'UPDATE_TUTORSHIP'; payload: { studentId: string; entry: TutorshipEntry } } // NUEVO
+  | { type: 'SET_GROUP_TUTOR'; payload: { groupId: string; tutorName: string } }; // NUEVO
