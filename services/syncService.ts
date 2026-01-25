@@ -248,18 +248,16 @@ export const syncTutorshipData = async (state: AppState, dispatch: Dispatch<AppA
     const { settings, tutorshipData = {}, groupTutors = {} } = state;
     const { apiUrl, apiKey, professorName } = settings;
 
-    dispatch({ type: 'ADD_TOAST', payload: { message: 'Sincronizando información de tutoreo...', type: 'info' } });
-
     try {
         const syncUrl = getBaseApiUrl(apiUrl);
 
-        // 1. OBTENER DATOS DEL SERVIDOR (PULL) - Ahora incluye la configuración de tutores
+        // 1. OBTENER DATOS DEL SERVIDOR (PULL)
         const getResponse = await fetch(syncUrl.toString(), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'X-API-KEY': apiKey },
             body: JSON.stringify({ 
                 action: 'get-tutoreo',
-                profesor_nombre: professorName // Opcional: para que el servidor sepa quién pide
+                profesor_nombre: professorName
             })
         });
 
@@ -273,36 +271,32 @@ export const syncTutorshipData = async (state: AppState, dispatch: Dispatch<AppA
                 });
             }
 
-            // --- ACTUALIZACIÓN AUTOMÁTICA DE TUTORES ---
-            // El servidor puede devolver un mapa de { "id_grupo": "Nombre del Tutor" }
+            // Sincronizar tutores de grupos (lo que configuraste en asignar_tutor.php)
             if (serverData && serverData.groupTutors) {
                 Object.entries(serverData.groupTutors).forEach(([gid, tutor]) => {
                     dispatch({ type: 'SET_GROUP_TUTOR', payload: { groupId: gid, tutorName: tutor as string } });
                 });
             }
-            
-            // Si el servidor soporta una acción específica solo para tutores, se puede llamar aquí
         }
 
-        // 2. ENVIAR CAMBIOS LOCALES (PUSH)
-        const isTutorOfSomething = Object.values(groupTutors).some(t => t.toLowerCase() === professorName.toLowerCase());
+        // 2. ENVIAR CAMBIOS LOCALES (PUSH) - Solo si el profesor actual es tutor oficial de algún grupo
+        const isOfficialTutor = Object.values(groupTutors).some(t => t.toLowerCase() === professorName.toLowerCase());
         
-        if (isTutorOfSomething) {
+        if (isOfficialTutor) {
             await fetch(syncUrl.toString(), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'X-API-KEY': apiKey },
                 body: JSON.stringify({
                     action: 'sync-tutoreo',
                     tutorshipData,
-                    groupTutors
+                    groupTutors,
+                    profesor_nombre: professorName
                 })
             });
         }
 
-        dispatch({ type: 'ADD_TOAST', payload: { message: 'Tutoreo y Tutores sincronizados.', type: 'success' } });
-
     } catch (error) {
-        dispatch({ type: 'ADD_TOAST', payload: { message: 'Error al sincronizar tutoreo.', type: 'error' } });
+        console.error("Sync tutoreo error:", error);
     }
 };
 

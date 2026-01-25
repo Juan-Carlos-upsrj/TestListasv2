@@ -60,6 +60,13 @@ const TutorshipView: React.FC = () => {
     
     const group = useMemo(() => groups.find(g => g.id === selectedGroupId), [groups, selectedGroupId]);
     
+    // AUTO-SYNC: Cargar datos del tutor al entrar o cambiar de grupo
+    useEffect(() => {
+        if (selectedGroupId && settings.apiUrl) {
+            handleSync(true); // sync silencioso
+        }
+    }, [selectedGroupId]);
+
     useEffect(() => {
         if (!selectedGroupId && groups.length > 0) {
             dispatch({ type: 'SET_SELECTED_GROUP', payload: groups[0].id });
@@ -75,7 +82,7 @@ const TutorshipView: React.FC = () => {
         );
     }, [group, searchTerm]);
 
-    const currentTutor = group ? groupTutors[group.id] || 'Pendiente de Sincronización' : '';
+    const currentTutor = group ? groupTutors[group.id] || 'Buscando tutor...' : '';
     const canEdit = settings.professorName.trim().toLowerCase() === currentTutor.trim().toLowerCase();
 
     const handleSaveEntry = (entry: TutorshipEntry) => {
@@ -83,18 +90,20 @@ const TutorshipView: React.FC = () => {
             dispatch({ type: 'UPDATE_TUTORSHIP', payload: { studentId: editingStudent.id, entry } });
             setIsEditorOpen(false);
             setEditingStudent(null);
+            // Opcional: Auto-subir cambios tras editar
+            setTimeout(() => handleSync(true), 1000);
         }
     };
 
-    const handleSync = async () => {
-        setIsSyncing(true);
+    const handleSync = async (silent = false) => {
+        if (!silent) setIsSyncing(true);
         await syncTutorshipData(state, dispatch);
-        setIsSyncing(false);
+        if (!silent) setIsSyncing(false);
     };
 
     const handleManualSetTutor = () => {
         if (!group) return;
-        const name = prompt("Escribe el nombre del Tutor de este grupo:", currentTutor !== 'Pendiente de Sincronización' ? currentTutor : settings.professorName);
+        const name = prompt("Escribe el nombre del Tutor de este grupo:", currentTutor !== 'Buscando tutor...' ? currentTutor : settings.professorName);
         if (name !== null) {
             dispatch({ type: 'SET_GROUP_TUTOR', payload: { groupId: group.id, tutorName: name } });
         }
@@ -118,7 +127,7 @@ const TutorshipView: React.FC = () => {
                             <span className="text-[10px] font-black uppercase text-text-secondary tracking-widest leading-none">Tutor Académico (Servidor)</span>
                             <div className="flex items-center gap-2">
                                 <span className={`text-sm font-bold ${canEdit ? 'text-indigo-700' : 'text-slate-600'}`}>{currentTutor}</span>
-                                <button onClick={handleManualSetTutor} title="Asignación Manual" className="p-1 hover:bg-slate-100 rounded text-slate-400 hover:text-primary transition-all"><Icon name="edit-3" className="w-3.5 h-3.5"/></button>
+                                <button onClick={handleManualSetTutor} title="Cambio manual local" className="p-1 hover:bg-slate-100 rounded text-slate-400 hover:text-primary transition-all"><Icon name="edit-3" className="w-3.5 h-3.5"/></button>
                             </div>
                         </div>
                     </div>
@@ -133,13 +142,12 @@ const TutorshipView: React.FC = () => {
                         <Button 
                             variant="secondary" 
                             size="sm" 
-                            onClick={handleSync} 
+                            onClick={() => handleSync(false)} 
                             disabled={isSyncing}
                             className={`${canEdit ? 'bg-indigo-600 !text-white hover:bg-indigo-700' : 'bg-white border-indigo-200 text-indigo-700'}`}
-                            title="Descarga automáticamente quién es el tutor y las fichas de alumnos"
                         >
                             <Icon name={isSyncing ? "loader" : "download-cloud"} className={`w-4 h-4 ${isSyncing ? 'animate-spin' : ''}`} />
-                            <span className="hidden sm:inline">Actualizar (Sincronizar)</span>
+                            <span className="hidden sm:inline">Sincronizar Datos</span>
                         </Button>
                     </div>
                 </div>
@@ -149,8 +157,8 @@ const TutorshipView: React.FC = () => {
                         <Icon name={canEdit ? "check-circle-2" : "info"} className="w-4 h-4 shrink-0" />
                         <p className="text-xs font-medium">
                             {canEdit ? 
-                                <span><b>Acceso Total.</b> El servidor te reconoce como Tutor. Tus cambios se subirán a la nube.</span> : 
-                                <span><b>Modo Lectura.</b> Sincroniza para ver las últimas notas de <b>{currentTutor}</b>.</span>
+                                <span><b>Acceso de Tutor.</b> Tus notas se guardarán en la nube.</span> : 
+                                <span><b>Vista de Profesor.</b> Estás viendo las notas de <b>{currentTutor}</b>.</span>
                             }
                         </p>
                     </div>
