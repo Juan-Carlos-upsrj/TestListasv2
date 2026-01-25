@@ -203,8 +203,6 @@ export const syncGradesData = async (state: AppState, dispatch: Dispatch<AppActi
                         max_score: 10
                     });
                 }
-
-                // ... (remedials and extras remain the same)
             }
         }
 
@@ -255,32 +253,38 @@ export const syncTutorshipData = async (state: AppState, dispatch: Dispatch<AppA
     try {
         const syncUrl = getBaseApiUrl(apiUrl);
 
-        // 1. OBTENER DATOS DEL SERVIDOR (PULL)
+        // 1. OBTENER DATOS DEL SERVIDOR (PULL) - Ahora incluye la configuración de tutores
         const getResponse = await fetch(syncUrl.toString(), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'X-API-KEY': apiKey },
-            body: JSON.stringify({ action: 'get-tutoreo' })
+            body: JSON.stringify({ 
+                action: 'get-tutoreo',
+                profesor_nombre: professorName // Opcional: para que el servidor sepa quién pide
+            })
         });
 
         if (getResponse.ok) {
             const serverData = await getResponse.json();
-            // serverData format: { studentId: TutorshipEntry, groupId: tutorName }
+            
+            // Sincronizar fichas de alumnos
             if (serverData && serverData.tutorshipData) {
-                // Actualizar localmente solo si hay cambios reales para no sobreescribir lo que se acaba de teclear
-                // En una app real usaríamos timestamps, aquí hacemos un merge básico.
                 Object.entries(serverData.tutorshipData).forEach(([sid, entry]) => {
                    dispatch({ type: 'UPDATE_TUTORSHIP', payload: { studentId: sid, entry: entry as TutorshipEntry } });
                 });
             }
+
+            // --- ACTUALIZACIÓN AUTOMÁTICA DE TUTORES ---
+            // El servidor puede devolver un mapa de { "id_grupo": "Nombre del Tutor" }
             if (serverData && serverData.groupTutors) {
                 Object.entries(serverData.groupTutors).forEach(([gid, tutor]) => {
                     dispatch({ type: 'SET_GROUP_TUTOR', payload: { groupId: gid, tutorName: tutor as string } });
                 });
             }
+            
+            // Si el servidor soporta una acción específica solo para tutores, se puede llamar aquí
         }
 
         // 2. ENVIAR CAMBIOS LOCALES (PUSH)
-        // Solo enviamos si el profesor actual es tutor de algún grupo para evitar sobreescribir datos ajenos
         const isTutorOfSomething = Object.values(groupTutors).some(t => t.toLowerCase() === professorName.toLowerCase());
         
         if (isTutorOfSomething) {
@@ -295,7 +299,7 @@ export const syncTutorshipData = async (state: AppState, dispatch: Dispatch<AppA
             });
         }
 
-        dispatch({ type: 'ADD_TOAST', payload: { message: 'Tutoreo sincronizado correctamente.', type: 'success' } });
+        dispatch({ type: 'ADD_TOAST', payload: { message: 'Tutoreo y Tutores sincronizados.', type: 'success' } });
 
     } catch (error) {
         dispatch({ type: 'ADD_TOAST', payload: { message: 'Error al sincronizar tutoreo.', type: 'error' } });
@@ -307,37 +311,29 @@ export const syncScheduleData = async (state: AppState, dispatch: Dispatch<AppAc
     if (!settings.professorName || settings.professorName.trim() === 'Nombre del Profesor') {
         dispatch({
             type: 'ADD_TOAST',
-            payload: { message: 'Por favor, configura tu "Nombre del Profesor/a" en Configuración antes de sincronizar.', type: 'error' }
+            payload: { message: 'Por favor, configura tu "Nombre del Profesor/a" en Configuración.', type: 'error' }
         });
         return;
     }
 
-    dispatch({ type: 'ADD_TOAST', payload: { message: 'Sincronizando horario desde Firebase...', type: 'info' } });
+    dispatch({ type: 'ADD_TOAST', payload: { message: 'Sincronizando horario...', type: 'info' } });
 
     try {
         const trimmedProfessorName = settings.professorName.trim();
         const horario = await fetchHorarioCompleto(trimmedProfessorName);
 
         if (horario.length === 0) {
-            dispatch({ type: 'ADD_TOAST', payload: { message: 'No se encontraron clases para este profesor.', type: 'info' } });
+            dispatch({ type: 'ADD_TOAST', payload: { message: 'No se encontraron clases.', type: 'info' } });
             return;
         }
 
         dispatch({ type: 'SET_TEACHER_SCHEDULE', payload: horario });
 
-        let gruposCreados = 0;
-        let gruposActualizados = 0;
-
         const clasesPorGrupoUnico: { [uniqueName: string]: { subjectName: string; days: string[] } } = {};
-
         horario.forEach(clase => {
             const uniqueGroupName = `${clase.groupName} - ${clase.subjectName}`;
-
             if (!clasesPorGrupoUnico[uniqueGroupName]) {
-                clasesPorGrupoUnico[uniqueGroupName] = {
-                    subjectName: clase.subjectName,
-                    days: [],
-                };
+                clasesPorGrupoUnico[uniqueGroupName] = { subjectName: clase.subjectName, days: [] };
             }
             if (!clasesPorGrupoUnico[uniqueGroupName].days.includes(clase.day)) {
                 clasesPorGrupoUnico[uniqueGroupName].days.push(clase.day);
@@ -346,38 +342,27 @@ export const syncScheduleData = async (state: AppState, dispatch: Dispatch<AppAc
         
         for (const uniqueGroupName of Object.keys(clasesPorGrupoUnico)) {
             const info = clasesPorGrupoUnico[uniqueGroupName];
-            const diasDeClase = info.days;
-            
             const grupoExistente = groups.find(g => g.name.toLowerCase() === uniqueGroupName.toLowerCase());
-
             if (grupoExistente) {
-                dispatch({
-                    type: 'SAVE_GROUP',
-                    payload: { ...grupoExistente, classDays: diasDeClase as DayOfWeek[] }
-                });
-                gruposActualizados++;
+                dispatch({ type: 'SAVE_GROUP', payload: { ...grupoExistente, classDays: info.days as DayOfWeek[] } });
             } else {
                 const nuevoGrupo: Group = {
                     id: uuidv4(),
                     name: uniqueGroupName, 
                     subject: info.subjectName,
-                    classDays: diasDeClase as DayOfWeek[],
+                    classDays: info.days as DayOfWeek[],
                     students: [],
-                    color: GROUP_COLORS[(groups.length + gruposCreados) % GROUP_COLORS.length].name,
+                    color: GROUP_COLORS[groups.length % GROUP_COLORS.length].name,
                     evaluationTypes: {
                         partial1: [{ id: uuidv4(), name: 'General', weight: 100 }],
                         partial2: [{ id: uuidv4(), name: 'General', weight: 100 }],
                     },
                 };
                 dispatch({ type: 'SAVE_GROUP', payload: nuevoGrupo });
-                gruposCreados++;
             }
         }
-
-        dispatch({ type: 'ADD_TOAST', payload: { message: `¡Horario sincronizado! ${gruposCreados} grupos creados, ${gruposActualizados} actualizados.`, type: 'success' } });
-
+        dispatch({ type: 'ADD_TOAST', payload: { message: '¡Horario y grupos actualizados!', type: 'success' } });
     } catch (error) {
-        const msg = error instanceof Error ? error.message : 'Error desconocido al sincronizar.';
-        dispatch({ type: 'ADD_TOAST', payload: { message: msg, type: 'error' } });
+        dispatch({ type: 'ADD_TOAST', payload: { message: 'Error al sincronizar horario.', type: 'error' } });
     }
 };

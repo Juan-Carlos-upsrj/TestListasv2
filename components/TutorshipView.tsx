@@ -29,37 +29,18 @@ const TutorshipForm: React.FC<TutorshipFormProps> = ({ student, initialEntry, on
     return (
         <form onSubmit={handleSubmit} className="space-y-4">
             <p className="text-sm font-medium text-slate-500">Editando ficha de: <span className="text-primary font-bold">{student.name}</span></p>
-            
             <div>
                 <label className="block text-xs font-black uppercase text-text-secondary mb-1">Fortalezas</label>
-                <textarea 
-                    value={strengths} 
-                    onChange={e => setStrengths(e.target.value)}
-                    placeholder="Habilidades, aptitudes positivas, liderazgo..."
-                    className="w-full p-2 border-2 border-border-color rounded-xl bg-surface focus:ring-2 focus:ring-primary min-h-[80px]"
-                />
+                <textarea value={strengths} onChange={e => setStrengths(e.target.value)} placeholder="Habilidades, aptitudes positivas..." className="w-full p-2 border-2 border-border-color rounded-xl bg-surface focus:ring-2 focus:ring-primary min-h-[80px]"/>
             </div>
-            
             <div>
                 <label className="block text-xs font-black uppercase text-text-secondary mb-1">Áreas de Oportunidad</label>
-                <textarea 
-                    value={opportunities} 
-                    onChange={e => setOpportunities(e.target.value)}
-                    placeholder="Debilidades, retos, aspectos a mejorar..."
-                    className="w-full p-2 border-2 border-border-color rounded-xl bg-surface focus:ring-2 focus:ring-primary min-h-[80px]"
-                />
+                <textarea value={opportunities} onChange={e => setOpportunities(e.target.value)} placeholder="Debilidades, retos..." className="w-full p-2 border-2 border-border-color rounded-xl bg-surface focus:ring-2 focus:ring-primary min-h-[80px]"/>
             </div>
-            
             <div>
-                <label className="block text-xs font-black uppercase text-text-secondary mb-1">Resumen de Desempeño</label>
-                <textarea 
-                    value={summary} 
-                    onChange={e => setSummary(e.target.value)}
-                    placeholder="Comportamiento en clase, participación, notas generales para otros profes..."
-                    className="w-full p-2 border-2 border-border-color rounded-xl bg-surface focus:ring-2 focus:ring-primary min-h-[100px]"
-                />
+                <label className="block text-xs font-black uppercase text-text-secondary mb-1">Resumen Académico</label>
+                <textarea value={summary} onChange={e => setSummary(e.target.value)} placeholder="Notas generales para otros profesores..." className="w-full p-2 border-2 border-border-color rounded-xl bg-surface focus:ring-2 focus:ring-primary min-h-[100px]"/>
             </div>
-
             <div className="flex justify-end gap-3 pt-2">
                 <Button variant="secondary" onClick={onCancel}>Cancelar</Button>
                 <Button type="submit">Guardar Ficha</Button>
@@ -90,12 +71,11 @@ const TutorshipView: React.FC = () => {
         const term = searchTerm.toLowerCase();
         return group.students.filter(s => 
             s.name.toLowerCase().includes(term) || 
-            (s.matricula && s.matricula.toLowerCase().includes(term)) ||
-            (s.nickname && s.nickname.toLowerCase().includes(term))
+            (s.matricula && s.matricula.toLowerCase().includes(term))
         );
     }, [group, searchTerm]);
 
-    const currentTutor = group ? groupTutors[group.id] || 'No asignado' : '';
+    const currentTutor = group ? groupTutors[group.id] || 'Pendiente de Sincronización' : '';
     const canEdit = settings.professorName.trim().toLowerCase() === currentTutor.trim().toLowerCase();
 
     const handleSaveEntry = (entry: TutorshipEntry) => {
@@ -112,9 +92,9 @@ const TutorshipView: React.FC = () => {
         setIsSyncing(false);
     };
 
-    const handleSetTutorShortcut = () => {
+    const handleManualSetTutor = () => {
         if (!group) return;
-        const name = prompt("Escribe el nombre del Tutor de este grupo:", currentTutor !== 'No asignado' ? currentTutor : settings.professorName);
+        const name = prompt("Escribe el nombre del Tutor de este grupo:", currentTutor !== 'Pendiente de Sincronización' ? currentTutor : settings.professorName);
         if (name !== null) {
             dispatch({ type: 'SET_GROUP_TUTOR', payload: { groupId: group.id, tutorName: name } });
         }
@@ -135,10 +115,10 @@ const TutorshipView: React.FC = () => {
                         </select>
                         <div className="h-8 w-px bg-slate-200 hidden md:block"></div>
                         <div className="flex flex-col">
-                            <span className="text-[10px] font-black uppercase text-text-secondary tracking-widest leading-none">Tutor Académico</span>
+                            <span className="text-[10px] font-black uppercase text-text-secondary tracking-widest leading-none">Tutor Académico (Servidor)</span>
                             <div className="flex items-center gap-2">
                                 <span className={`text-sm font-bold ${canEdit ? 'text-indigo-700' : 'text-slate-600'}`}>{currentTutor}</span>
-                                <button onClick={handleSetTutorShortcut} title="Cambiar Tutor" className="p-1 hover:bg-slate-100 rounded text-slate-400 hover:text-primary transition-all"><Icon name="edit-3" className="w-3.5 h-3.5"/></button>
+                                <button onClick={handleManualSetTutor} title="Asignación Manual" className="p-1 hover:bg-slate-100 rounded text-slate-400 hover:text-primary transition-all"><Icon name="edit-3" className="w-3.5 h-3.5"/></button>
                             </div>
                         </div>
                     </div>
@@ -148,24 +128,18 @@ const TutorshipView: React.FC = () => {
                             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
                                 <Icon name="search" className="h-4 w-4" />
                             </div>
-                            <input 
-                                type="text" 
-                                className="block w-full pl-9 pr-3 py-2 border-2 border-border-color rounded-xl bg-white text-sm focus:ring-2 focus:ring-primary" 
-                                placeholder="Buscar alumno..." 
-                                value={searchTerm} 
-                                onChange={(e) => setSearchTerm(e.target.value)} 
-                            />
+                            <input type="text" className="block w-full pl-9 pr-3 py-2 border-2 border-border-color rounded-xl bg-white text-sm focus:ring-2 focus:ring-primary" placeholder="Buscar..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
                         </div>
                         <Button 
                             variant="secondary" 
                             size="sm" 
                             onClick={handleSync} 
                             disabled={isSyncing}
-                            className={`${canEdit ? 'bg-indigo-600 !text-white hover:bg-indigo-700 shadow-md' : 'bg-white border-indigo-200 text-indigo-700'}`}
-                            title={canEdit ? "Subir información al servidor" : "Descargar información actualizada"}
+                            className={`${canEdit ? 'bg-indigo-600 !text-white hover:bg-indigo-700' : 'bg-white border-indigo-200 text-indigo-700'}`}
+                            title="Descarga automáticamente quién es el tutor y las fichas de alumnos"
                         >
                             <Icon name={isSyncing ? "loader" : "download-cloud"} className={`w-4 h-4 ${isSyncing ? 'animate-spin' : ''}`} />
-                            <span className="hidden sm:inline">{canEdit ? 'Sincronizar (Subir)' : 'Actualizar (Bajar)'}</span>
+                            <span className="hidden sm:inline">Actualizar (Sincronizar)</span>
                         </Button>
                     </div>
                 </div>
@@ -175,8 +149,8 @@ const TutorshipView: React.FC = () => {
                         <Icon name={canEdit ? "check-circle-2" : "info"} className="w-4 h-4 shrink-0" />
                         <p className="text-xs font-medium">
                             {canEdit ? 
-                                <span>Eres el <strong>Tutor</strong> de este grupo. Tus cambios se guardarán y sincronizarán para los demás profes.</span> : 
-                                <span>Modo <strong>Solo Lectura</strong>. Únicamente <b>{currentTutor}</b> puede editar estas fichas.</span>
+                                <span><b>Acceso Total.</b> El servidor te reconoce como Tutor. Tus cambios se subirán a la nube.</span> : 
+                                <span><b>Modo Lectura.</b> Sincroniza para ver las últimas notas de <b>{currentTutor}</b>.</span>
                             }
                         </p>
                     </div>
@@ -189,36 +163,22 @@ const TutorshipView: React.FC = () => {
                         <AnimatePresence>
                             {filteredStudents.map((student) => {
                                 const entry = tutorshipData[student.id];
-                                
                                 const studentGrades = grades[group.id]?.[student.id] || {};
                                 const groupEvals = evaluations[group.id] || [];
                                 const studentAtt = attendance[group.id]?.[student.id] || {};
-                                
                                 const p1 = calculatePartialAverage(group, 1, groupEvals, studentGrades, settings, studentAtt);
                                 const p2 = calculatePartialAverage(group, 2, groupEvals, studentGrades, settings, studentAtt);
                                 const avg = (p1 !== null && p2 !== null) ? (p1 + p2) / 2 : (p1 || p2 || 0);
 
                                 return (
-                                    <motion.div 
-                                        layout
-                                        key={student.id}
-                                        initial={{ opacity: 0, scale: 0.9 }}
-                                        animate={{ opacity: 1, scale: 1 }}
-                                        className="bg-surface rounded-2xl border-2 border-border-color shadow-sm hover:shadow-md transition-all flex flex-col overflow-hidden relative group/card h-full min-h-[320px]"
-                                    >
+                                    <motion.div layout key={student.id} initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="bg-surface rounded-2xl border-2 border-border-color shadow-sm hover:shadow-md transition-all flex flex-col overflow-hidden relative h-full min-h-[320px]">
                                         <div className="p-4 bg-slate-50 border-b border-border-color flex justify-between items-start">
                                             <div className="min-w-0">
                                                 <h4 className="font-black text-sm text-slate-800 truncate leading-tight uppercase tracking-tighter">{student.name}</h4>
                                                 <p className="text-[10px] font-bold text-slate-400 mt-0.5">{student.matricula || 'SIN MATRÍCULA'}</p>
                                             </div>
                                             {canEdit && (
-                                                <button 
-                                                    onClick={() => { setEditingStudent(student); setIsEditorOpen(true); }}
-                                                    className="p-2 bg-white border border-slate-200 rounded-xl text-primary hover:bg-primary hover:text-white transition-all shadow-sm active:scale-95"
-                                                    title="Editar Ficha"
-                                                >
-                                                    <Icon name="edit-3" className="w-4 h-4"/>
-                                                </button>
+                                                <button onClick={() => { setEditingStudent(student); setIsEditorOpen(true); }} className="p-2 bg-white border border-slate-200 rounded-xl text-primary hover:bg-primary hover:text-white transition-all shadow-sm"><Icon name="edit-3" className="w-4 h-4"/></button>
                                             )}
                                         </div>
 
@@ -236,37 +196,18 @@ const TutorshipView: React.FC = () => {
 
                                             <div className="space-y-3">
                                                 <div>
-                                                    <h5 className="text-[9px] font-black uppercase tracking-widest text-emerald-600 flex items-center gap-1.5 mb-1">
-                                                        <Icon name="check-circle-2" className="w-3 h-3" /> Fortalezas
-                                                    </h5>
-                                                    <p className="text-[11px] leading-relaxed text-slate-600 italic">
-                                                        {entry?.strengths || 'Pendiente de registro...'}
-                                                    </p>
+                                                    <h5 className="text-[9px] font-black uppercase tracking-widest text-emerald-600 flex items-center gap-1.5 mb-1"><Icon name="check-circle-2" className="w-3 h-3" /> Fortalezas</h5>
+                                                    <p className="text-[11px] leading-relaxed text-slate-600 italic">{entry?.strengths || 'Sin registro...'}</p>
                                                 </div>
-                                                
                                                 <div>
-                                                    <h5 className="text-[9px] font-black uppercase tracking-widest text-amber-600 flex items-center gap-1.5 mb-1">
-                                                        <Icon name="info" className="w-3 h-3" /> Áreas de Oportunidad
-                                                    </h5>
-                                                    <p className="text-[11px] leading-relaxed text-slate-600 italic">
-                                                        {entry?.opportunities || 'Pendiente de registro...'}
-                                                    </p>
+                                                    <h5 className="text-[9px] font-black uppercase tracking-widest text-amber-600 flex items-center gap-1.5 mb-1"><Icon name="info" className="w-3 h-3" /> Oportunidades</h5>
+                                                    <p className="text-[11px] leading-relaxed text-slate-600 italic">{entry?.opportunities || 'Sin registro...'}</p>
                                                 </div>
-
                                                 <div className="pt-2 border-t border-slate-100">
-                                                    <h5 className="text-[9px] font-black uppercase tracking-widest text-indigo-700 flex items-center gap-1.5 mb-1">
-                                                        <Icon name="book-marked" className="w-3 h-3" /> Desempeño Académico
-                                                    </h5>
-                                                    <p className="text-[11px] font-medium leading-relaxed text-slate-700 bg-indigo-50/30 p-2 rounded-lg border border-indigo-100/50">
-                                                        {entry?.summary || 'Sin comentarios académicos generales.'}
-                                                    </p>
+                                                    <h5 className="text-[9px] font-black uppercase tracking-widest text-indigo-700 flex items-center gap-1.5 mb-1"><Icon name="book-marked" className="w-3 h-3" /> Académico</h5>
+                                                    <p className="text-[11px] font-medium leading-relaxed text-slate-700 bg-indigo-50/30 p-2 rounded-lg border border-indigo-100/50">{entry?.summary || 'Sin comentarios.'}</p>
                                                 </div>
                                             </div>
-                                        </div>
-                                        
-                                        <div className="px-4 py-2 bg-slate-50 border-t border-border-color flex items-center justify-between opacity-60">
-                                             <span className="text-[8px] font-bold uppercase text-slate-400">Ficha de Tutoreo</span>
-                                             <Icon name="graduation-cap" className="w-3.5 h-3.5 text-slate-300"/>
                                         </div>
                                     </motion.div>
                                 );
@@ -278,23 +219,13 @@ const TutorshipView: React.FC = () => {
                 <div className="flex-1 flex flex-col items-center justify-center opacity-30 py-20">
                     <Icon name="book-marked" className="w-20 h-20 mb-4"/>
                     <h3 className="text-xl font-black uppercase">Tutoreo Académico</h3>
-                    <p className="text-sm">Selecciona un grupo para ver las fichas de acompañamiento.</p>
+                    <p className="text-sm">Selecciona un grupo para ver sus fichas.</p>
                 </div>
             )}
 
             {editingStudent && (
-                <Modal 
-                    isOpen={isEditorOpen} 
-                    onClose={() => setIsEditorOpen(false)} 
-                    title="Editar Ficha de Tutoreo"
-                    size="lg"
-                >
-                    <TutorshipForm 
-                        student={editingStudent} 
-                        initialEntry={tutorshipData[editingStudent.id]}
-                        onSave={handleSaveEntry} 
-                        onCancel={() => setIsEditorOpen(false)} 
-                    />
+                <Modal isOpen={isEditorOpen} onClose={() => setIsEditorOpen(false)} title="Editar Ficha" size="lg">
+                    <TutorshipForm student={editingStudent} initialEntry={tutorshipData[editingStudent.id]} onSave={handleSaveEntry} onCancel={() => setIsEditorOpen(false)} />
                 </Modal>
             )}
         </div>
