@@ -31,9 +31,9 @@ const ChangelogModal: React.FC<ChangelogModalProps> = ({ isOpen, onClose }) => {
                         <Icon name="download-cloud" className="w-6 h-6" />
                     </div>
                     <div>
-                        <h4 className="font-bold text-slate-800">Sincronización de Tutoría</h4>
+                        <h4 className="font-bold text-slate-800">Sincronización en la Nube</h4>
                         <p className="text-sm text-slate-500 mt-1">
-                            Colabora con otros profes: Ahora puedes <strong>sincronizar las fichas en la nube</strong>. Los demás maestros podrán ver tus notas de tutoría, pero solo tú (como tutor) podrás editarlas.
+                            Colabora con otros profes: Ahora puedes <strong>sincronizar las fichas automáticamente</strong>. Los demás maestros podrán leer tus notas de tutoría, garantizando un acompañamiento integral.
                         </p>
                     </div>
                 </div>
@@ -43,21 +43,21 @@ const ChangelogModal: React.FC<ChangelogModalProps> = ({ isOpen, onClose }) => {
                         <Icon name="graduation-cap" className="w-6 h-6" />
                     </div>
                     <div>
-                        <h4 className="font-bold text-slate-800">Asignación de Tutores</h4>
+                        <h4 className="font-bold text-slate-800">Permisos por Tutor</h4>
                         <p className="text-sm text-slate-500 mt-1">
-                            Define quién es el tutor de cada grupo desde la <strong>Configuración del Grupo</strong>. El sistema comparará tu nombre con el del tutor para habilitar permisos de edición automáticos.
+                            Asigna al tutor en la <strong>Configuración del Grupo</strong>. Solo el profesor que coincida con el nombre del tutor podrá editar las fichas; los demás las verán en modo lectura.
                         </p>
                     </div>
                 </div>
 
                 <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200">
                     <p className="text-xs text-slate-400 italic text-center">
-                        "Build Hotfix: Se corrigieron errores técnicos internos para permitir la generación del instalador de escritorio con éxito."
+                        "Build Final: Se corrigieron los errores de TypeScript en la vista de Calificaciones y se optimizó el proceso de empaquetado del instalador."
                     </p>
                 </div>
 
                 <Button onClick={onClose} className="w-full justify-center">
-                    ¡Excelente, a trabajar!
+                    ¡Entendido, a trabajar!
                 </Button>
             </div>
         </Modal>

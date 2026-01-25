@@ -229,8 +229,8 @@ const GradesView: React.FC = () => {
     const renderHeaderButtons = (ev: Evaluation) => (
         <div className="flex flex-col items-center justify-center p-2 relative group w-full">
             <div className="absolute top-0 right-0 flex sm:opacity-0 sm:group-hover:opacity-100 transition-opacity bg-white/80 rounded-md shadow-sm z-10">
-                <button onClick={() => handleEditEvaluation(ev)} className="p-1 text-blue-600 hover:bg-blue-50 rounded" title="Editar"><Icon name="edit-3" className="w-3 h-3"/></button>
-                <button onClick={() => setConfirmDeleteEval(ev)} className="p-1 text-red-600 hover:bg-red-50 rounded" title="Borrar"><Icon name="trash-2" className="w-3 h-3"/></button>
+                <button onClick={() => handleEditEvaluation(ev)} className="p-1 text-blue-600 hover:bg-blue-50 rounded" title="Editar"><Icon name="edit-3" className="w-3.5 h-3.5"/></button>
+                <button onClick={() => setConfirmDeleteEval(ev)} className="p-1 text-red-600 hover:bg-red-50 rounded" title="Borrar"><Icon name="trash-2" className="w-3.5 h-3.5"/></button>
             </div>
             {ev.isTeamBased && (
                 <div className="flex items-center gap-1 mb-0.5" title={`Evaluación por ${ev.teamType === 'coyote' ? 'Equipo Coyote' : 'Equipo Base'}`}>
@@ -421,7 +421,7 @@ const GradesView: React.FC = () => {
             {group && (
                 <>
                     <Modal isOpen={isEvalModalOpen} onClose={() => setEvalModalOpen(false)} title={editingEvaluation ? 'Editar Evaluación' : 'Nueva Evaluación'}><EvaluationForm evaluation={editingEvaluation} group={group} onSave={(ev) => { dispatch({ type: 'SAVE_EVALUATION', payload: { groupId: group.id, evaluation: ev } }); setEvalModalOpen(false); }} onCancel={() => setEvalModalOpen(false)} /></Modal>
-                    <Modal isOpen={isGroupConfigOpen} onClose={() => setGroupConfigOpen(false)} title="Configuración del Grupo" size="xl"><GroupForm group={group} existingGroups={groups} onSave={(ug) => { dispatch({ type: 'SAVE_GROUP', payload: ug }); setGroupConfigOpen(false); }} onCancel={() => setGroupConfigOpen(false)} onImportCriteria={() => {}} /></Modal>
+                    <Modal isOpen={isGroupConfigOpen} onClose={() => setGroupConfigOpen(false)} title="Configuración del Grupo" size="xl"><GroupForm group={group} existingGroups={groups} onSave={(ug) => { dispatch({ type: 'SAVE_GROUP', payload: ug }); setGroupConfigOpen(false); }} onCancel={() => setGroupConfigOpen(false)} /></Modal>
                     <GradeImageModal isOpen={isImageModalOpen} onClose={() => setImageModalOpen(false)} group={group} evaluations={groupEvaluations} grades={groupGrades} attendance={attendance[group.id] || {}} settings={settings}/>
                     <CopyEvaluationsModal isOpen={isCopyModalOpen} onClose={() => setCopyModalOpen(false)} targetGroup={group} />
                     
