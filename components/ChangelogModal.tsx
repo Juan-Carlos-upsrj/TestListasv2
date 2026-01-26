@@ -16,31 +16,31 @@ const ChangelogModal: React.FC<ChangelogModalProps> = ({ isOpen, onClose }) => {
             <div className="space-y-6">
                 <div className="flex items-start gap-4">
                     <div className="bg-indigo-100 p-2 rounded-xl text-indigo-600 shrink-0">
-                        <Icon name="users" className="w-6 h-6" />
+                        <Icon name="upload-cloud" className="w-6 h-6" />
                     </div>
                     <div>
-                        <h4 className="font-bold text-slate-800">Deduplicación de Alumnos</h4>
+                        <h4 className="font-bold text-slate-800">Estabilidad en la Nube</h4>
                         <p className="text-sm text-slate-500 mt-1">
-                            ¡Limpieza automática! Si tienes al mismo alumno en varias materias del mismo cuatrimestre, ahora solo aparecerá una vez en la vista de <strong>Equipo Coyote</strong>.
+                            Se corrigió el error <strong>400 (Bad Request)</strong> al sincronizar asistencias. Ahora la comunicación con el servidor es más robusta y consistente.
                         </p>
                     </div>
                 </div>
 
                 <div className="flex items-start gap-4">
                     <div className="bg-orange-100 p-2 rounded-xl text-orange-600 shrink-0">
-                        <Icon name="grid" className="w-6 h-6" />
+                        <Icon name="users" className="w-6 h-6" />
                     </div>
                     <div>
-                        <h4 className="font-bold text-slate-800">Control de Equipos Optimizado</h4>
+                        <h4 className="font-bold text-slate-800">Deduplicación de Alumnos</h4>
                         <p className="text-sm text-slate-500 mt-1">
-                            Se ha refinado la lógica de búsqueda y visualización para que la gestión de equipos inter-grupales sea mucho más clara y rápida.
+                            Continuamos mejorando la vista de <strong>Equipos Coyote</strong>. Si tienes al mismo alumno en varias materias, el sistema lo identifica y limpia automáticamente.
                         </p>
                     </div>
                 </div>
 
                 <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200">
                     <p className="text-xs text-slate-400 italic text-center">
-                        "Build 2.8.0: Eliminando redundancias para una gestión más limpia."
+                        "Build 2.9.0: Resolviendo problemas de conectividad para una mejor experiencia multi-materia."
                     </p>
                 </div>
 

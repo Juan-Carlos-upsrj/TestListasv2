@@ -47,6 +47,8 @@ export const syncAttendanceData = async (state: AppState, dispatch: Dispatch<App
     dispatch({ type: 'ADD_TOAST', payload: { message: 'Sincronizando asistencias...', type: 'info' } });
     try {
         const fetchUrl = getBaseApiUrl(apiUrl);
+        
+        // 1. Obtener registros existentes del servidor para evitar duplicados
         const serverResponse = await fetch(fetchUrl.toString(), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'X-API-KEY': apiKey },
@@ -62,6 +64,8 @@ export const syncAttendanceData = async (state: AppState, dispatch: Dispatch<App
                 serverRecordsMap.set(key, rec.status);
             }
         });
+
+        // 2. Filtrar registros locales que necesitan subirse
         const recordsToSync: any[] = [];
         for (const [groupId, studentAttendances] of Object.entries(attendance)) {
             const group = groups.find(g => g.id === groupId);
@@ -75,23 +79,44 @@ export const syncAttendanceData = async (state: AppState, dispatch: Dispatch<App
                     const key = `${normalizeForMatch(student.name)}-${normalizeForMatch(group.name)}-${date}`;
                     const serverStatus = serverRecordsMap.get(key);
                     if (!serverStatus || serverStatus !== localStatus) {
-                        recordsToSync.push({ profesor_nombre: trimmedProfessorName, materia_nombre: group.subject, grupo_nombre: group.name, alumno_nombre: student.name, fecha: date, status: localStatus });
+                        recordsToSync.push({ 
+                            profesor_nombre: trimmedProfessorName, 
+                            materia_nombre: group.subject, 
+                            grupo_nombre: group.name, 
+                            alumno_nombre: student.name, 
+                            fecha: date, 
+                            status: localStatus 
+                        });
                     }
                 }
             }
         }
+
         if (recordsToSync.length === 0) {
             dispatch({ type: 'ADD_TOAST', payload: { message: 'Asistencia al día.', type: 'success' } });
             return;
         }
+
+        // 3. Ejecutar sincronización (Envío con Action Wrapper)
         const syncResponse = await fetch(fetchUrl.toString(), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'X-API-KEY': apiKey },
-            body: JSON.stringify(recordsToSync),
+            body: JSON.stringify({ 
+                action: 'sync-asistencias', 
+                data: recordsToSync 
+            }),
         });
-        if (syncResponse.ok) dispatch({ type: 'ADD_TOAST', payload: { message: `Sincronizado correctamente.`, type: 'success' } });
+
+        if (syncResponse.ok) {
+            dispatch({ type: 'ADD_TOAST', payload: { message: `Sincronizado correctamente.`, type: 'success' } });
+        } else {
+            const errorText = await syncResponse.text();
+            console.error('[SYNC ERROR]', errorText);
+            throw new Error(`Servidor respondió con error ${syncResponse.status}`);
+        }
     } catch (error) {
-        dispatch({ type: 'ADD_TOAST', payload: { message: 'Error de red.', type: 'error' } });
+        console.error(error);
+        dispatch({ type: 'ADD_TOAST', payload: { message: 'Error al sincronizar con la nube.', type: 'error' } });
     }
 };
 
