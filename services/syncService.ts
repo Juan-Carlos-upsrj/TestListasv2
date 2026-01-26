@@ -56,10 +56,7 @@ export const syncAttendanceData = async (state: AppState, dispatch: Dispatch<App
 
         if (!serverResponse.ok) {
             const errorData = await serverResponse.json().catch(() => ({ message: serverResponse.statusText }));
-            if (serverResponse.status === 404 || (await serverResponse.text()).trim() === "") {
-            } else {
-                throw new Error(`Error al obtener datos del servidor: ${errorData.message}`);
-            }
+            throw new Error(`Error al obtener datos: ${errorData.message || serverResponse.statusText}`);
         }
         
         const serverData = await serverResponse.json().catch(() => null);
@@ -67,41 +64,33 @@ export const syncAttendanceData = async (state: AppState, dispatch: Dispatch<App
         
         const serverRecordsMap = new Map<string, string>(); 
         serverRecords.forEach(rec => {
-            if (rec.alumno_id && rec.fecha) {
-                serverRecordsMap.set(`${rec.alumno_id}-${rec.fecha}`, rec.status);
+            if (rec.alumno_nombre && rec.fecha && rec.grupo_nombre) {
+                const key = `${rec.alumno_nombre.trim().toLowerCase()}-${rec.grupo_nombre.trim().toLowerCase()}-${rec.fecha}`;
+                serverRecordsMap.set(key, rec.status);
             }
         });
 
         const recordsToSync: any[] = [];
-        const groupsMap = new Map(groups.map(g => [g.id, g]));
-
         for (const [groupId, studentAttendances] of Object.entries(attendance)) {
-            const group = groupsMap.get(groupId);
+            const group = groups.find(g => g.id === groupId);
             if (!group) continue;
-            const studentsMap = new Map(group.students.map(s => [s.id, s]));
 
             for (const [studentId, dateAttendances] of Object.entries(studentAttendances)) {
-                const student = studentsMap.get(studentId);
+                const student = group.students.find(s => s.id === studentId);
                 if (!student) continue;
 
                 for (const [date, localStatus] of Object.entries(dateAttendances)) {
-                    if (syncScope === 'today' && date !== todayStr) {
-                        continue;
-                    }
-                    if (localStatus === AttendanceStatus.Pending) {
-                        continue;
-                    }
+                    if (syncScope === 'today' && date !== todayStr) continue;
+                    if (localStatus === AttendanceStatus.Pending) continue;
 
-                    const key = `${studentId}-${date}`;
+                    const key = `${student.name.trim().toLowerCase()}-${group.name.trim().toLowerCase()}-${date}`;
                     const serverStatus = serverRecordsMap.get(key);
 
                     if (!serverStatus || serverStatus !== localStatus) {
                         recordsToSync.push({
                             profesor_nombre: trimmedProfessorName,
                             materia_nombre: group.subject,
-                            grupo_id: groupId,
                             grupo_nombre: group.name,
-                            alumno_id: studentId,
                             alumno_nombre: student.name,
                             fecha: date,
                             status: localStatus,
@@ -112,36 +101,25 @@ export const syncAttendanceData = async (state: AppState, dispatch: Dispatch<App
         }
 
         if (recordsToSync.length === 0) {
-            dispatch({ type: 'ADD_TOAST', payload: { message: 'Tus datos ya están actualizados.', type: 'info' } });
+            dispatch({ type: 'ADD_TOAST', payload: { message: 'Asistencias al día.', type: 'info' } });
             return;
         }
 
-        dispatch({ type: 'ADD_TOAST', payload: { message: `Subiendo ${recordsToSync.length} registros nuevos o modificados...`, type: 'info' } });
-        
-        const syncUrl = getBaseApiUrl(apiUrl);
-
-        const syncResponse = await fetch(syncUrl.toString(), {
+        const syncResponse = await fetch(fetchUrl.toString(), {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-API-KEY': apiKey,
-            },
+            headers: { 'Content-Type': 'application/json', 'X-API-KEY': apiKey },
             body: JSON.stringify(recordsToSync),
         });
         
-        const responseData = await syncResponse.json();
-
+        const res = await syncResponse.json();
         if (syncResponse.ok) {
-            dispatch({
-                type: 'ADD_TOAST',
-                payload: { message: `Sincronización completa. (${responseData.registros_procesados} registros)`, type: 'success' }
-            });
+            dispatch({ type: 'ADD_TOAST', payload: { message: `Sincronizado: ${res.registros_procesados} cambios subidos.`, type: 'success' } });
         } else {
-             throw new Error(responseData.message || `Error del servidor: ${syncResponse.statusText}`);
+             throw new Error(res.message || "Error al subir datos");
         }
 
     } catch (error) {
-        const msg = error instanceof Error ? error.message : 'Error de red al sincronizar.';
+        const msg = error instanceof Error ? error.message : 'Error de red.';
         dispatch({ type: 'ADD_TOAST', payload: { message: msg, type: 'error' } });
     }
 };
@@ -151,93 +129,47 @@ export const syncGradesData = async (state: AppState, dispatch: Dispatch<AppActi
 
     const { settings, grades, evaluations, groups, attendance } = state;
     const { apiUrl, apiKey, professorName } = settings;
-    const trimmedProfessorName = professorName.trim();
-
-    dispatch({ type: 'ADD_TOAST', payload: { message: 'Calculando promedios para subir...', type: 'info' } });
 
     try {
         const recordsToSync: any[] = [];
-        
-        for (const group of groups) {
-            const groupId = group.id;
-            const groupEvaluations = evaluations[groupId] || [];
-            
-            for (const student of group.students) {
-                const studentId = student.id;
-                const studentGrades = grades[groupId]?.[studentId] || {};
-                const studentAttendance = attendance[groupId]?.[studentId] || {};
+        groups.forEach(group => {
+            const groupEvals = evaluations[group.id] || [];
+            group.students.forEach(student => {
+                const studentGrades = grades[group.id]?.[student.id] || {};
+                const studentAttendance = attendance[group.id]?.[student.id] || {};
 
-                const p1Avg = calculatePartialAverage(group, 1, groupEvaluations, studentGrades, settings, studentAttendance);
-                if (p1Avg !== null) {
-                    recordsToSync.push({
-                        profesor_nombre: trimmedProfessorName,
-                        grupo_id: groupId,
-                        grupo_nombre: group.name,
-                        materia_nombre: group.subject,
-                        alumno_id: studentId,
-                        alumno_nombre: student.name,
-                        alumno_matricula: student.matricula || '',
-                        evaluacion_id: 'PROMEDIO_P1', 
-                        evaluacion_nombre: 'Promedio Parcial 1',
-                        parcial: 1,
-                        calificacion: Number(p1Avg.toFixed(2)),
-                        max_score: 10
-                    });
-                }
-
-                const p2Avg = calculatePartialAverage(group, 2, groupEvaluations, studentGrades, settings, studentAttendance);
-                if (p2Avg !== null) {
-                    recordsToSync.push({
-                        profesor_nombre: trimmedProfessorName,
-                        grupo_id: groupId,
-                        grupo_nombre: group.name,
-                        materia_nombre: group.subject,
-                        alumno_id: studentId,
-                        alumno_nombre: student.name,
-                        alumno_matricula: student.matricula || '',
-                        evaluacion_id: 'PROMEDIO_P2', 
-                        evaluacion_nombre: 'Promedio Parcial 2',
-                        parcial: 2,
-                        calificacion: Number(p2Avg.toFixed(2)),
-                        max_score: 10
-                    });
-                }
-            }
-        }
-
-        if (recordsToSync.length === 0) {
-            dispatch({ type: 'ADD_TOAST', payload: { message: 'No hay promedios calculados para subir.', type: 'info' } });
-            return;
-        }
-
-        dispatch({ type: 'ADD_TOAST', payload: { message: `Subiendo ${recordsToSync.length} promedios...`, type: 'info' } });
-
-        const syncUrl = getBaseApiUrl(apiUrl);
-
-        const syncResponse = await fetch(syncUrl.toString(), {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-API-KEY': apiKey,
-            },
-            body: JSON.stringify({
-                action: 'sync-calificaciones',
-                data: recordsToSync
-            }),
+                [1, 2].forEach(parcial => {
+                    const avg = calculatePartialAverage(group, parcial as 1 | 2, groupEvals, studentGrades, settings, studentAttendance);
+                    if (avg !== null) {
+                        recordsToSync.push({
+                            profesor_nombre: professorName,
+                            grupo_nombre: group.name,
+                            materia_nombre: group.subject,
+                            alumno_nombre: student.name,
+                            alumno_matricula: student.matricula || '',
+                            evaluacion_nombre: `Promedio Parcial ${parcial}`,
+                            parcial,
+                            calificacion: Number(avg.toFixed(2))
+                        });
+                    }
+                });
+            });
         });
 
-        if (syncResponse.ok) {
-            dispatch({
-                type: 'ADD_TOAST',
-                payload: { message: `Éxito: Se actualizaron calificaciones en el servidor.`, type: 'success' }
-            });
-        } else {
-             throw new Error(`Error del servidor al subir calificaciones.`);
-        }
+        if (recordsToSync.length === 0) return;
 
+        const syncUrl = getBaseApiUrl(apiUrl);
+        const response = await fetch(syncUrl.toString(), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-API-KEY': apiKey },
+            body: JSON.stringify({ action: 'sync-calificaciones', data: recordsToSync }),
+        });
+
+        if (response.ok) {
+            dispatch({ type: 'ADD_TOAST', payload: { message: `Promedios actualizados en la nube.`, type: 'success' } });
+        }
     } catch (error) {
-        const msg = error instanceof Error ? error.message : 'Error de red al subir calificaciones.';
-        dispatch({ type: 'ADD_TOAST', payload: { message: msg, type: 'error' } });
+        dispatch({ type: 'ADD_TOAST', payload: { message: 'Error al subir calificaciones.', type: 'error' } });
     }
 };
 
@@ -250,7 +182,7 @@ export const syncTutorshipData = async (state: AppState, dispatch: Dispatch<AppA
     try {
         const syncUrl = getBaseApiUrl(apiUrl);
 
-        // 1. DESCARGAR DATOS (PULL)
+        // 1. DESCARGAR DATOS ACTUALIZADOS (PULL)
         const getResponse = await fetch(syncUrl.toString(), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'X-API-KEY': apiKey },
@@ -262,52 +194,29 @@ export const syncTutorshipData = async (state: AppState, dispatch: Dispatch<AppA
 
         if (getResponse.ok) {
             const rawServerData = await getResponse.json();
-            let serverRows: any[] = [];
-
-            if (Array.isArray(rawServerData)) {
-                serverRows = rawServerData;
-            } else if (rawServerData && rawServerData.tutorshipData) {
-                // Compatibilidad con formato antiguo
-                serverRows = Object.entries(rawServerData.tutorshipData).map(([id, data]: [string, any]) => ({
-                    alumno_id: id,
-                    alumno_nombre: data.studentName || '',
-                    fortalezas: data.strengths || '',
-                    oportunidades: data.opportunities || '',
-                    resumen: data.summary || ''
-                }));
-            }
-
+            
             const finalProcessedData: { [sid: string]: TutorshipEntry } = {};
-            let matchedCount = 0;
-
-            // Mapa para búsqueda ultra rápida por Nombre + Grupo
-            const localMap = new Map<string, string>(); // "NombreAlumno-NombreGrupo" -> localStudentId
+            const localStudentsMap = new Map<string, string>(); // "Nombre-Grupo" -> localID
             groups.forEach(g => g.students.forEach(s => {
-                const identityKey = `${s.name.trim().toLowerCase()}-${g.name.trim().toLowerCase()}`;
-                localMap.set(identityKey, s.id);
+                localStudentsMap.set(`${s.name.trim().toLowerCase()}-${g.name.trim().toLowerCase()}`, s.id);
             }));
 
+            let matchedCount = 0;
+            const serverRows = Array.isArray(rawServerData) ? rawServerData : (rawServerData.data || []);
+
             serverRows.forEach((row: any) => {
-                let targetLocalId = '';
-
-                // Intento 1: ¿El ID coincide exactamente? (Misma computadora)
-                const studentExistsById = groups.some(g => g.students.some(s => s.id === row.alumno_id));
-                if (studentExistsById) {
-                    targetLocalId = row.alumno_id;
-                } 
-                // Intento 2: ¿Coincide por Nombre + Grupo? (Diferente computadora)
-                else if (row.alumno_nombre && row.grupo_nombre) {
-                    const identityKey = `${row.alumno_nombre.trim().toLowerCase()}-${row.grupo_nombre.trim().toLowerCase()}`;
-                    targetLocalId = localMap.get(identityKey) || '';
-                }
-                // Intento 3: Solo Nombre (Fallback arriesgado pero útil)
-                else if (row.alumno_nombre) {
-                    const studentByName = groups.flatMap(g => g.students).find(s => s.name.trim().toLowerCase() === row.alumno_nombre.trim().toLowerCase());
-                    if (studentByName) targetLocalId = studentByName.id;
+                // Prioridad 1: Vincular por identidad nominal (Nombre + Grupo)
+                const key = `${(row.alumno_nombre || '').trim().toLowerCase()}-${(row.grupo_nombre || '').trim().toLowerCase()}`;
+                let targetId = localStudentsMap.get(key);
+                
+                // Prioridad 2: Si no hay nombre en la BD, probar por ID técnico (misma PC)
+                if (!targetId) {
+                    const studentExistsById = groups.some(g => g.students.some(s => s.id === row.alumno_id));
+                    if (studentExistsById) targetId = row.alumno_id;
                 }
 
-                if (targetLocalId) {
-                    finalProcessedData[targetLocalId] = {
+                if (targetId) {
+                    finalProcessedData[targetId] = {
                         strengths: row.fortalezas || '',
                         opportunities: row.oportunidades || '',
                         summary: row.resumen || ''
@@ -320,131 +229,98 @@ export const syncTutorshipData = async (state: AppState, dispatch: Dispatch<AppA
                 dispatch({ type: 'SET_TUTORSHIP_DATA_BULK', payload: finalProcessedData });
             }
 
-            // Sincronizar Tutores de Grupo (Misma lógica de identidad)
-            if (rawServerData && rawServerData.groupTutors) {
+            if (rawServerData.groupTutors) {
                 const mappedTutors: { [gid: string]: string } = {};
-                Object.entries(rawServerData.groupTutors).forEach(([serverKey, tutor]) => {
-                    const groupById = groups.find(g => g.id === serverKey);
-                    if (groupById) {
-                        mappedTutors[serverKey] = tutor as string;
-                    } else {
-                        const groupByNombre = groups.find(g => g.name.trim().toLowerCase() === serverKey.trim().toLowerCase());
-                        if (groupByNombre) mappedTutors[groupByNombre.id] = tutor as string;
-                    }
+                Object.entries(rawServerData.groupTutors).forEach(([serverGroupName, tutor]) => {
+                    const localGroup = groups.find(g => g.name.trim().toLowerCase() === serverGroupName.trim().toLowerCase());
+                    if (localGroup) mappedTutors[localGroup.id] = tutor as string;
                 });
                 dispatch({ type: 'SET_GROUP_TUTORS_BULK', payload: mappedTutors });
             }
             
-            dispatch({ type: 'ADD_TOAST', payload: { message: `Descarga: ${matchedCount} fichas vinculadas con éxito.`, type: 'info' } });
+            dispatch({ type: 'ADD_TOAST', payload: { message: `Descarga: ${matchedCount} fichas sincronizadas.`, type: 'info' } });
         }
 
-        // 2. SUBIR CAMBIOS (PUSH)
-        // Solo si soy el tutor de algún grupo subo mis cambios
-        const isOfficialTutor = Object.values(groupTutors).some(t => t.trim().toLowerCase() === professorName.trim().toLowerCase());
-        
-        if (isOfficialTutor) {
-            // Construimos una lista plana con identidades completas para la base de datos
-            const recordsToUpload: any[] = [];
+        // 2. SUBIR MIS CAMBIOS LOCALES (PUSH)
+        // Forzamos el envío de Nombres para llenar los campos NULL de tu base de datos
+        const recordsToUpload: any[] = [];
+        groups.forEach(g => {
+            const isMyGroup = groupTutors[g.id]?.trim().toLowerCase() === professorName.trim().toLowerCase();
             
-            groups.forEach(g => {
-                g.students.forEach(s => {
-                    const entry = tutorshipData[s.id];
-                    if (entry && (entry.strengths || entry.opportunities || entry.summary)) {
-                        recordsToUpload.push({
-                            profesor_nombre: professorName,
-                            grupo_id: g.id,
-                            grupo_nombre: g.name,
-                            alumno_id: s.id,
-                            alumno_nombre: s.name,
-                            fortalezas: entry.strengths,
-                            oportunidades: entry.opportunities,
-                            resumen: entry.summary
-                        });
-                    }
-                });
-            });
-
-            if (recordsToUpload.length > 0) {
-                const syncResponse = await fetch(syncUrl.toString(), {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'X-API-KEY': apiKey },
-                    body: JSON.stringify({
-                        action: 'sync-tutoreo',
-                        data: recordsToUpload,
-                        groupTutors, // Enviamos el mapeo de tutores también
-                        profesor_nombre: professorName
-                    })
-                });
-                
-                if (syncResponse.ok) {
-                    dispatch({ type: 'ADD_TOAST', payload: { message: 'Tus fichas se han subido a la nube.', type: 'success' } });
+            g.students.forEach(s => {
+                const entry = tutorshipData[s.id];
+                // Si el registro existe localmente, lo mandamos con TODO su contexto de nombres
+                if (entry && (entry.strengths || entry.opportunities || entry.summary)) {
+                    recordsToUpload.push({
+                        profesor_nombre: professorName,
+                        grupo_id: g.id, 
+                        grupo_nombre: g.name,
+                        alumno_id: s.id,
+                        alumno_nombre: s.name,
+                        fortalezas: entry.strengths,
+                        oportunidades: entry.opportunities,
+                        resumen: entry.summary
+                    });
                 }
+            });
+        });
+
+        if (recordsToUpload.length > 0) {
+            const postResponse = await fetch(syncUrl.toString(), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-API-KEY': apiKey },
+                body: JSON.stringify({
+                    action: 'sync-tutoreo',
+                    data: recordsToUpload,
+                    groupTutors,
+                    profesor_nombre: professorName
+                })
+            });
+            
+            if (postResponse.ok) {
+                 dispatch({ type: 'ADD_TOAST', payload: { message: 'Datos subidos correctamente.', type: 'success' } });
             }
         }
 
     } catch (error) {
-        console.error("Sync tutoreo error:", error);
-        dispatch({ type: 'ADD_TOAST', payload: { message: 'Error de red en tutoría.', type: 'error' } });
+        console.error("Sync error:", error);
     }
 };
 
 export const syncScheduleData = async (state: AppState, dispatch: Dispatch<AppAction>) => {
     const { settings, groups } = state;
     if (!settings.professorName || settings.professorName.trim() === 'Nombre del Profesor') {
-        dispatch({
-            type: 'ADD_TOAST',
-            payload: { message: 'Por favor, configura tu "Nombre del Profesor/a" en Configuración.', type: 'error' }
-        });
+        dispatch({ type: 'ADD_TOAST', payload: { message: 'Escribe tu nombre en Configuración.', type: 'error' } });
         return;
     }
 
-    dispatch({ type: 'ADD_TOAST', payload: { message: 'Sincronizando horario...', type: 'info' } });
-
     try {
-        const trimmedProfessorName = settings.professorName.trim();
-        const horario = await fetchHorarioCompleto(trimmedProfessorName);
-
-        if (horario.length === 0) {
-            dispatch({ type: 'ADD_TOAST', payload: { message: 'No se encontraron clases.', type: 'info' } });
-            return;
-        }
+        const horario = await fetchHorarioCompleto(settings.professorName.trim());
+        if (horario.length === 0) return;
 
         dispatch({ type: 'SET_TEACHER_SCHEDULE', payload: horario });
 
-        const clasesPorGrupoUnico: { [uniqueName: string]: { subjectName: string; days: string[] } } = {};
-        horario.forEach(clase => {
-            const uniqueGroupName = `${clase.groupName} - ${clase.subjectName}`;
-            if (!clasesPorGrupoUnico[uniqueGroupName]) {
-                clasesPorGrupoUnico[uniqueGroupName] = { subjectName: clase.subjectName, days: [] };
-            }
-            if (!clasesPorGrupoUnico[uniqueGroupName].days.includes(clase.day)) {
-                clasesPorGrupoUnico[uniqueGroupName].days.push(clase.day);
-            }
+        const clasesPorGrupoUnico: { [name: string]: { sub: string; days: string[] } } = {};
+        horario.forEach(c => {
+            const key = `${c.groupName} - ${c.subjectName}`;
+            if (!clasesPorGrupoUnico[key]) clasesPorGrupoUnico[key] = { sub: c.subjectName, days: [] };
+            if (!clasesPorGrupoUnico[key].days.includes(c.day)) clasesPorGrupoUnico[key].days.push(c.day);
         });
         
-        for (const uniqueGroupName of Object.keys(clasesPorGrupoUnico)) {
-            const info = clasesPorGrupoUnico[uniqueGroupName];
-            const grupoExistente = groups.find(g => g.name.toLowerCase() === uniqueGroupName.toLowerCase());
-            if (grupoExistente) {
-                dispatch({ type: 'SAVE_GROUP', payload: { ...grupoExistente, classDays: info.days as DayOfWeek[] } });
+        for (const [name, info] of Object.entries(clasesPorGrupoUnico)) {
+            const exist = groups.find(g => g.name.toLowerCase() === name.toLowerCase());
+            if (exist) {
+                dispatch({ type: 'SAVE_GROUP', payload: { ...exist, classDays: info.days as DayOfWeek[] } });
             } else {
-                const nuevoGrupo: Group = {
-                    id: uuidv4(),
-                    name: uniqueGroupName, 
-                    subject: info.subjectName,
-                    classDays: info.days as DayOfWeek[],
-                    students: [],
+                dispatch({ type: 'SAVE_GROUP', payload: {
+                    id: uuidv4(), name, subject: info.sub, classDays: info.days as DayOfWeek[], students: [],
                     color: GROUP_COLORS[groups.length % GROUP_COLORS.length].name,
-                    evaluationTypes: {
-                        partial1: [{ id: uuidv4(), name: 'General', weight: 100 }],
-                        partial2: [{ id: uuidv4(), name: 'General', weight: 100 }],
-                    },
-                };
-                dispatch({ type: 'SAVE_GROUP', payload: nuevoGrupo });
+                    evaluationTypes: { partial1: [{ id: uuidv4(), name: 'General', weight: 100 }], partial2: [{ id: uuidv4(), name: 'General', weight: 100 }] }
+                } as Group });
             }
         }
-        dispatch({ type: 'ADD_TOAST', payload: { message: '¡Horario y grupos actualizados!', type: 'success' } });
-    } catch (error) {
-        dispatch({ type: 'ADD_TOAST', payload: { message: 'Error al sincronizar horario.', type: 'error' } });
+        dispatch({ type: 'ADD_TOAST', payload: { message: 'Horario sincronizado.', type: 'success' } });
+    } catch (e) {
+        dispatch({ type: 'ADD_TOAST', payload: { message: 'Error con Firebase/Horario.', type: 'error' } });
     }
 };
