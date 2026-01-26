@@ -29,6 +29,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
     const [pendingImportFile, setPendingImportFile] = useState<File | null>(null);
     const [pendingRestoreArchive, setPendingRestoreArchive] = useState<Archive | null>(null);
     const [pendingDeleteArchive, setPendingDeleteArchive] = useState<Archive | null>(null);
+    const [showHardResetConfirm, setShowHardResetConfirm] = useState(false);
 
     useEffect(() => {
         setSettings(state.settings);
@@ -90,7 +91,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
         if (window.electronAPI) {
             window.electronAPI.checkForUpdates();
         } else if (settings.mobileUpdateUrl) {
-            // Logic for Web/Mobile
             try {
                 const updateInfo = await checkForMobileUpdate(settings.mobileUpdateUrl, APP_VERSION);
                 if (updateInfo) {
@@ -100,7 +100,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                 }
             } catch (e) {
                 const msg = e instanceof Error ? e.message : 'Error desconocido';
-                // Show a shortened error message
                 setUpdateStatus(`Error: ${msg.substring(0, 30)}...`);
             }
             setIsChecking(false);
@@ -108,6 +107,20 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
             setUpdateStatus('Configura la URL de actualización primero.');
             setIsChecking(false);
         }
+    };
+
+    const handleHardReset = () => {
+        // Clear all caches and reload
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then(registrations => {
+                for (let registration of registrations) {
+                    registration.unregister();
+                }
+            });
+        }
+        
+        // Force clean cache reload
+        window.location.href = window.location.origin + '?cb=' + Date.now();
     };
 
     const confirmImportAction = async () => {
@@ -159,20 +172,23 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                     <fieldset className="border p-4 rounded-lg border-border-color">
                          <legend className="px-2 font-semibold">Sistema</legend>
                          
-                         {/* Unified Update UI */}
                         <div className="flex items-center justify-between">
                             <div>
-                                <p className="text-sm font-medium">Actualizaciones Automáticas {window.electronAPI ? '(PC)' : '(Móvil/Web)'}</p>
+                                <p className="text-sm font-medium">Actualizaciones Automáticas</p>
                                 <p className="text-xs text-text-secondary truncate max-w-[200px]" title={updateStatus}>
                                     {updateStatus || 'Versión actual instalada.'}
                                 </p>
                             </div>
-                            <Button size="sm" variant="secondary" onClick={handleCheckForUpdates} disabled={isChecking}>
-                                {isChecking ? 'Buscando...' : 'Buscar Actualizaciones'}
-                            </Button>
+                            <div className="flex gap-2">
+                                <Button size="sm" variant="secondary" onClick={() => setShowHardResetConfirm(true)} title="Forzar recarga de archivos">
+                                    <Icon name="list-checks" className="w-4 h-4" />
+                                </Button>
+                                <Button size="sm" variant="secondary" onClick={handleCheckForUpdates} disabled={isChecking}>
+                                    {isChecking ? 'Buscando...' : 'Buscar Actualizaciones'}
+                                </Button>
+                            </div>
                         </div>
                         
-                         {/* Extra Mobile config if needed */}
                          {!window.electronAPI && (
                              <div className="mt-4 pt-4 border-t border-border-color">
                                 <label htmlFor="mobileUpdateUrl" className="block text-sm font-medium">Repositorio de GitHub</label>
@@ -185,9 +201,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                                     placeholder="https://github.com/usuario/repositorio"
                                     className="mt-1 w-full p-2 border border-border-color rounded-md bg-surface focus:ring-2 focus:ring-primary"
                                 />
-                                <p className="text-xs text-text-secondary mt-1">
-                                    Introduce la URL principal del repositorio. El sistema buscará automáticamente en la sección de "Releases".
-                                </p>
                              </div>
                          )}
                     </fieldset>
@@ -212,29 +225,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                             <Button onClick={() => setTransitionOpen(true)} className="w-full justify-center bg-indigo-600 hover:bg-indigo-700 text-white">
                                 <Icon name="users" className="w-4 h-4"/> Asistente de Cierre de Ciclo
                             </Button>
-                            <p className="text-xs text-text-secondary mt-2 text-center">Usa esto al finalizar el cuatrimestre para promover grupos y limpiar datos.</p>
                         </div>
                     </fieldset>
-                    
-                    {state.archives.length > 0 && (
-                        <fieldset className="border p-4 rounded-lg border-border-color bg-slate-50 dark:bg-slate-800/50">
-                            <legend className="px-2 font-semibold text-indigo-600 dark:text-indigo-400">Historial de Ciclos</legend>
-                            <div className="space-y-2 max-h-40 overflow-y-auto">
-                                {state.archives.map(archive => (
-                                    <div key={archive.id} className="flex items-center justify-between p-2 bg-surface rounded border border-border-color text-sm">
-                                        <div>
-                                            <p className="font-semibold">{archive.name}</p>
-                                            <p className="text-xs text-text-secondary">{new Date(archive.dateArchived).toLocaleDateString()}</p>
-                                        </div>
-                                        <div className="flex gap-2">
-                                            <button onClick={() => setPendingRestoreArchive(archive)} className="px-2 py-1 bg-indigo-100 text-indigo-700 rounded hover:bg-indigo-200 text-xs font-medium">Cargar</button>
-                                            <button onClick={() => setPendingDeleteArchive(archive)} className="p-1 text-red-500 hover:bg-red-100 rounded"><Icon name="trash-2" className="w-4 h-4"/></button>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </fieldset>
-                    )}
                     
                      <fieldset className="border p-4 rounded-lg border-border-color">
                         <legend className="px-2 font-semibold">Información del Docente</legend>
@@ -249,70 +241,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                                 placeholder="Ej. Prof. Juan Pérez"
                                 className="mt-1 w-full p-2 border border-border-color rounded-md bg-surface focus:ring-2 focus:ring-primary"
                             />
-                            <p className="text-xs text-text-secondary mt-1">Este nombre aparecerá en los reportes generados y se usará para la sincronización de horarios.</p>
-                        </div>
-                    </fieldset>
-
-                    <fieldset className="border p-4 rounded-lg border-border-color">
-                        <legend className="px-2 font-semibold">Integración de Calendario</legend>
-                        <div className="space-y-4">
-                            <div>
-                                <label htmlFor="googleCalendarUrl" className="block text-sm font-medium">URL de Google Calendar (formato iCal público)</label>
-                                <input
-                                    type="url"
-                                    id="googleCalendarUrl"
-                                    name="googleCalendarUrl"
-                                    value={settings.googleCalendarUrl}
-                                    onChange={handleChange}
-                                    placeholder="Pega aquí la dirección pública en formato iCal"
-                                    className="mt-1 w-full p-2 border border-border-color rounded-md bg-surface focus:ring-2 focus:ring-primary"
-                                />
-                                <p className="text-xs text-text-secondary mt-1">Esto permitirá mostrar los eventos de tu calendario de Google directamente en la aplicación.</p>
-                            </div>
-                             <div>
-                                <label className="block text-sm font-medium mb-2">Color para Eventos de Google Calendar</label>
-                                <div className="flex flex-wrap gap-3">
-                                    {GROUP_COLORS.map(c => (
-                                        <button
-                                            type="button"
-                                            key={c.name}
-                                            onClick={() => setSettings(s => ({ ...s, googleCalendarColor: c.name }))}
-                                            title={c.name}
-                                            className={`w-8 h-8 rounded-full ${c.bg} transition-transform transform hover:scale-110 focus:outline-none ${settings.googleCalendarColor === c.name ? 'ring-2 ring-offset-2 ring-primary ring-offset-surface' : ''}`}
-                                        />
-                                    ))}
-                                </div>
-                            </div>
-                        </div>
-                    </fieldset>
-
-                    <fieldset className="border p-4 rounded-lg border-border-color">
-                        <legend className="px-2 font-semibold">Sincronización con Servidor</legend>
-                        <div className="space-y-4">
-                            <div>
-                                <label htmlFor="apiUrl" className="block text-sm font-medium">URL del API de Sincronización</label>
-                                <input
-                                    type="url"
-                                    id="apiUrl"
-                                    name="apiUrl"
-                                    value={settings.apiUrl}
-                                    onChange={handleChange}
-                                    placeholder="https://api.ejemplo.com/asistencia"
-                                    className="mt-1 w-full p-2 border border-border-color rounded-md bg-surface focus:ring-2 focus:ring-primary"
-                                />
-                            </div>
-                            <div>
-                                <label htmlFor="apiKey" className="block text-sm font-medium">Clave de API Secreta</label>
-                                <input
-                                    type="password"
-                                    id="apiKey"
-                                    name="apiKey"
-                                    value={settings.apiKey}
-                                    onChange={handleChange}
-                                    placeholder="••••••••••••••••"
-                                    className="mt-1 w-full p-2 border border-border-color rounded-md bg-surface focus:ring-2 focus:ring-primary"
-                                />
-                            </div>
                         </div>
                     </fieldset>
 
@@ -323,34 +251,12 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                                 <label htmlFor="showMatricula" className="font-medium text-sm">Mostrar Columna de Matrícula</label>
                                 <input type="checkbox" id="showMatricula" name="showMatricula" checked={settings.showMatricula} onChange={handleChange} className="h-5 w-5 rounded text-primary focus:ring-primary" />
                             </div>
-                            <div className="flex items-center justify-between">
-                                <label htmlFor="showTeamsInGrades" className="font-medium text-sm">Mostrar Equipos en Calificaciones</label>
-                                <input type="checkbox" id="showTeamsInGrades" name="showTeamsInGrades" checked={settings.showTeamsInGrades} onChange={handleChange} className="h-5 w-5 rounded text-primary focus:ring-primary" />
-                            </div>
                             
-                            {/* NUEVOS CONTROLES DE ALERTA */}
                             <div className="pt-2 border-t border-border-color space-y-3">
                                 <div className="flex items-center justify-between">
                                     <label htmlFor="enableReminders" className="font-bold text-sm text-indigo-600">Habilitar Recordatorios de Clase</label>
                                     <input type="checkbox" id="enableReminders" name="enableReminders" checked={settings.enableReminders} onChange={handleChange} className="h-5 w-5 rounded text-indigo-600 focus:ring-indigo-500" />
                                 </div>
-                                {settings.enableReminders && (
-                                    <div className="flex items-center justify-between animate-in fade-in slide-in-from-top-1 duration-200">
-                                        <label htmlFor="reminderTime" className="text-xs font-medium text-text-secondary">Anticipación del recordatorio (minutos):</label>
-                                        <div className="flex items-center gap-2">
-                                            <input 
-                                                type="number" 
-                                                id="reminderTime" 
-                                                name="reminderTime" 
-                                                value={settings.reminderTime} 
-                                                onChange={handleChange} 
-                                                min="1" max="120"
-                                                className="w-16 p-1 text-center border border-border-color rounded bg-surface focus:ring-1 focus:ring-primary text-sm"
-                                            />
-                                            <span className="text-xs text-text-secondary font-bold">min</span>
-                                        </div>
-                                    </div>
-                                )}
                             </div>
 
                             <div className="pt-2 border-t border-border-color">
@@ -367,11 +273,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                                     <option value="abbrev">Solo Abreviatura (MAT)</option>
                                 </select>
                             </div>
-                            <div>
-                                <label htmlFor="lowAttendanceThreshold" className="block text-sm font-medium">Umbral de Asistencia Baja (%)</label>
-                                <input type="number" id="lowAttendanceThreshold" name="lowAttendanceThreshold" value={settings.lowAttendanceThreshold} onChange={handleChange} min="0" max="100" className="mt-1 w-full p-2 border border-border-color rounded-md bg-surface focus:ring-2 focus:ring-primary text-sm" />
-                                <p className="text-xs text-text-secondary mt-1">Se marcarán en reportes los alumnos con asistencia por debajo de este porcentaje.</p>
-                          </div>
                          </div>
                      </fieldset>
 
@@ -385,10 +286,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                                 <Icon name="upload-cloud" /> Importar Respaldo
                             </Button>
                             <Button variant="secondary" onClick={() => syncAttendanceData(state, dispatch, 'all')} className="w-full">
-                                <Icon name="upload-cloud" /> Sinc. Asistencia (Completo)
-                            </Button>
-                            <Button variant="secondary" onClick={() => syncGradesData(state, dispatch)} className="w-full">
-                                <Icon name="graduation-cap" /> Sinc. Calificaciones
+                                <Icon name="upload-cloud" /> Sinc. Asistencia
                             </Button>
                             <Button variant="secondary" onClick={() => syncScheduleData(state, dispatch)} className="w-full bg-accent text-white hover:opacity-90">
                                 <Icon name="download-cloud" /> Actualizar Horario
@@ -401,9 +299,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                                 className="hidden"
                             />
                         </div>
-                        <p className="text-xs text-text-secondary mt-2">
-                            <strong className="text-accent-yellow-dark">Importante:</strong> Importar un respaldo reemplazará toda la información actual. Sincronizar el horario agregará o actualizará grupos sin borrar los existentes.
-                        </p>
                     </fieldset>
                     
                 </div>
@@ -415,7 +310,19 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
             
             <SemesterTransitionModal isOpen={isTransitionOpen} onClose={() => setTransitionOpen(false)} />
 
-            {/* --- Confirmation Modals for Settings --- */}
+            <ConfirmationModal
+                isOpen={showHardResetConfirm}
+                onClose={() => setShowHardResetConfirm(false)}
+                onConfirm={handleHardReset}
+                title="Limpieza Profunda"
+                variant="danger"
+                confirmText="Reiniciar App"
+            >
+                Esta acción intentará eliminar la caché del navegador para forzar la actualización a la v{APP_VERSION}. 
+                <br/><br/>
+                <strong>No se borrarán tus datos guardados</strong>, solo se recargarán los archivos del programa.
+            </ConfirmationModal>
+
             <ConfirmationModal
                 isOpen={!!pendingImportFile}
                 onClose={() => setPendingImportFile(null)}
@@ -436,7 +343,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                 confirmText="Restaurar"
             >
                 ¿Deseas restaurar el ciclo <strong>"{pendingRestoreArchive?.name}"</strong>? 
-                <p className="mt-2 text-xs opacity-70">Perderás los datos actuales que no hayas guardado en un respaldo manual.</p>
             </ConfirmationModal>
 
             <ConfirmationModal
@@ -447,7 +353,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                 variant="danger"
                 confirmText="Eliminar"
             >
-                ¿Eliminar permanentemente el respaldo <strong>"{pendingDeleteArchive?.name}"</strong>? Esta acción no se puede deshacer.
+                ¿Eliminar permanentemente el respaldo <strong>"{pendingDeleteArchive?.name}"</strong>?
             </ConfirmationModal>
         </>
     );

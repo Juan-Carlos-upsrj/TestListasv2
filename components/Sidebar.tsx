@@ -5,7 +5,7 @@ import SettingsModal from './SettingsModal';
 import Icon from './icons/Icon';
 import { motion } from 'framer-motion';
 import { ActiveView, SidebarGroupDisplayMode } from '../types';
-import { GROUP_COLORS } from '../constants';
+import { GROUP_COLORS, APP_VERSION } from '../constants';
 import { startTour } from '../services/tourService';
 import useLocalStorage from '../hooks/useLocalStorage';
 
@@ -233,6 +233,13 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
             <Icon name="settings" className="w-5 h-5 flex-shrink-0" />
             {!isCollapsed && <span className="text-base font-semibold whitespace-nowrap">Configuración</span>}
           </button>
+
+          {!isCollapsed && (
+            <div className="pt-2 flex flex-col items-center">
+               <span className="text-[10px] font-black text-slate-400 tracking-widest uppercase">Versión Actual</span>
+               <span className="text-xs font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full mt-1 border border-primary/20">v{APP_VERSION}</span>
+            </div>
+          )}
         </div>
       </aside>
       <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />

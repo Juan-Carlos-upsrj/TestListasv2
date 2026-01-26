@@ -1,6 +1,6 @@
 
 {
-  "version": "3.0.1",
-  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v3.0.1/app-debug.apk",
-  "notes": "¡Versión 3.0.1! Corrección crítica del sistema de actualización en Android. Se ha implementado un mecanismo anti-cache para asegurar que el APK descargado sea siempre el más reciente. Nota: Asegúrate de desinstalar la versión anterior si el sistema indica conflicto de paquetes."
+  "version": "3.1.0",
+  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v3.1.0/app-debug.apk",
+  "notes": "¡Versión 3.1.0! Si sigues viendo la v1.8.5, desinstala la app completamente e instala este nuevo archivo. Se ha incluido una opción de 'Limpieza Profunda' en configuración para forzar la recarga de archivos."
 }
