@@ -1,6 +1,6 @@
 
 {
-  "version": "3.1.0",
-  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v3.1.0/app-debug.apk",
-  "notes": "¡Versión 3.1.0! Si sigues viendo la v1.8.5, desinstala la app completamente e instala este nuevo archivo. Se ha incluido una opción de 'Limpieza Profunda' en configuración para forzar la recarga de archivos."
+  "version": "3.1.1",
+  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v3.1.1/app-debug.apk",
+  "notes": "¡Versión 3.1.1! Se ha detectado que Android retiene versiones antiguas. ES OBLIGATORIO: 1. Desinstalar la versión actual. 2. Instalar este nuevo APK. 3. Usar el botón 'Limpieza Profunda' en Configuración si no ves los cambios."
 }
