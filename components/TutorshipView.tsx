@@ -6,7 +6,7 @@ import Button from './common/Button';
 import Modal from './common/Modal';
 import { motion, AnimatePresence } from 'framer-motion';
 import { calculatePartialAverage } from '../services/gradeCalculation';
-import { syncTutorshipData } from '../services/syncService';
+import { syncTutorshipData, normalizeForMatch } from '../services/syncService';
 
 interface TutorshipFormProps {
     student: Student;
@@ -59,10 +59,10 @@ const TutorshipView: React.FC = () => {
     
     const group = useMemo(() => groups.find(g => g.id === selectedGroupId), [groups, selectedGroupId]);
     
-    // AUTO-SYNC: Cargar datos al entrar
+    // AUTO-SYNC: Cargar datos al entrar o cambiar de grupo
     useEffect(() => {
         if (selectedGroupId && settings.apiUrl) {
-            handleSync(true); // sync silencioso
+            handleSync(true); // sync silencioso de fondo
         }
     }, [selectedGroupId]);
 
@@ -88,14 +88,18 @@ const TutorshipView: React.FC = () => {
         return isSyncing ? 'Buscando...' : 'Sin asignar';
     }, [group, groupTutors, isSyncing]);
 
-    const canEdit = settings.professorName.trim().toLowerCase() === currentTutor.trim().toLowerCase();
+    // MEJORA: canEdit ahora usa normalización para evitar errores de espacios o acentos
+    const canEdit = useMemo(() => {
+        if (!currentTutor || currentTutor.includes('Sin asignar')) return false;
+        return normalizeForMatch(settings.professorName) === normalizeForMatch(currentTutor);
+    }, [settings.professorName, currentTutor]);
 
     const handleSaveEntry = (entry: TutorshipEntry) => {
         if (editingStudent) {
             dispatch({ type: 'UPDATE_TUTORSHIP', payload: { studentId: editingStudent.id, entry } });
             setIsEditorOpen(false);
             setEditingStudent(null);
-            // Auto-subir cambios tras editar
+            // Auto-subir cambios tras editar para no perder nada
             setTimeout(() => handleSync(true), 500);
         }
     };
@@ -152,36 +156,35 @@ const TutorshipView: React.FC = () => {
                             size="sm" 
                             onClick={() => handleSync(false)} 
                             disabled={isSyncing}
-                            className={`${canEdit ? 'bg-indigo-600 !text-white hover:bg-indigo-700' : 'bg-white border-indigo-200 text-indigo-700'}`}
+                            className={`${canEdit ? 'bg-indigo-600 !text-white hover:bg-indigo-700' : 'bg-white border-indigo-200 text-indigo-700'} shadow-sm`}
                         >
                             <div className="flex items-center gap-2">
                                 <Icon name="download-cloud" className={`w-4 h-4 ${isSyncing ? 'animate-bounce' : ''}`} />
-                                <span className="hidden sm:inline">{isSyncing ? 'Sincronizando...' : 'Sincronizar'}</span>
+                                <span className="hidden sm:inline">{isSyncing ? 'Sincronizando...' : 'Sincronizar Datos'}</span>
                             </div>
                         </Button>
                     </div>
                 </div>
                 
                 {group && (
-                    <div className={`flex items-center gap-2 px-3 py-2 border rounded-xl transition-all ${canEdit ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-amber-50 border-amber-200 text-amber-700'}`}>
+                    <motion.div 
+                        initial={{ opacity: 0, y: -5 }} 
+                        animate={{ opacity: 1, y: 0 }}
+                        className={`flex items-center gap-2 px-3 py-2 border rounded-xl transition-all ${canEdit ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-amber-50 border-amber-200 text-amber-700'}`}
+                    >
                         <Icon name={canEdit ? "check-circle-2" : "info"} className="w-4 h-4 shrink-0" />
                         <p className="text-xs font-medium">
                             {canEdit ? 
-                                <span><b>Modo Tutor.</b> Estás editando la ficha oficial de este grupo.</span> : 
-                                <span><b>Modo Lectura.</b> Notas registradas por <b>{currentTutor}</b>. Solo el tutor puede editar.</span>
+                                <span><b>Modo Tutor.</b> Tienes permisos para editar estas fichas.</span> : 
+                                <span><b>Modo Lectura.</b> Notas registradas por <b>{currentTutor}</b>. Solo el tutor puede realizar cambios permanentes.</span>
                             }
                         </p>
-                    </div>
+                    </motion.div>
                 )}
             </div>
 
             {group ? (
                 <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 pb-10">
-                    {isSyncing && (
-                        <div className="mb-4 p-2 bg-indigo-50 text-indigo-600 rounded-lg text-center text-xs font-bold animate-pulse">
-                            Actualizando fichas desde el servidor...
-                        </div>
-                    )}
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                         <AnimatePresence>
                             {filteredStudents.map((student) => {
@@ -194,7 +197,7 @@ const TutorshipView: React.FC = () => {
                                 const avg = (p1 !== null && p2 !== null) ? (p1 + p2) / 2 : (p1 || p2 || 0);
 
                                 return (
-                                    <motion.div layout key={student.id} initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="bg-surface rounded-2xl border-2 border-border-color shadow-sm hover:shadow-md transition-all flex flex-col overflow-hidden relative h-full min-h-[320px]">
+                                    <motion.div layout key={student.id} initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="bg-surface rounded-2xl border-2 border-border-color shadow-sm hover:shadow-md transition-all flex flex-col overflow-hidden relative h-full min-h-[340px]">
                                         <div className="p-4 bg-slate-50 border-b border-border-color flex justify-between items-start">
                                             <div className="min-w-0">
                                                 <h4 className="font-black text-sm text-slate-800 truncate leading-tight uppercase tracking-tighter">{student.name}</h4>
@@ -220,15 +223,15 @@ const TutorshipView: React.FC = () => {
                                             <div className="space-y-3">
                                                 <div>
                                                     <h5 className="text-[9px] font-black uppercase tracking-widest text-emerald-600 flex items-center gap-1.5 mb-1"><Icon name="check-circle-2" className="w-3 h-3" /> Fortalezas</h5>
-                                                    <p className="text-[11px] leading-relaxed text-slate-600 italic whitespace-pre-wrap">{entry?.strengths || 'Sin registro...'}</p>
+                                                    <p className="text-[11px] leading-relaxed text-slate-600 italic line-clamp-3 overflow-hidden">{entry?.strengths || 'Sin registro...'}</p>
                                                 </div>
                                                 <div>
                                                     <h5 className="text-[9px] font-black uppercase tracking-widest text-amber-600 flex items-center gap-1.5 mb-1"><Icon name="info" className="w-3 h-3" /> Oportunidades</h5>
-                                                    <p className="text-[11px] leading-relaxed text-slate-600 italic whitespace-pre-wrap">{entry?.opportunities || 'Sin registro...'}</p>
+                                                    <p className="text-[11px] leading-relaxed text-slate-600 italic line-clamp-3 overflow-hidden">{entry?.opportunities || 'Sin registro...'}</p>
                                                 </div>
                                                 <div className="pt-2 border-t border-slate-100">
                                                     <h5 className="text-[9px] font-black uppercase tracking-widest text-indigo-700 flex items-center gap-1.5 mb-1"><Icon name="book-marked" className="w-3 h-3" /> Académico</h5>
-                                                    <p className="text-[11px] font-medium leading-relaxed text-slate-700 bg-indigo-50/30 p-2 rounded-lg border border-indigo-100/50 whitespace-pre-wrap">{entry?.summary || 'Sin comentarios.'}</p>
+                                                    <p className="text-[11px] font-medium leading-relaxed text-slate-700 bg-indigo-50/30 p-2 rounded-lg border border-indigo-100/50 line-clamp-4 overflow-hidden">{entry?.summary || 'Sin comentarios.'}</p>
                                                 </div>
                                             </div>
                                         </div>

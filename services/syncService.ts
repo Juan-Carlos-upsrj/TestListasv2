@@ -5,10 +5,15 @@ import { fetchHorarioCompleto } from './horarioService';
 import { GROUP_COLORS } from '../constants';
 import { calculatePartialAverage } from './gradeCalculation';
 
-// Función para normalizar texto (quitar acentos, diéresis y convertir a minúsculas)
-// Vital para que "ORDUÑA" coincida con "ORDUNA" o "orduna" si hay discrepancias de encoding.
-const normalize = (s: string) => 
-    (s || "").toLowerCase().trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+// Función para normalizar texto de forma agresiva para comparaciones exitosas
+// Convierte a minúsculas, quita acentos y elimina TODO lo que no sea letra o número
+export const normalizeForMatch = (s: string) => 
+    (s || "")
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "") // Quita acentos/tildes
+        .replace(/[^a-z0-9]/g, "")      // Quita espacios, guiones, puntos, etc.
+        .trim();
 
 const checkSettings = (settings: AppState['settings'], dispatch: Dispatch<AppAction>): boolean => {
     const { apiUrl, apiKey, professorName } = settings;
@@ -42,7 +47,7 @@ export const syncAttendanceData = async (state: AppState, dispatch: Dispatch<App
     const today = new Date();
     const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
 
-    dispatch({ type: 'ADD_TOAST', payload: { message: 'Comparando datos con el servidor...', type: 'info' } });
+    dispatch({ type: 'ADD_TOAST', payload: { message: 'Sincronizando asistencias...', type: 'info' } });
 
     try {
         const fetchUrl = getBaseApiUrl(apiUrl);
@@ -65,13 +70,12 @@ export const syncAttendanceData = async (state: AppState, dispatch: Dispatch<App
         }
         
         const serverData = await serverResponse.json().catch(() => null);
-        const serverRecords: any[] = Array.isArray(serverData) ? serverData : [];
+        const serverRecords: any[] = Array.isArray(serverData) ? serverData : (serverData?.data || []);
         
         const serverRecordsMap = new Map<string, string>(); 
         serverRecords.forEach(rec => {
             if (rec.alumno_nombre && rec.fecha && rec.grupo_nombre) {
-                // Usamos normalización para el match de asistencia también
-                const key = `${normalize(rec.alumno_nombre)}-${normalize(rec.grupo_nombre)}-${rec.fecha}`;
+                const key = `${normalizeForMatch(rec.alumno_nombre)}-${normalizeForMatch(rec.grupo_nombre)}-${rec.fecha}`;
                 serverRecordsMap.set(key, rec.status);
             }
         });
@@ -89,7 +93,7 @@ export const syncAttendanceData = async (state: AppState, dispatch: Dispatch<App
                     if (syncScope === 'today' && date !== todayStr) continue;
                     if (localStatus === AttendanceStatus.Pending) continue;
 
-                    const key = `${normalize(student.name)}-${normalize(group.name)}-${date}`;
+                    const key = `${normalizeForMatch(student.name)}-${normalizeForMatch(group.name)}-${date}`;
                     const serverStatus = serverRecordsMap.get(key);
 
                     if (!serverStatus || serverStatus !== localStatus) {
@@ -107,7 +111,7 @@ export const syncAttendanceData = async (state: AppState, dispatch: Dispatch<App
         }
 
         if (recordsToSync.length === 0) {
-            dispatch({ type: 'ADD_TOAST', payload: { message: 'Asistencias al día.', type: 'info' } });
+            dispatch({ type: 'ADD_TOAST', payload: { message: 'Asistencia al día.', type: 'success' } });
             return;
         }
 
@@ -119,7 +123,7 @@ export const syncAttendanceData = async (state: AppState, dispatch: Dispatch<App
         
         const res = await syncResponse.json();
         if (syncResponse.ok) {
-            dispatch({ type: 'ADD_TOAST', payload: { message: `Sincronizado: ${res.registros_procesados} cambios subidos.`, type: 'success' } });
+            dispatch({ type: 'ADD_TOAST', payload: { message: `Sincronizado: ${res.registros_procesados || recordsToSync.length} cambios subidos.`, type: 'success' } });
         } else {
              throw new Error(res.message || "Error al subir datos");
         }
@@ -172,7 +176,7 @@ export const syncGradesData = async (state: AppState, dispatch: Dispatch<AppActi
         });
 
         if (response.ok) {
-            dispatch({ type: 'ADD_TOAST', payload: { message: `Promedios actualizados en la nube.`, type: 'success' } });
+            dispatch({ type: 'ADD_TOAST', payload: { message: `Calificaciones actualizadas.`, type: 'success' } });
         }
     } catch (error) {
         dispatch({ type: 'ADD_TOAST', payload: { message: 'Error al subir calificaciones.', type: 'error' } });
@@ -182,46 +186,47 @@ export const syncGradesData = async (state: AppState, dispatch: Dispatch<AppActi
 export const syncTutorshipData = async (state: AppState, dispatch: Dispatch<AppAction>) => {
     if (!checkSettings(state.settings, dispatch)) return;
 
-    const { settings, tutorshipData = {}, groups = [] } = state;
+    const { settings, tutorshipData = {}, groups = [], groupTutors = {} } = state;
     const { apiUrl, apiKey, professorName } = settings;
 
     try {
         const syncUrl = getBaseApiUrl(apiUrl);
 
-        // 1. DESCARGAR DATOS ACTUALIZADOS (PULL)
+        // 1. DESCARGAR DATOS (PULL)
         const getResponse = await fetch(syncUrl.toString(), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'X-API-KEY': apiKey },
             body: JSON.stringify({ 
                 action: 'get-tutoreo',
-                profesor_nombre: professorName // Se envía para identificación, pero el server debería retornar todo lo relevante
+                profesor_nombre: professorName
             })
         });
 
         if (getResponse.ok) {
             const rawServerData = await getResponse.json();
+            const serverRows = Array.isArray(rawServerData) ? rawServerData : (rawServerData.data || []);
             
             const finalProcessedData: { [sid: string]: TutorshipEntry } = {};
             const localStudentsMap = new Map<string, string>(); // "NombreNormalizado-GrupoNormalizado" -> localID
             
             groups.forEach(g => g.students.forEach(s => {
-                const key = `${normalize(s.name)}-${normalize(g.name)}`;
+                const key = `${normalizeForMatch(s.name)}-${normalizeForMatch(g.name)}`;
                 localStudentsMap.set(key, s.id);
             }));
 
             let matchedCount = 0;
-            const serverRows = Array.isArray(rawServerData) ? rawServerData : (rawServerData.data || []);
 
             serverRows.forEach((row: any) => {
-                // PRIORIDAD 1: Vincular por identidad nominal normalizada (Nombre + Grupo sin acentos)
-                // Esto soluciona los problemas de Ñ y acentos.
-                const key = `${normalize(row.alumno_nombre)}-${normalize(row.grupo_nombre)}`;
+                // Emparejamiento por Nombre y Grupo normalizados (Ignora acentos, espacios y mayúsculas)
+                const key = `${normalizeForMatch(row.alumno_nombre)}-${normalizeForMatch(row.grupo_nombre)}`;
                 let targetId = localStudentsMap.get(key);
                 
-                // PRIORIDAD 2: Si no hay match nominal, probar por ID técnico (si es la misma PC)
+                // Fallback por ID técnico si no hubo match por nombre
                 if (!targetId && row.alumno_id) {
                     const studentExistsById = groups.some(g => g.students.some(s => s.id === row.alumno_id));
-                    if (studentExistsById) targetId = row.alumno_id;
+                    if (studentExistsById) {
+                        targetId = row.alumno_id;
+                    }
                 }
 
                 if (targetId) {
@@ -234,16 +239,15 @@ export const syncTutorshipData = async (state: AppState, dispatch: Dispatch<AppA
                 }
             });
 
-            // Solo actualizar si encontramos algo para no borrar el estado local por error
             if (Object.keys(finalProcessedData).length > 0) {
                 dispatch({ type: 'SET_TUTORSHIP_DATA_BULK', payload: finalProcessedData });
             }
 
-            // Sincronizar también los dueños de los grupos (TUTORES)
+            // Sincronizar tutores de grupos
             if (rawServerData.groupTutors) {
                 const mappedTutors: { [gid: string]: string } = {};
                 Object.entries(rawServerData.groupTutors).forEach(([serverGroupName, tutor]) => {
-                    const localGroup = groups.find(g => normalize(g.name) === normalize(serverGroupName));
+                    const localGroup = groups.find(g => normalizeForMatch(g.name) === normalizeForMatch(serverGroupName));
                     if (localGroup) mappedTutors[localGroup.id] = tutor as string;
                 });
                 if (Object.keys(mappedTutors).length > 0) {
@@ -252,16 +256,16 @@ export const syncTutorshipData = async (state: AppState, dispatch: Dispatch<AppA
             }
             
             if (matchedCount > 0) {
-                dispatch({ type: 'ADD_TOAST', payload: { message: `Descarga: ${matchedCount} alumnos actualizados con datos del servidor.`, type: 'info' } });
+                dispatch({ type: 'ADD_TOAST', payload: { message: `Descargadas ${matchedCount} fichas del servidor.`, type: 'info' } });
             }
         }
 
-        // 2. SUBIR MIS CAMBIOS LOCALES (PUSH)
+        // 2. SUBIR CAMBIOS (PUSH)
         const recordsToUpload: any[] = [];
         groups.forEach(g => {
+            // Solo subimos si el registro tiene contenido real
             g.students.forEach(s => {
                 const entry = tutorshipData[s.id];
-                // Enviamos registros que tengan algún contenido
                 if (entry && (entry.strengths || entry.opportunities || entry.summary)) {
                     recordsToUpload.push({
                         profesor_nombre: professorName,
@@ -290,13 +294,13 @@ export const syncTutorshipData = async (state: AppState, dispatch: Dispatch<AppA
             });
             
             if (postResponse.ok) {
-                 dispatch({ type: 'ADD_TOAST', payload: { message: 'Tus notas locales se han subido correctamente.', type: 'success' } });
+                 dispatch({ type: 'ADD_TOAST', payload: { message: 'Fichas locales subidas con éxito.', type: 'success' } });
             }
         }
 
     } catch (error) {
         console.error("Sync error:", error);
-        dispatch({ type: 'ADD_TOAST', payload: { message: 'Error de sincronización. Revisa tu conexión.', type: 'error' } });
+        dispatch({ type: 'ADD_TOAST', payload: { message: 'Error de conexión durante la sincronización.', type: 'error' } });
     }
 };
 
@@ -321,7 +325,7 @@ export const syncScheduleData = async (state: AppState, dispatch: Dispatch<AppAc
         });
         
         for (const [name, info] of Object.entries(clasesPorGrupoUnico)) {
-            const exist = groups.find(g => g.name.toLowerCase() === name.toLowerCase());
+            const exist = groups.find(g => normalizeForMatch(g.name) === normalizeForMatch(name));
             if (exist) {
                 dispatch({ type: 'SAVE_GROUP', payload: { ...exist, classDays: info.days as DayOfWeek[] } });
             } else {
@@ -332,8 +336,8 @@ export const syncScheduleData = async (state: AppState, dispatch: Dispatch<AppAc
                 } as Group });
             }
         }
-        dispatch({ type: 'ADD_TOAST', payload: { message: 'Horario sincronizado.', type: 'success' } });
+        dispatch({ type: 'ADD_TOAST', payload: { message: 'Horario actualizado.', type: 'success' } });
     } catch (e) {
-        dispatch({ type: 'ADD_TOAST', payload: { message: 'Error con Firebase/Horario.', type: 'error' } });
+        dispatch({ type: 'ADD_TOAST', payload: { message: 'Error al cargar horario desde el servidor.', type: 'error' } });
     }
 };
