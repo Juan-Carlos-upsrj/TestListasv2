@@ -10,6 +10,57 @@ import ConfirmationModal from './common/ConfirmationModal';
 import { DAYS_OF_WEEK, GROUP_COLORS } from '../constants';
 import { motion } from 'framer-motion';
 
+// --- SUBCOMPONENTE: FORMULARIO DE ALUMNO ---
+const StudentForm: React.FC<{
+    student?: Student;
+    onSave: (data: { name: string, matricula: string }) => void;
+    onCancel: () => void;
+}> = ({ student, onSave, onCancel }) => {
+    const [name, setName] = useState(student?.name || '');
+    const [matricula, setMatricula] = useState(student?.matricula || '');
+
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (name.trim()) {
+            onSave({ name: name.trim(), matricula: matricula.trim() });
+        }
+    };
+
+    return (
+        <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+                <label className="block text-xs font-black uppercase text-slate-500 mb-1">Nombre Completo</label>
+                <input 
+                    autoFocus
+                    type="text" 
+                    value={name} 
+                    onChange={e => setName(e.target.value)} 
+                    placeholder="Ej. Juan Pérez"
+                    className="w-full p-2.5 border-2 border-border-color rounded-xl bg-surface focus:ring-2 focus:ring-primary text-sm font-bold"
+                    required
+                />
+            </div>
+            <div>
+                <label className="block text-xs font-black uppercase text-slate-500 mb-1">Matrícula (Opcional)</label>
+                <input 
+                    type="text" 
+                    value={matricula} 
+                    onChange={e => setMatricula(e.target.value)} 
+                    placeholder="Ej. 2023001"
+                    className="w-full p-2.5 border-2 border-border-color rounded-xl bg-surface focus:ring-2 focus:ring-primary text-sm font-mono"
+                />
+            </div>
+            <div className="flex justify-end gap-3 pt-4">
+                <Button variant="secondary" type="button" onClick={onCancel}>Cancelar</Button>
+                <Button type="submit">
+                    <Icon name="check-circle-2" className="w-4 h-4" /> 
+                    {student ? 'Actualizar Alumno' : 'Agregar Alumno'}
+                </Button>
+            </div>
+        </form>
+    );
+};
+
 export const EvaluationTypesEditor: React.FC<{
     types: EvaluationType[];
     onTypesChange: (types: EvaluationType[]) => void;
@@ -157,9 +208,15 @@ export const GroupForm: React.FC<{ group?: Group; existingGroups?: Group[]; onSa
 const GroupManagement: React.FC = () => {
     const { state, dispatch } = useContext(AppContext);
     const { groups, selectedGroupId } = state;
+    
     const [isGroupModalOpen, setGroupModalOpen] = useState(false);
     const [isStudentModalOpen, setStudentModalOpen] = useState(false);
     const [isBulkModalOpen, setBulkModalOpen] = useState(false);
+    
+    // Estados para edición y eliminación de alumnos
+    const [editingStudent, setEditingStudent] = useState<Student | null>(null);
+    const [confirmDeleteStudent, setConfirmDeleteStudent] = useState<Student | null>(null);
+    
     const [editingGroup, setEditingGroup] = useState<Group | undefined>(undefined);
     const [confirmDeleteGroup, setConfirmDeleteGroup] = useState<Group | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
@@ -174,6 +231,34 @@ const GroupManagement: React.FC = () => {
             (s.matricula && s.matricula.toLowerCase().includes(term))
         );
     }, [group, searchTerm]);
+
+    const handleSaveStudentAction = (data: { name: string, matricula: string }) => {
+        if (!group) return;
+        
+        const studentToSave: Student = editingStudent 
+            ? { ...editingStudent, ...data }
+            : { id: uuidv4(), ...data };
+
+        dispatch({ 
+            type: 'SAVE_STUDENT', 
+            payload: { groupId: group.id, student: studentToSave } 
+        });
+        
+        setStudentModalOpen(false);
+        setEditingStudent(null);
+        dispatch({ type: 'ADD_TOAST', payload: { message: editingStudent ? 'Alumno actualizado.' : 'Alumno agregado.', type: 'success' } });
+    };
+
+    const handleDeleteStudentAction = () => {
+        if (group && confirmDeleteStudent) {
+            dispatch({ 
+                type: 'DELETE_STUDENT', 
+                payload: { groupId: group.id, studentId: confirmDeleteStudent.id } 
+            });
+            setConfirmDeleteStudent(null);
+            dispatch({ type: 'ADD_TOAST', payload: { message: 'Alumno eliminado.', type: 'info' } });
+        }
+    };
 
     return (
         <div className="space-y-6">
@@ -223,7 +308,7 @@ const GroupManagement: React.FC = () => {
                                 <input type="text" placeholder="Buscar alumno..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full pl-9 pr-3 py-1.5 border border-border-color rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary"/>
                             </div>
                             <Button variant="secondary" size="sm" onClick={() => setBulkModalOpen(true)} title="Importar"><Icon name="list-plus" className="w-4 h-4" /></Button>
-                            <Button size="sm" onClick={() => setStudentModalOpen(true)} title="Agregar"><Icon name="user-plus" className="w-4 h-4" /></Button>
+                            <Button size="sm" onClick={() => { setEditingStudent(null); setStudentModalOpen(true); }} title="Agregar"><Icon name="user-plus" className="w-4 h-4" /></Button>
                         </div>
                     </div>
                     <div className="overflow-x-auto max-h-[500px] custom-scrollbar">
@@ -238,13 +323,25 @@ const GroupManagement: React.FC = () => {
                             </thead>
                             <tbody className="divide-y divide-border-color">
                                 {filteredStudents.map((s, idx) => (
-                                    <tr key={s.id} className="hover:bg-slate-50/50">
+                                    <tr key={s.id} className="hover:bg-slate-50/50 group">
                                         <td className="p-3 text-slate-400 font-bold text-center">{idx + 1}</td>
                                         <td className="p-3 font-bold text-slate-700">{s.name}</td>
                                         <td className="p-3 font-mono text-xs text-slate-500">{s.matricula || '-'}</td>
                                         <td className="p-3 flex justify-center gap-1">
-                                            <button onClick={() => { const n = prompt("Nombre:", s.name); if(n) dispatch({ type: 'SAVE_STUDENT', payload: { groupId: group.id, student: { ...s, name: n } } }); }} className="p-1.5 text-slate-400 hover:text-primary hover:bg-primary/10 rounded-md transition-colors"><Icon name="edit-3" className="w-4 h-4" /></button>
-                                            <button onClick={() => { if(confirm(`¿Eliminar a ${s.name}?`)) dispatch({ type: 'DELETE_STUDENT', payload: { groupId: group.id, studentId: s.id } }); }} className="p-1.5 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-md transition-colors"><Icon name="trash-2" className="w-4 h-4" /></button>
+                                            <button 
+                                                onClick={() => { setEditingStudent(s); setStudentModalOpen(true); }} 
+                                                className="p-1.5 text-slate-400 hover:text-primary hover:bg-primary/10 rounded-md transition-colors"
+                                                title="Editar Alumno"
+                                            >
+                                                <Icon name="edit-3" className="w-4 h-4" />
+                                            </button>
+                                            <button 
+                                                onClick={() => setConfirmDeleteStudent(s)} 
+                                                className="p-1.5 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-md transition-colors"
+                                                title="Eliminar Alumno"
+                                            >
+                                                <Icon name="trash-2" className="w-4 h-4" />
+                                            </button>
                                         </td>
                                     </tr>
                                 ))}
@@ -255,28 +352,44 @@ const GroupManagement: React.FC = () => {
                 </motion.div>
             )}
 
+            {/* MODALES DE GRUPO */}
             <Modal isOpen={isGroupModalOpen} onClose={() => setGroupModalOpen(false)} title={editingGroup ? 'Editar Grupo' : 'Nuevo Grupo'} size="xl">
                 <GroupForm group={editingGroup} existingGroups={groups} onSave={(g) => { dispatch({ type: 'SAVE_GROUP', payload: g }); setGroupModalOpen(false); }} onCancel={() => setGroupModalOpen(false)} />
-            </Modal>
-
-            <Modal isOpen={isStudentModalOpen} onClose={() => setStudentModalOpen(false)} title="Agregar Alumno">
-                <form onSubmit={(e) => {
-                    e.preventDefault(); const fd = new FormData(e.currentTarget); const name = fd.get('name') as string; const matr = fd.get('matricula') as string;
-                    if(name.trim()){ dispatch({ type: 'SAVE_STUDENT', payload: { groupId: group!.id, student: { id: uuidv4(), name, matricula: matr } } }); setStudentModalOpen(false); }
-                }} className="space-y-4">
-                    <div><label className="block text-xs font-bold mb-1 uppercase text-slate-500">Nombre</label><input name="name" required autoFocus className="w-full p-2.5 border border-border-color rounded-xl bg-surface focus:ring-2 focus:ring-primary" placeholder="Ej. Juan Pérez" /></div>
-                    <div><label className="block text-xs font-bold mb-1 uppercase text-slate-500">Matrícula</label><input name="matricula" className="w-full p-2.5 border border-border-color rounded-xl bg-surface focus:ring-2 focus:ring-primary" placeholder="Opcional" /></div>
-                    <div className="flex justify-end gap-3 pt-4"><Button variant="secondary" onClick={() => setStudentModalOpen(false)}>Cancelar</Button><Button type="submit">Guardar</Button></div>
-                </form>
-            </Modal>
-
-            <Modal isOpen={isBulkModalOpen} onClose={() => setBulkModalOpen(false)} title="Importar Alumnos" size="lg">
-                <BulkStudentForm onAdd={(s) => { dispatch({ type: 'BULK_ADD_STUDENTS', payload: { groupId: group!.id, students: s } }); setBulkModalOpen(false); }} onCancel={() => setBulkModalOpen(false)} />
             </Modal>
 
             <ConfirmationModal isOpen={!!confirmDeleteGroup} onClose={() => setConfirmDeleteGroup(null)} onConfirm={() => { dispatch({ type: 'DELETE_GROUP', payload: confirmDeleteGroup!.id }); setConfirmDeleteGroup(null); }} title="Eliminar Grupo" variant="danger">
                 ¿Deseas eliminar permanentemente el grupo <strong>{confirmDeleteGroup?.name}</strong>?
             </ConfirmationModal>
+
+            {/* MODALES DE ALUMNO */}
+            <Modal 
+                isOpen={isStudentModalOpen} 
+                onClose={() => { setStudentModalOpen(false); setEditingStudent(null); }} 
+                title={editingStudent ? 'Editar Alumno' : 'Agregar Alumno'}
+            >
+                <StudentForm 
+                    student={editingStudent || undefined} 
+                    onSave={handleSaveStudentAction} 
+                    onCancel={() => { setStudentModalOpen(false); setEditingStudent(null); }} 
+                />
+            </Modal>
+
+            <ConfirmationModal 
+                isOpen={!!confirmDeleteStudent} 
+                onClose={() => setConfirmDeleteStudent(null)} 
+                onConfirm={handleDeleteStudentAction} 
+                title="Eliminar Alumno" 
+                variant="danger"
+                confirmText="Eliminar permanentemente"
+            >
+                ¿Estás seguro de que deseas eliminar a <strong>{confirmDeleteStudent?.name}</strong>? 
+                <p className="mt-2 text-xs text-slate-400 italic">Esta acción borrará también sus asistencias y calificaciones en este grupo.</p>
+            </ConfirmationModal>
+
+            {/* OTROS MODALES */}
+            <Modal isOpen={isBulkModalOpen} onClose={() => setBulkModalOpen(false)} title="Importar Alumnos" size="lg">
+                <BulkStudentForm onAdd={(s) => { dispatch({ type: 'BULK_ADD_STUDENTS', payload: { groupId: group!.id, students: s } }); setBulkModalOpen(false); }} onCancel={() => setBulkModalOpen(false)} />
+            </Modal>
         </div>
     );
 };
