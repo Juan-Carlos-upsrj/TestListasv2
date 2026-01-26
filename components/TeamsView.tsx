@@ -30,22 +30,38 @@ const TeamsView: React.FC = () => {
     const teams = useMemo(() => {
         if (!group) return [];
         const isCoyote = teamType === 'coyote';
-        const teamMap = new Map<string, Student[]>();
+        const teamMap = new Map<string, { student: Student; groupName: string }[]>();
         
-        group.students.forEach(s => {
-            const tName = isCoyote ? s.teamCoyote : s.team;
-            if (tName) {
-                if (!teamMap.has(tName)) teamMap.set(tName, []);
-                teamMap.get(tName)!.push(s);
-            }
-        });
+        // --- LÓGICA DE AGREGACIÓN ---
+        if (isCoyote) {
+            // Equipos Coyote son globales para el mismo cuatrimestre
+            const targetQuarter = group.quarter;
+            const groupsInSameQuarter = groups.filter(g => g.quarter === targetQuarter);
+            
+            groupsInSameQuarter.forEach(g => {
+                g.students.forEach(s => {
+                    if (s.teamCoyote) {
+                        if (!teamMap.has(s.teamCoyote)) teamMap.set(s.teamCoyote, []);
+                        teamMap.get(s.teamCoyote)!.push({ student: s, groupName: g.name });
+                    }
+                });
+            });
+        } else {
+            // Equipos Base son estrictamente locales del grupo seleccionado
+            group.students.forEach(s => {
+                if (s.team) {
+                    if (!teamMap.has(s.team)) teamMap.set(s.team, []);
+                    teamMap.get(s.team)!.push({ student: s, groupName: group.name });
+                }
+            });
+        }
 
         return Array.from(teamMap.entries()).map(([name, members]) => ({
             name,
             members,
             note: (isCoyote ? coyoteTeamNotes[name] : teamNotes[name]) || ''
         })).sort((a, b) => a.name.localeCompare(b.name));
-    }, [group, teamType, teamNotes, coyoteTeamNotes]);
+    }, [group, teamType, teamNotes, coyoteTeamNotes, groups]);
 
     const handleOpenEdit = (name: string, note: string) => {
         setEditingTeam({ name, isCoyote: teamType === 'coyote' });
@@ -132,6 +148,15 @@ const TeamsView: React.FC = () => {
                         </Button>
                     </div>
                 </div>
+                
+                {teamType === 'coyote' && group && (
+                    <div className="bg-orange-50 border border-orange-100 p-2 rounded-xl flex items-center gap-2">
+                        <Icon name="info" className="w-4 h-4 text-orange-500 shrink-0" />
+                        <p className="text-[10px] font-bold text-orange-700 uppercase">
+                            Vista Global Cuatrimestre {group.quarter}: Mostrando alumnos de todos los grupos {group.quarter} que comparten el mismo nombre de equipo.
+                        </p>
+                    </div>
+                )}
             </div>
 
             {group ? (
@@ -163,8 +188,9 @@ const TeamsView: React.FC = () => {
                                                 <h5 className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Integrantes</h5>
                                                 <div className="flex flex-col gap-1">
                                                     {team.members.map(m => (
-                                                        <div key={m.id} className="text-xs font-bold text-slate-700 bg-white border border-slate-100 px-2 py-1 rounded-lg truncate">
-                                                            {m.name}
+                                                        <div key={m.student.id} className="text-xs font-bold text-slate-700 bg-white border border-slate-100 px-2 py-1 rounded-lg flex justify-between items-center gap-2">
+                                                            <span className="truncate">{m.student.name}</span>
+                                                            <span className="shrink-0 text-[8px] font-black bg-slate-100 px-1.5 py-0.5 rounded text-slate-500 border border-slate-200">{m.groupName}</span>
                                                         </div>
                                                     ))}
                                                 </div>

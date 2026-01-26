@@ -330,18 +330,18 @@ const GroupManagement: React.FC = () => {
     };
 
     return (
-        <div className="space-y-6">
-            <div className="flex justify-between items-center bg-white p-4 rounded-3xl border border-border-color shadow-sm">
+        <div className="space-y-4">
+            <div className="flex justify-between items-center bg-white p-3 rounded-2xl border border-border-color shadow-sm">
                 <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 bg-primary/10 text-primary rounded-2xl flex items-center justify-center"><Icon name="users" className="w-6 h-6" /></div>
-                    <h2 className="text-xl font-black text-slate-800 uppercase tracking-tight">Gestión de Grupos</h2>
+                    <div className="w-10 h-10 bg-primary/10 text-primary rounded-xl flex items-center justify-center"><Icon name="users" className="w-5 h-5" /></div>
+                    <h2 className="text-lg font-black text-slate-800 uppercase tracking-tight">Gestión de Grupos</h2>
                 </div>
-                <Button onClick={() => { setEditingGroup(undefined); setGroupModalOpen(true); }} size="sm">
+                <Button onClick={() => { setEditingGroup(undefined); setGroupModalOpen(true); }} size="sm" className="!py-2">
                     <Icon name="plus" className="w-4 h-4" /> Nuevo Grupo
                 </Button>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                 {groups.map(g => {
                     const colorObj = GROUP_COLORS.find(c => c.name === g.color) || GROUP_COLORS[0];
                     const isSelected = selectedGroupId === g.id;
@@ -350,20 +350,20 @@ const GroupManagement: React.FC = () => {
                             layout
                             key={g.id} 
                             onClick={() => dispatch({ type: 'SET_SELECTED_GROUP', payload: g.id })} 
-                            className={`p-4 rounded-3xl border-2 cursor-pointer transition-all ${isSelected ? 'border-primary bg-primary/5 shadow-lg scale-[1.02]' : 'border-slate-100 bg-surface hover:border-slate-200'}`}
+                            className={`p-3 rounded-2xl border-2 cursor-pointer transition-all ${isSelected ? 'border-primary bg-primary/5 shadow-md scale-[1.01]' : 'border-slate-100 bg-surface hover:border-slate-200'}`}
                         >
-                            <div className="flex justify-between items-start mb-3">
-                                <div className={`w-10 h-10 rounded-2xl flex items-center justify-center ${colorObj.bg} ${colorObj.text} shadow-sm`}><Icon name="users" className="w-5 h-5" /></div>
-                                <div className="flex gap-1.5">
-                                    <button onClick={(e) => { e.stopPropagation(); setEditingGroup(g); setGroupModalOpen(true); }} className="p-1.5 hover:bg-white rounded-xl text-slate-400 hover:text-primary transition-all"><Icon name="edit-3" className="w-4 h-4" /></button>
-                                    <button onClick={(e) => { e.stopPropagation(); setConfirmDeleteGroup(g); }} className="p-1.5 hover:bg-rose-50 rounded-xl text-slate-400 hover:text-rose-500 transition-all"><Icon name="trash-2" className="w-4 h-4" /></button>
+                            <div className="flex justify-between items-start mb-2">
+                                <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${colorObj.bg} ${colorObj.text} shadow-sm`}><Icon name="users" className="w-4 h-4" /></div>
+                                <div className="flex gap-1">
+                                    <button onClick={(e) => { e.stopPropagation(); setEditingGroup(g); setGroupModalOpen(true); }} className="p-1 hover:bg-white rounded-lg text-slate-400 hover:text-primary transition-all"><Icon name="edit-3" className="w-3.5 h-3.5" /></button>
+                                    <button onClick={(e) => { e.stopPropagation(); setConfirmDeleteGroup(g); }} className="p-1 hover:bg-rose-50 rounded-lg text-slate-400 hover:text-rose-500 transition-all"><Icon name="trash-2" className="w-3.5 h-3.5" /></button>
                                 </div>
                             </div>
-                            <h3 className="font-black text-lg truncate uppercase text-slate-800">{g.name}</h3>
-                            <p className="text-xs text-slate-500 font-medium truncate">{g.subject}</p>
-                            <div className="mt-4 pt-3 border-t border-slate-100 flex justify-between items-center text-[10px] font-black uppercase text-slate-400 tracking-widest">
-                                <span className="flex items-center gap-1"><Icon name="users" className="w-3 h-3"/> {g.students.length} ALUMNOS</span>
-                                <span className="bg-slate-100 px-2 py-0.5 rounded-full text-slate-600">{g.quarter || 'N/A'}</span>
+                            <h3 className="font-black text-sm truncate uppercase text-slate-800 leading-tight">{g.name}</h3>
+                            <p className="text-[10px] text-slate-500 font-bold truncate uppercase">{g.subject}</p>
+                            <div className="mt-2 pt-2 border-t border-slate-100 flex justify-between items-center text-[9px] font-black uppercase text-slate-400">
+                                <span className="flex items-center gap-1"><Icon name="users" className="w-2.5 h-2.5"/> {g.students.length} ALUMNOS</span>
+                                <span className="bg-slate-100 px-1.5 py-0.5 rounded-full text-slate-600">{g.quarter || 'N/A'}</span>
                             </div>
                         </motion.div>
                     );
@@ -372,57 +372,57 @@ const GroupManagement: React.FC = () => {
 
             {group ? (
                 <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="bg-surface rounded-3xl border border-border-color shadow-sm overflow-hidden">
-                    <div className="p-5 border-b border-border-color bg-slate-50/50 flex flex-col sm:flex-row justify-between items-center gap-4">
-                        <div className="flex items-center gap-4">
-                            <div className="w-12 h-12 bg-white rounded-2xl shadow-sm flex items-center justify-center text-primary border border-slate-100"><Icon name="list-checks" className="w-6 h-6"/></div>
+                    <div className="p-4 border-b border-border-color bg-slate-50/50 flex flex-col sm:flex-row justify-between items-center gap-3">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-white rounded-xl shadow-sm flex items-center justify-center text-primary border border-slate-100"><Icon name="list-checks" className="w-5 h-5"/></div>
                             <div>
-                                <h3 className="font-black text-xl text-slate-800 uppercase leading-none">{group.name}</h3>
-                                <p className="text-xs text-slate-500 font-bold mt-1 uppercase tracking-wider">{group.subject}</p>
+                                <h3 className="font-black text-lg text-slate-800 uppercase leading-none">{group.name}</h3>
+                                <p className="text-[10px] text-slate-500 font-bold mt-1 uppercase tracking-wider">{group.subject}</p>
                             </div>
                         </div>
                         <div className="flex items-center gap-2 w-full sm:w-auto">
                             <div className="relative flex-1 sm:w-64">
                                 <Icon name="search" className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                                <input type="text" placeholder="Filtro rápido..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full pl-10 pr-4 py-2.5 border-2 border-slate-200 rounded-2xl text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary transition-all"/>
+                                <input type="text" placeholder="Filtro rápido..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full pl-10 pr-4 py-2 border-2 border-slate-200 rounded-xl text-xs bg-white focus:ring-2 focus:ring-primary focus:border-primary transition-all"/>
                             </div>
-                            <Button variant="secondary" onClick={() => setBulkModalOpen(true)} title="Importar Lista"><Icon name="list-plus" className="w-5 h-5" /></Button>
-                            <Button onClick={() => { setEditingStudent(null); setStudentModalOpen(true); }} title="Agregar Individual"><Icon name="user-plus" className="w-5 h-5" /></Button>
+                            <Button variant="secondary" onClick={() => setBulkModalOpen(true)} title="Importar Lista" className="!p-2"><Icon name="list-plus" className="w-4 h-4" /></Button>
+                            <Button onClick={() => { setEditingStudent(null); setStudentModalOpen(true); }} title="Agregar Individual" className="!p-2"><Icon name="user-plus" className="w-4 h-4" /></Button>
                         </div>
                     </div>
                     <div className="overflow-x-auto max-h-[600px] custom-scrollbar">
                         <table className="w-full text-sm text-left">
                             <thead className="bg-slate-100/50 text-slate-400 uppercase text-[10px] font-black sticky top-0 z-10 border-b border-slate-200">
                                 <tr>
-                                    <th className="p-4 w-12 text-center">#</th>
-                                    <th className="p-4">Alumno</th>
-                                    <th className="p-4">Matrícula</th>
-                                    <th className="p-4 text-center">Estatus Especial</th>
-                                    <th className="p-4 text-center">Acciones</th>
+                                    <th className="p-3 w-12 text-center">#</th>
+                                    <th className="p-3">Alumno</th>
+                                    <th className="p-3">Matrícula</th>
+                                    <th className="p-3 text-center">Estatus Especial</th>
+                                    <th className="p-3 text-center">Acciones</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100">
                                 <AnimatePresence>
                                     {filteredStudents.map((s, idx) => (
                                         <motion.tr layout initial={{ opacity: 0 }} animate={{ opacity: 1 }} key={s.id} className="hover:bg-slate-50/50 transition-colors">
-                                            <td className="p-4 text-slate-300 font-black text-center">{idx + 1}</td>
-                                            <td className="p-4">
+                                            <td className="p-3 text-slate-300 font-black text-center">{idx + 1}</td>
+                                            <td className="p-3">
                                                 <div className="flex flex-col">
                                                     <span className="font-black text-slate-700 uppercase tracking-tight">{s.name}</span>
                                                     {s.nickname && <span className="text-[10px] text-primary italic font-bold tracking-tight">"{s.nickname}"</span>}
                                                 </div>
                                             </td>
-                                            <td className="p-4 font-mono text-xs text-slate-500 font-bold">{s.matricula || 'SIN ID'}</td>
-                                            <td className="p-4">
+                                            <td className="p-3 font-mono text-xs text-slate-500 font-bold">{s.matricula || 'SIN ID'}</td>
+                                            <td className="p-3">
                                                 <div className="flex flex-wrap gap-1.5 justify-center">
                                                     {s.isRepeating && <span className="text-[9px] font-black bg-rose-600 text-white px-2 py-0.5 rounded-full uppercase shadow-sm">Recu</span>}
                                                     {s.team && <span className="text-[9px] font-black bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full uppercase border border-indigo-200">B: {s.team}</span>}
                                                     {s.teamCoyote && <span className="text-[9px] font-black bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full uppercase border border-orange-200">C: {s.teamCoyote}</span>}
                                                 </div>
                                             </td>
-                                            <td className="p-4">
+                                            <td className="p-3">
                                                 <div className="flex justify-center gap-2">
-                                                    <button onClick={() => { setEditingStudent(s); setStudentModalOpen(true); }} className="p-2 text-slate-400 hover:text-primary hover:bg-primary/10 rounded-xl transition-all" title="Editar Ficha"><Icon name="edit-3" className="w-5 h-5" /></button>
-                                                    <button onClick={() => setConfirmDeleteStudent(s)} className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all" title="Eliminar"><Icon name="trash-2" className="w-5 h-5" /></button>
+                                                    <button onClick={() => { setEditingStudent(s); setStudentModalOpen(true); }} className="p-2 text-slate-400 hover:text-primary hover:bg-primary/10 rounded-xl transition-all" title="Editar Ficha"><Icon name="edit-3" className="w-4 h-4" /></button>
+                                                    <button onClick={() => setConfirmDeleteStudent(s)} className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all" title="Eliminar"><Icon name="trash-2" className="w-4 h-4" /></button>
                                                 </div>
                                             </td>
                                         </motion.tr>
@@ -443,9 +443,9 @@ const GroupManagement: React.FC = () => {
                     </div>
                 </motion.div>
             ) : (
-                <div className="flex flex-col items-center justify-center p-20 bg-surface rounded-3xl border border-dashed border-slate-200 opacity-50">
-                    <Icon name="layout" className="w-20 h-20 mb-6 text-slate-300"/>
-                    <p className="font-black uppercase text-slate-400 tracking-[0.2em]">Selecciona un grupo para gestionar</p>
+                <div className="flex flex-col items-center justify-center p-16 bg-surface rounded-3xl border border-dashed border-slate-200 opacity-50">
+                    <Icon name="layout" className="w-16 h-16 mb-4 text-slate-300"/>
+                    <p className="font-black uppercase text-slate-400 tracking-[0.2em] text-xs">Selecciona un grupo para gestionar</p>
                 </div>
             )}
 

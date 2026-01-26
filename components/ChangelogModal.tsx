@@ -15,49 +15,49 @@ const ChangelogModal: React.FC<ChangelogModalProps> = ({ isOpen, onClose }) => {
         <Modal isOpen={isOpen} onClose={onClose} title={`¿Qué hay de nuevo en v${APP_VERSION}?`} size="md">
             <div className="space-y-6">
                 <div className="flex items-start gap-4">
-                    <div className="bg-indigo-100 p-2 rounded-xl text-indigo-600 shrink-0">
-                        <Icon name="book-marked" className="w-6 h-6" />
+                    <div className="bg-orange-100 p-2 rounded-xl text-orange-600 shrink-0">
+                        <Icon name="grid" className="w-6 h-6" />
                     </div>
                     <div>
-                        <h4 className="font-bold text-slate-800">Nueva Sección: Tutoreo Académico</h4>
+                        <h4 className="font-bold text-slate-800">Equipos Coyote Globales</h4>
                         <p className="text-sm text-slate-500 mt-1">
-                            ¡Ya puedes crear <strong>fichas estudiantiles</strong>! Registra fortalezas, áreas de oportunidad y notas académicas para un seguimiento más humano de tus alumnos.
+                            ¡Colaboración entre grupos! Ahora puedes ver integrantes de diferentes salones en una misma ficha de <strong>Equipo Coyote</strong>, siempre que pertenezcan al mismo cuatrimestre.
+                        </p>
+                    </div>
+                </div>
+
+                <div className="flex items-start gap-4">
+                    <div className="bg-indigo-100 p-2 rounded-xl text-indigo-600 shrink-0">
+                        <Icon name="layout" className="w-6 h-6" />
+                    </div>
+                    <div>
+                        <h4 className="font-bold text-slate-800">Diseño Optimizado (Compacto)</h4>
+                        <p className="text-sm text-slate-500 mt-1">
+                            Hemos reducido el tamaño de los encabezados y tarjetas en la <strong>Gestión de Grupos</strong>. Ahora tienes más espacio vertical para ver tus listas de alumnos sin hacer tanto scroll.
                         </p>
                     </div>
                 </div>
 
                 <div className="flex items-start gap-4">
                     <div className="bg-emerald-100 p-2 rounded-xl text-emerald-600 shrink-0">
-                        <Icon name="download-cloud" className="w-6 h-6" />
+                        <Icon name="users" className="w-6 h-6" />
                     </div>
                     <div>
-                        <h4 className="font-bold text-slate-800">Sincronización en la Nube</h4>
+                        <h4 className="font-bold text-slate-800">Distintivos de Grupo</h4>
                         <p className="text-sm text-slate-500 mt-1">
-                            Colabora con otros profes: Ahora puedes <strong>sincronizar las fichas automáticamente</strong>. Los demás maestros podrán leer tus notas de tutoría, garantizando un acompañamiento integral.
-                        </p>
-                    </div>
-                </div>
-
-                <div className="flex items-start gap-4">
-                    <div className="bg-amber-100 p-2 rounded-xl text-amber-600 shrink-0">
-                        <Icon name="graduation-cap" className="w-6 h-6" />
-                    </div>
-                    <div>
-                        <h4 className="font-bold text-slate-800">Permisos por Tutor</h4>
-                        <p className="text-sm text-slate-500 mt-1">
-                            Asigna al tutor en la <strong>Configuración del Grupo</strong>. Solo el profesor que coincida con el nombre del tutor podrá editar las fichas; los demás las verán en modo lectura.
+                            En las vistas de equipos, cada alumno ahora tiene una pequeña etiqueta que indica a qué grupo pertenece (ej. [6A], [6B]), facilitando la identificación rápida.
                         </p>
                     </div>
                 </div>
 
                 <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200">
                     <p className="text-xs text-slate-400 italic text-center">
-                        "Build Final: Se corrigieron los errores de TypeScript en la vista de Calificaciones y se optimizó el proceso de empaquetado del instalador."
+                        "Build 2.6.0: Sincronización mejorada y corrección de visibilidad en dispositivos móviles."
                     </p>
                 </div>
 
                 <Button onClick={onClose} className="w-full justify-center">
-                    ¡Entendido, a trabajar!
+                    ¡Excelente, continuar!
                 </Button>
             </div>
         </Modal>
