@@ -1,6 +1,6 @@
 
 {
-  "version": "3.1.3",
-  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v3.1.3/app-debug.apk",
-  "notes": "¡Versión 3.1.3! Se corrigieron los errores que impedían generar la APK. REQUISITO ANDROID: Cambia el 'versionCode' a 313 en build.gradle para que se reconozca la actualización."
+  "version": "3.1.4",
+  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v3.1.4/app-debug.apk",
+  "notes": "¡Versión 3.1.4! Solucionado el error crítico de compilación. IMPORTANTE: En Android Studio, cambia el 'versionCode' a 314 en build.gradle para asegurar que el teléfono acepte el nuevo APK."
 }

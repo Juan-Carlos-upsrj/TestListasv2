@@ -19,9 +19,9 @@ const ChangelogModal: React.FC<ChangelogModalProps> = ({ isOpen, onClose }) => {
                         <Icon name="check-circle-2" className="w-6 h-6" />
                     </div>
                     <div>
-                        <h4 className="font-bold text-slate-800">Compilación Exitosa</h4>
+                        <h4 className="font-bold text-slate-800">¡Error de Build Solucionado!</h4>
                         <p className="text-sm text-slate-500 mt-1">
-                            Se corrigieron los errores de código muerto que causaban que el proceso de empaquetado fallara. Ahora la carpeta <code>dist</code> se genera correctamente.
+                            Se corrigió un error de sintaxis que bloqueaba la generación de nuevos archivos. Ahora el comando <code>npm run build</code> funciona correctamente.
                         </p>
                     </div>
                 </div>
@@ -31,21 +31,21 @@ const ChangelogModal: React.FC<ChangelogModalProps> = ({ isOpen, onClose }) => {
                         <Icon name="info" className="w-6 h-6" />
                     </div>
                     <div>
-                        <h4 className="font-bold text-slate-800">Nota para Android Studio</h4>
+                        <h4 className="font-bold text-slate-800">Actualización en el Teléfono</h4>
                         <p className="text-sm text-slate-500 mt-1">
-                            Es vital cambiar el <strong>versionCode</strong> a <code>313</code> en el archivo <code>build.gradle</code> para que Android sepa que este archivo es más reciente que el anterior.
+                            Debido a la caché de Android, <strong>debes desinstalar la app v1.8.5</strong> antes de instalar este nuevo APK para ver los cambios reflejados.
                         </p>
                     </div>
                 </div>
 
                 <div className="bg-indigo-50 p-4 rounded-2xl border border-indigo-100">
                     <p className="text-xs text-indigo-700 font-bold text-center italic">
-                        "Build 3.1.3: Limpieza total de errores de compilación."
+                        "Build 3.1.4: Compilación limpia y lista para Android."
                     </p>
                 </div>
 
                 <Button onClick={onClose} className="w-full justify-center">
-                    ¡Todo listo, continuar!
+                    ¡Vamos allá!
                 </Button>
             </div>
         </Modal>
