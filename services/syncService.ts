@@ -1,5 +1,4 @@
-
-import { AppState, AppAction, Group, DayOfWeek, AttendanceStatus, TutorshipEntry } from '../types';
+import { AppState, AppAction, Group, DayOfWeek, AttendanceStatus } from '../types';
 import { Dispatch } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { fetchHorarioCompleto } from './horarioService';
@@ -288,14 +287,13 @@ export const syncTutorshipData = async (state: AppState, dispatch: Dispatch<AppA
                 dispatch({ type: 'SET_GROUP_TUTORS_BULK', payload: mappedTutors });
             }
             
-            // Si la respuesta fue exitosa y estamos en modo manual, avisar.
-            // No mostramos toast en sync silencioso para no molestar.
+            // Éxito en la descarga
+            dispatch({ type: 'ADD_TOAST', payload: { message: 'Fichas de tutoría actualizadas desde el servidor.', type: 'info' } });
         } else {
             console.error("Error al obtener datos de tutoreo:", getResponse.statusText);
         }
 
         // 2. ENVIAR CAMBIOS LOCALES (PUSH) - Solo si el profesor actual es tutor oficial de algún grupo
-        // Comparamos nombres normalizados para evitar errores de espacios o mayúsculas
         const isOfficialTutor = Object.values(groupTutors).some(t => t.trim().toLowerCase() === professorName.trim().toLowerCase());
         
         if (isOfficialTutor) {
@@ -310,14 +308,15 @@ export const syncTutorshipData = async (state: AppState, dispatch: Dispatch<AppA
                 })
             });
             
-            if (!syncResponse.ok) {
+            if (syncResponse.ok) {
+                dispatch({ type: 'ADD_TOAST', payload: { message: 'Tus cambios de tutoría han sido subidos.', type: 'success' } });
+            } else {
                 throw new Error("Error al subir cambios de tutoreo.");
             }
         }
 
     } catch (error) {
         console.error("Sync tutoreo error:", error);
-        // Solo lanzamos toast si no es un error de red silencioso durante el auto-sync
     }
 };
 
