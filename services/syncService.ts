@@ -1,3 +1,4 @@
+
 import { AppState, AppAction, DayOfWeek, AttendanceStatus, TutorshipEntry, Group } from '../types';
 import { Dispatch } from 'react';
 import { v4 as uuidv4 } from 'uuid';
@@ -217,23 +218,20 @@ export const syncTutorshipData = async (state: AppState, dispatch: Dispatch<AppA
             let matchedCount = 0;
 
             serverRows.forEach((row: any) => {
-                // Emparejamiento por Nombre y Grupo normalizados (Ignora acentos, espacios y mayúsculas)
                 const key = `${normalizeForMatch(row.alumno_nombre)}-${normalizeForMatch(row.grupo_nombre)}`;
                 let targetId = localStudentsMap.get(key);
                 
-                // Fallback por ID técnico si no hubo match por nombre
                 if (!targetId && row.alumno_id) {
                     const studentExistsById = groups.some(g => g.students.some(s => s.id === row.alumno_id));
-                    if (studentExistsById) {
-                        targetId = row.alumno_id;
-                    }
+                    if (studentExistsById) targetId = row.alumno_id;
                 }
 
                 if (targetId) {
                     finalProcessedData[targetId] = {
                         strengths: row.fortalezas || '',
                         opportunities: row.oportunidades || '',
-                        summary: row.resumen || ''
+                        summary: row.resumen || '',
+                        author: row.profesor_nombre || '' // Capturamos el autor real del registro
                     };
                     matchedCount++;
                 }
@@ -243,7 +241,6 @@ export const syncTutorshipData = async (state: AppState, dispatch: Dispatch<AppA
                 dispatch({ type: 'SET_TUTORSHIP_DATA_BULK', payload: finalProcessedData });
             }
 
-            // Sincronizar tutores de grupos
             if (rawServerData.groupTutors) {
                 const mappedTutors: { [gid: string]: string } = {};
                 Object.entries(rawServerData.groupTutors).forEach(([serverGroupName, tutor]) => {
@@ -263,7 +260,6 @@ export const syncTutorshipData = async (state: AppState, dispatch: Dispatch<AppA
         // 2. SUBIR CAMBIOS (PUSH)
         const recordsToUpload: any[] = [];
         groups.forEach(g => {
-            // Solo subimos si el registro tiene contenido real
             g.students.forEach(s => {
                 const entry = tutorshipData[s.id];
                 if (entry && (entry.strengths || entry.opportunities || entry.summary)) {
@@ -288,7 +284,7 @@ export const syncTutorshipData = async (state: AppState, dispatch: Dispatch<AppA
                 body: JSON.stringify({
                     action: 'sync-tutoreo',
                     data: recordsToUpload,
-                    groupTutors: state.groupTutors,
+                    groupTutors: groupTutors, // FIX: Usamos la variable desestructurada corregida
                     profesor_nombre: professorName
                 })
             });

@@ -1,3 +1,4 @@
+
 import React, { useContext, useMemo, useState, useEffect } from 'react';
 import { AppContext } from '../context/AppContext';
 import { Student, TutorshipEntry } from '../types';
@@ -22,7 +23,7 @@ const TutorshipForm: React.FC<TutorshipFormProps> = ({ student, initialEntry, on
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        onSave({ strengths, opportunities, summary });
+        onSave({ ...initialEntry, strengths, opportunities, summary });
     };
 
     return (
@@ -88,7 +89,6 @@ const TutorshipView: React.FC = () => {
         return isSyncing ? 'Buscando...' : 'Sin asignar';
     }, [group, groupTutors, isSyncing]);
 
-    // MEJORA: canEdit ahora usa normalización para evitar errores de espacios o acentos
     const canEdit = useMemo(() => {
         if (!currentTutor || currentTutor.includes('Sin asignar')) return false;
         return normalizeForMatch(settings.professorName) === normalizeForMatch(currentTutor);
@@ -96,10 +96,9 @@ const TutorshipView: React.FC = () => {
 
     const handleSaveEntry = (entry: TutorshipEntry) => {
         if (editingStudent) {
-            dispatch({ type: 'UPDATE_TUTORSHIP', payload: { studentId: editingStudent.id, entry } });
+            dispatch({ type: 'UPDATE_TUTORSHIP', payload: { studentId: editingStudent.id, entry: { ...entry, author: settings.professorName } } });
             setIsEditorOpen(false);
             setEditingStudent(null);
-            // Auto-subir cambios tras editar para no perder nada
             setTimeout(() => handleSync(true), 500);
         }
     };
@@ -230,7 +229,12 @@ const TutorshipView: React.FC = () => {
                                                     <p className="text-[11px] leading-relaxed text-slate-600 italic line-clamp-3 overflow-hidden">{entry?.opportunities || 'Sin registro...'}</p>
                                                 </div>
                                                 <div className="pt-2 border-t border-slate-100">
-                                                    <h5 className="text-[9px] font-black uppercase tracking-widest text-indigo-700 flex items-center gap-1.5 mb-1"><Icon name="book-marked" className="w-3 h-3" /> Académico</h5>
+                                                    <div className="flex justify-between items-center mb-1">
+                                                        <h5 className="text-[9px] font-black uppercase tracking-widest text-indigo-700 flex items-center gap-1.5"><Icon name="book-marked" className="w-3 h-3" /> Académico</h5>
+                                                        {entry?.author && (
+                                                            <span className="text-[8px] font-bold text-slate-400">Por: {entry.author.split(' ')[0]}</span>
+                                                        )}
+                                                    </div>
                                                     <p className="text-[11px] font-medium leading-relaxed text-slate-700 bg-indigo-50/30 p-2 rounded-lg border border-indigo-100/50 line-clamp-4 overflow-hidden">{entry?.summary || 'Sin comentarios.'}</p>
                                                 </div>
                                             </div>
