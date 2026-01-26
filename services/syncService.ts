@@ -245,8 +245,6 @@ export const syncTutorshipData = async (state: AppState, dispatch: Dispatch<AppA
         // Forzamos el envío de Nombres para llenar los campos NULL de tu base de datos
         const recordsToUpload: any[] = [];
         groups.forEach(g => {
-            const isMyGroup = groupTutors[g.id]?.trim().toLowerCase() === professorName.trim().toLowerCase();
-            
             g.students.forEach(s => {
                 const entry = tutorshipData[s.id];
                 // Si el registro existe localmente, lo mandamos con TODO su contexto de nombres
