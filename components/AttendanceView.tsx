@@ -55,10 +55,6 @@ interface AttendanceContextValue {
 
 const AttendanceInternalContext = createContext<AttendanceContextValue | null>(null);
 
-/**
- * UPDATED: Calculate stats based on TOTAL scheduled classes for the period,
- * not just classes that have occurred to date.
- */
 const calculateStats = (studentAttendance: any, dates: string[]) => {
     let absences = 0;
     const totalPossible = dates.length;
@@ -66,15 +62,12 @@ const calculateStats = (studentAttendance: any, dates: string[]) => {
     for (let i = 0; i < dates.length; i++) {
         const date = dates[i];
         const status = (studentAttendance[date] || AttendanceStatus.Pending) as AttendanceStatus;
-        
-        // Solo las faltas reducen el porcentaje respecto al total del curso
         if (status === AttendanceStatus.Absent) {
             absences++;
         }
     }
 
     return { 
-        // Porcentaje = (Clases Totales - Faltas) / Clases Totales
         percent: totalPossible > 0 ? Math.round(((totalPossible - absences) / totalPossible) * 100) : 100,
         absences 
     };
@@ -190,11 +183,6 @@ const Row = React.memo(({ index, style }: ListChildComponentProps) => {
     const { p1, p2, global } = precalcStats[index];
     const top = parseFloat((style.top ?? 0).toString()) + HEADER_HEIGHT;
     
-    /**
-     * LOGIC REFACTORED:
-     * BAJA: Excede faltas globales permitidas para TODO el cuatrimestre (redondeado arriba).
-     * RIESGO: Excede faltas permitidas específicamente en el parcial actual (redondeado arriba).
-     */
     const isBaja = global.absences > limits.global;
     const isRisk = !isBaja && ((isCurrentP1 && p1.absences > limits.p1) || (isCurrentP2 && p2.absences > limits.p2));
     
@@ -213,15 +201,17 @@ const Row = React.memo(({ index, style }: ListChildComponentProps) => {
                 className={`sticky left-0 z-[50] border-r border-slate-300 flex items-center px-2 h-full ${isBaja ? 'bg-rose-100' : isRisk ? 'bg-amber-100' : 'bg-white shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]'}`}
                 style={{ width: nameColWidth }}
             >
-                <div className="truncate w-full relative z-10">
-                    <span className="text-[10px] font-black text-slate-400 mr-1 w-4 inline-block text-right">{index + 1}.</span>
-                    <span className={`font-bold text-[11px] sm:text-xs ${isBaja ? 'text-rose-700' : isRisk ? 'text-amber-700' : 'text-slate-800'}`}>{student.name}</span>
-                    
-                    {isBaja ? (
-                        <span className="ml-2 text-[8px] bg-rose-600 text-white px-1.5 py-0.5 rounded-full font-black animate-pulse shadow-sm">BAJA</span>
-                    ) : isRisk ? (
-                        <span className="ml-2 text-[8px] bg-amber-500 text-white px-1.5 py-0.5 rounded-full font-black shadow-sm">RIESGO</span>
-                    ) : null}
+                <div className="truncate w-full relative z-10 flex flex-col">
+                    <div className="flex items-center">
+                        <span className="text-[10px] font-black text-slate-400 mr-1 w-4 inline-block text-right">{index + 1}.</span>
+                        <span className={`font-bold text-[11px] sm:text-xs truncate ${isBaja ? 'text-rose-700' : isRisk ? 'text-amber-700' : 'text-slate-800'}`}>{student.name}</span>
+                        {isBaja ? (
+                            <span className="ml-2 text-[8px] bg-rose-600 text-white px-1.5 py-0.5 rounded-full font-black shadow-sm">BAJA</span>
+                        ) : isRisk ? (
+                            <span className="ml-2 text-[8px] bg-amber-500 text-white px-1.5 py-0.5 rounded-full font-black shadow-sm">RIESGO</span>
+                        ) : null}
+                    </div>
+                    {student.nickname && <span className="text-[9px] text-primary italic font-bold ml-5 leading-none mt-0.5 truncate">"{student.nickname}"</span>}
                 </div>
             </div>
 
@@ -410,11 +400,6 @@ const AttendanceView: React.FC = () => {
         isCurrentP2: todayStr > settings.firstPartialEnd
     }), [todayStr, settings.firstPartialEnd]);
 
-    /**
-     * UPDATED: Using Math.ceil for allowed absences calculation.
-     * Rule: If 80% attendance is required, 20% absences are allowed.
-     * Rounding UP ensures students get the benefit of the doubt in fractional cases.
-     */
     const allowedAbsencesLimits = useMemo(() => {
         if (!group || classDates.length === 0) return { p1: 0, p2: 0, global: 0, p1Total: 0, p2Total: 0, totalClasses: 0 };
         const totalClasses = classDates.length;
@@ -503,7 +488,7 @@ const AttendanceView: React.FC = () => {
                         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
                             <Icon name="search" className="h-4 w-4" />
                         </div>
-                        <input type="text" className="block w-full pl-9 pr-3 py-2 border border-border-color rounded-md bg-white text-sm focus:ring-1 focus:ring-primary" placeholder="Buscar alumno..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+                        <input type="text" className="block w-full pl-9 pr-3 py-2 border border-border-color rounded-md bg-white text-sm focus:ring-1 focus:ring-primary" placeholder="Buscar alumno o apodo..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
                     </div>
                 </div>
 
@@ -515,12 +500,12 @@ const AttendanceView: React.FC = () => {
                         </div>
                         <div className="flex gap-4">
                             <div className={`flex items-center gap-1.5 p-1 rounded ${isCurrentP1 ? 'bg-indigo-100/50 ring-1 ring-indigo-200 shadow-inner' : ''}`}>
-                                <span className={`text-[9px] font-bold uppercase ${isCurrentP1 ? 'text-indigo-800' : 'text-slate-500'}`}>P1:</span>
+                                <span className={`text-[9px] font-bold uppercase ${isCurrentP1 ? 'text-indigo-800' : 'text-slate-50'}`}>P1:</span>
                                 <span className={`text-xs font-black px-2 py-0.5 rounded shadow-sm ${isCurrentP1 ? 'text-white bg-indigo-600' : 'text-indigo-700 bg-white'}`}>{allowedAbsencesLimits.p1} de {allowedAbsencesLimits.p1Total}</span>
                                 {isCurrentP1 && <span className="text-[7px] font-black text-indigo-400 uppercase tracking-tighter ml-1">ACTUAL</span>}
                             </div>
                             <div className={`flex items-center gap-1.5 p-1 rounded ${isCurrentP2 ? 'bg-indigo-100/50 ring-1 ring-indigo-200 shadow-inner' : ''}`}>
-                                <span className={`text-[9px] font-bold uppercase ${isCurrentP2 ? 'text-indigo-800' : 'text-slate-500'}`}>P2:</span>
+                                <span className={`text-[9px] font-bold uppercase ${isCurrentP2 ? 'text-indigo-800' : 'text-slate-50'}`}>P2:</span>
                                 <span className={`text-xs font-black px-2 py-0.5 rounded shadow-sm ${isCurrentP2 ? 'text-white bg-indigo-600' : 'text-indigo-700 bg-white'}`}>{allowedAbsencesLimits.p2} de {allowedAbsencesLimits.p2Total}</span>
                                 {isCurrentP2 && <span className="text-[7px] font-black text-indigo-400 uppercase tracking-tighter ml-1">ACTUAL</span>}
                             </div>
@@ -529,7 +514,7 @@ const AttendanceView: React.FC = () => {
                                 <span className="text-xs font-black text-rose-700 bg-white px-2 py-0.5 rounded shadow-sm">{allowedAbsencesLimits.global} de {allowedAbsencesLimits.totalClasses}</span>
                             </div>
                         </div>
-                        <p className="hidden lg:block text-[9px] text-slate-400 italic flex-1 text-right">Redondeo a favor del alumno aplicado (Math.ceil).</p>
+                        <p className="hidden lg:block text-[9px] text-slate-400 italic flex-1 text-right">Cálculo de faltas permitidas aplicado.</p>
                     </div>
                 )}
 

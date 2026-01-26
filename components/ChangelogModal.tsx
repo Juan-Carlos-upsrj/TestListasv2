@@ -15,44 +15,44 @@ const ChangelogModal: React.FC<ChangelogModalProps> = ({ isOpen, onClose }) => {
         <Modal isOpen={isOpen} onClose={onClose} title={`¿Qué hay de nuevo en v${APP_VERSION}?`} size="md">
             <div className="space-y-6">
                 <div className="flex items-start gap-4">
-                    <div className="bg-orange-100 p-2 rounded-xl text-orange-600 shrink-0">
+                    <div className="bg-indigo-100 p-2 rounded-xl text-indigo-600 shrink-0">
                         <Icon name="grid" className="w-6 h-6" />
                     </div>
                     <div>
-                        <h4 className="font-bold text-slate-800">Equipos Coyote Globales</h4>
+                        <h4 className="font-bold text-slate-800">Control de Equipos Avanzado</h4>
                         <p className="text-sm text-slate-500 mt-1">
-                            ¡Colaboración entre grupos! Ahora puedes ver integrantes de diferentes salones en una misma ficha de <strong>Equipo Coyote</strong>, siempre que pertenezcan al mismo cuatrimestre.
+                            ¡Vuelven los trabajos individuales! Ahora puedes buscar por equipo o alumno y ver rápidamente quién falta por asignar en una sección especial de "Sin Asignar".
                         </p>
                     </div>
                 </div>
 
                 <div className="flex items-start gap-4">
-                    <div className="bg-indigo-100 p-2 rounded-xl text-indigo-600 shrink-0">
-                        <Icon name="layout" className="w-6 h-6" />
+                    <div className="bg-orange-100 p-2 rounded-xl text-orange-600 shrink-0">
+                        <Icon name="search" className="w-6 h-6" />
                     </div>
                     <div>
-                        <h4 className="font-bold text-slate-800">Diseño Optimizado (Compacto)</h4>
+                        <h4 className="font-bold text-slate-800">Búsqueda Unificada (Nombre + Apodo)</h4>
                         <p className="text-sm text-slate-500 mt-1">
-                            Hemos reducido el tamaño de los encabezados y tarjetas en la <strong>Gestión de Grupos</strong>. Ahora tienes más espacio vertical para ver tus listas de alumnos sin hacer tanto scroll.
+                            En todas las secciones (Asistencia, Calificaciones, Grupos y Tutoreo), el buscador ahora reconoce tanto el nombre oficial como el apodo/nickname del alumno.
                         </p>
                     </div>
                 </div>
 
                 <div className="flex items-start gap-4">
                     <div className="bg-emerald-100 p-2 rounded-xl text-emerald-600 shrink-0">
-                        <Icon name="users" className="w-6 h-6" />
+                        <Icon name="user-plus" className="w-6 h-6" />
                     </div>
                     <div>
-                        <h4 className="font-bold text-slate-800">Distintivos de Grupo</h4>
+                        <h4 className="font-bold text-slate-800">Asignación Rápida</h4>
                         <p className="text-sm text-slate-500 mt-1">
-                            En las vistas de equipos, cada alumno ahora tiene una pequeña etiqueta que indica a qué grupo pertenece (ej. [6A], [6B]), facilitando la identificación rápida.
+                            Se añadió un botón en la vista de equipos para marcar directamente a un alumno como "Trabajo Individual" sin tener que escribirlo manualmente.
                         </p>
                     </div>
                 </div>
 
                 <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200">
                     <p className="text-xs text-slate-400 italic text-center">
-                        "Build 2.6.0: Sincronización mejorada y corrección de visibilidad en dispositivos móviles."
+                        "Build 2.7.0: Optimizando la velocidad de gestión y el control de equipos Coyote."
                     </p>
                 </div>
 
