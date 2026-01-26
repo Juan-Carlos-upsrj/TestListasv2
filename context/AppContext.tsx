@@ -285,6 +285,7 @@ const appReducer = (state: AppState, action: AppAction): AppState => {
     case 'BULK_SET_ATTENDANCE': {
         const { groupId, records } = action.payload;
         const updatedAttendance = { ...state.attendance };
+        // FIX: Correctly access the existing group attendance and avoid using 'record' before it's defined
         const updatedGroupAttendance = { ...(updatedAttendance[groupId] || {}) };
         records.forEach(record => {
             const updatedStudentAttendance = { ...(updatedGroupAttendance[record.studentId] || {}) };
@@ -555,6 +556,22 @@ const appReducer = (state: AppState, action: AppAction): AppState => {
             tutorshipData: {
                 ...state.tutorshipData,
                 [action.payload.studentId]: action.payload.entry
+            }
+        };
+    case 'SET_TUTORSHIP_DATA_BULK':
+        return {
+            ...state,
+            tutorshipData: {
+                ...state.tutorshipData,
+                ...action.payload
+            }
+        };
+    case 'SET_GROUP_TUTORS_BULK':
+        return {
+            ...state,
+            groupTutors: {
+                ...state.groupTutors,
+                ...action.payload
             }
         };
     case 'SET_GROUP_TUTOR':

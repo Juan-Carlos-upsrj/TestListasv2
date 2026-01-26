@@ -264,37 +264,42 @@ export const syncTutorshipData = async (state: AppState, dispatch: Dispatch<AppA
         if (getResponse.ok) {
             const serverData = await getResponse.json();
             
-            // Sincronizar fichas de alumnos
+            // Sincronizar fichas de alumnos masivamente
             if (serverData && serverData.tutorshipData) {
-                Object.entries(serverData.tutorshipData).forEach(([sid, entry]) => {
-                   dispatch({ type: 'UPDATE_TUTORSHIP', payload: { studentId: sid, entry: entry as TutorshipEntry } });
-                });
+                dispatch({ type: 'SET_TUTORSHIP_DATA_BULK', payload: serverData.tutorshipData });
             }
 
-            // --- LÓGICA DE MAPEO INTELIGENTE ---
-            // Sincronizar tutores de grupos (lo que configuraste en asignar_tutor.php)
+            // LÓGICA DE MAPEO INTELIGENTE DE TUTORES
             if (serverData && serverData.groupTutors) {
+                const mappedTutors: { [gid: string]: string } = {};
                 Object.entries(serverData.groupTutors).forEach(([serverKey, tutor]) => {
                     // 1. Intentar emparejar por ID exacto
                     const groupById = groups.find(g => g.id === serverKey);
                     if (groupById) {
-                        dispatch({ type: 'SET_GROUP_TUTOR', payload: { groupId: serverKey, tutorName: tutor as string } });
+                        mappedTutors[serverKey] = tutor as string;
                     } else {
                         // 2. Intentar emparejar por Nombre de Grupo (Ej: "IAEV-40")
-                        const groupByNombre = groups.find(g => g.name.toLowerCase() === serverKey.toLowerCase());
+                        const groupByNombre = groups.find(g => g.name.trim().toLowerCase() === serverKey.trim().toLowerCase());
                         if (groupByNombre) {
-                            dispatch({ type: 'SET_GROUP_TUTOR', payload: { groupId: groupByNombre.id, tutorName: tutor as string } });
+                            mappedTutors[groupByNombre.id] = tutor as string;
                         }
                     }
                 });
+                dispatch({ type: 'SET_GROUP_TUTORS_BULK', payload: mappedTutors });
             }
+            
+            // Si la respuesta fue exitosa y estamos en modo manual, avisar.
+            // No mostramos toast en sync silencioso para no molestar.
+        } else {
+            console.error("Error al obtener datos de tutoreo:", getResponse.statusText);
         }
 
         // 2. ENVIAR CAMBIOS LOCALES (PUSH) - Solo si el profesor actual es tutor oficial de algún grupo
-        const isOfficialTutor = Object.values(groupTutors).some(t => t.toLowerCase() === professorName.toLowerCase());
+        // Comparamos nombres normalizados para evitar errores de espacios o mayúsculas
+        const isOfficialTutor = Object.values(groupTutors).some(t => t.trim().toLowerCase() === professorName.trim().toLowerCase());
         
         if (isOfficialTutor) {
-            await fetch(syncUrl.toString(), {
+            const syncResponse = await fetch(syncUrl.toString(), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'X-API-KEY': apiKey },
                 body: JSON.stringify({
@@ -304,10 +309,15 @@ export const syncTutorshipData = async (state: AppState, dispatch: Dispatch<AppA
                     profesor_nombre: professorName
                 })
             });
+            
+            if (!syncResponse.ok) {
+                throw new Error("Error al subir cambios de tutoreo.");
+            }
         }
 
     } catch (error) {
         console.error("Sync tutoreo error:", error);
+        // Solo lanzamos toast si no es un error de red silencioso durante el auto-sync
     }
 };
 

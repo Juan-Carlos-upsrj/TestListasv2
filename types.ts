@@ -206,4 +206,6 @@ export type AppAction =
   | { type: 'GENERATE_RANDOM_TEAMS'; payload: { groupId: string, maxTeamSize: number } } // NUEVO
   | { type: 'SET_TEACHER_SCHEDULE'; payload: TeacherClass[] }
   | { type: 'UPDATE_TUTORSHIP'; payload: { studentId: string; entry: TutorshipEntry } } // NUEVO
+  | { type: 'SET_TUTORSHIP_DATA_BULK'; payload: { [studentId: string]: TutorshipEntry } } // NUEVO
+  | { type: 'SET_GROUP_TUTORS_BULK'; payload: { [groupId: string]: string } } // NUEVO
   | { type: 'SET_GROUP_TUTOR'; payload: { groupId: string; tutorName: string } }; // NUEVO
