@@ -44,7 +44,9 @@ export const syncAttendanceData = async (state: AppState, dispatch: Dispatch<App
     const trimmedProfessorName = professorName.trim();
     const today = new Date();
     const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    
     dispatch({ type: 'ADD_TOAST', payload: { message: 'Sincronizando asistencias...', type: 'info' } });
+    
     try {
         const fetchUrl = getBaseApiUrl(apiUrl);
         
@@ -57,10 +59,14 @@ export const syncAttendanceData = async (state: AppState, dispatch: Dispatch<App
         if (!serverResponse.ok) throw new Error("Error al obtener datos");
         const serverData = await serverResponse.json().catch(() => null);
         const serverRecords: any[] = Array.isArray(serverData) ? serverData : (serverData?.data || []);
+        
         const serverRecordsMap = new Map<string, string>(); 
         serverRecords.forEach(rec => {
             if (rec.alumno_nombre && rec.fecha && rec.grupo_nombre) {
-                const key = `${normalizeForMatch(rec.alumno_nombre)}-${normalizeForMatch(rec.grupo_nombre)}-${rec.fecha}`;
+                // Key mejorada con IDs si están disponibles, sino nombres normalizados
+                const aid = rec.alumno_id && rec.alumno_id !== '0' ? rec.alumno_id : normalizeForMatch(rec.alumno_nombre);
+                const gid = rec.grupo_id && rec.grupo_id !== 'sin_grupo' ? rec.grupo_id : normalizeForMatch(rec.grupo_nombre);
+                const key = `${aid}-${gid}-${rec.fecha}`;
                 serverRecordsMap.set(key, rec.status);
             }
         });
@@ -76,13 +82,18 @@ export const syncAttendanceData = async (state: AppState, dispatch: Dispatch<App
                 for (const [date, localStatus] of Object.entries(dateAttendances)) {
                     if (syncScope === 'today' && date !== todayStr) continue;
                     if (localStatus === AttendanceStatus.Pending) continue;
-                    const key = `${normalizeForMatch(student.name)}-${normalizeForMatch(group.name)}-${date}`;
+                    
+                    // Verificamos si ya existe en el servidor para no re-enviar innecesariamente
+                    const key = `${student.id}-${group.id}-${date}`;
                     const serverStatus = serverRecordsMap.get(key);
+                    
                     if (!serverStatus || serverStatus !== localStatus) {
                         recordsToSync.push({ 
                             profesor_nombre: trimmedProfessorName, 
                             materia_nombre: group.subject, 
+                            grupo_id: group.id, // ENVÍO DE ID REAL
                             grupo_nombre: group.name, 
+                            alumno_id: student.id, // ENVÍO DE ID REAL
                             alumno_nombre: student.name, 
                             fecha: date, 
                             status: localStatus 
@@ -97,14 +108,12 @@ export const syncAttendanceData = async (state: AppState, dispatch: Dispatch<App
             return;
         }
 
-        // 3. Ejecutar sincronización (Envío con Action Wrapper)
+        // 3. Ejecutar sincronización (Envío como ARRAY DIRECTO según espera api.php Caso 5)
+        // NOTA: Tu api.php procesa la asistencia en el bloque `if (is_array($input))` al final.
         const syncResponse = await fetch(fetchUrl.toString(), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'X-API-KEY': apiKey },
-            body: JSON.stringify({ 
-                action: 'sync-asistencias', 
-                data: recordsToSync 
-            }),
+            body: JSON.stringify(recordsToSync), // ARRAY DIRECTO
         });
 
         if (syncResponse.ok) {
@@ -134,7 +143,18 @@ export const syncGradesData = async (state: AppState, dispatch: Dispatch<AppActi
                 [1, 2].forEach(parcial => {
                     const avg = calculatePartialAverage(group, parcial as 1 | 2, groupEvals, studentGrades, settings, studentAttendance);
                     if (avg !== null) {
-                        recordsToSync.push({ profesor_nombre: professorName, grupo_nombre: group.name, materia_nombre: group.subject, alumno_nombre: student.name, alumno_matricula: student.matricula || '', evaluacion_nombre: `Promedio Parcial ${parcial}`, parcial, calificacion: Number(avg.toFixed(2)) });
+                        recordsToSync.push({ 
+                            profesor_nombre: professorName, 
+                            grupo_id: group.id,
+                            grupo_nombre: group.name, 
+                            materia_nombre: group.subject, 
+                            alumno_id: student.id,
+                            alumno_nombre: student.name, 
+                            alumno_matricula: student.matricula || '', 
+                            evaluacion_nombre: `Promedio Parcial ${parcial}`, 
+                            parcial, 
+                            calificacion: Number(avg.toFixed(2)) 
+                        });
                     }
                 });
             });
@@ -182,31 +202,24 @@ export const syncTutorshipData = async (state: AppState, dispatch: Dispatch<AppA
         const downloadedData: { [sid: string]: TutorshipEntry } = {};
         const downloadedTutors: { [gid: string]: string } = {};
         
-        // Mapeo: Nombre Normalizado -> Lista de IDs Locales
-        // Esto permite que una nota se replique en todos los grupos donde aparezca el alumno
-        const nameToLocalIds = new Map<string, string[]>();
+        // Mapeo: ID Local -> Student
+        const localStudentsMap = new Map<string, string>();
         groups.forEach(g => {
             g.students.forEach(s => {
-                const key = normalizeForMatch(s.name);
-                if (!nameToLocalIds.has(key)) nameToLocalIds.set(key, []);
-                nameToLocalIds.get(key)!.push(s.id);
+                localStudentsMap.set(s.id, s.name);
             });
         });
 
-        // Procesar registros recibidos
+        // Procesar registros recibidos (priorizando ID, luego nombre)
         serverRows.forEach((row: any) => {
-            const key = normalizeForMatch(row.alumno_nombre);
-            const targetIds = nameToLocalIds.get(key);
-            
-            if (targetIds) {
-                targetIds.forEach(id => {
-                    downloadedData[id] = {
-                        strengths: row.fortalezas || '',
-                        opportunities: row.oportunidades || '',
-                        summary: row.resumen || '',
-                        author: row.profesor_nombre || 'Docente Externo'
-                    };
-                });
+            const sid = row.alumno_id;
+            if (sid && localStudentsMap.has(sid)) {
+                downloadedData[sid] = {
+                    strengths: row.fortalezas || '',
+                    opportunities: row.oportunidades || '',
+                    summary: row.resumen || '',
+                    author: row.profesor_nombre || 'Docente Externo'
+                };
             }
         });
 
@@ -227,7 +240,6 @@ export const syncTutorshipData = async (state: AppState, dispatch: Dispatch<AppA
         }
 
         // 2. SUBIR (PUSH)
-        // Solo subimos si nosotros somos los tutores o no hay tutor asignado
         const recordsToUpload: any[] = [];
         groups.forEach(g => {
             const tutorOfThisGroup = groupTutors[g.id];
