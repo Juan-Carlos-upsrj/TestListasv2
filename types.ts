@@ -113,7 +113,7 @@ export interface TutorshipEntry {
   strengths: string;
   opportunities: string;
   summary: string;
-  author?: string; // NUEVO: Para saber quién escribió la nota originalmente
+  author?: string; // Campo para identificar quién escribió la nota
 }
 
 export interface AppState {
