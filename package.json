@@ -1,7 +1,7 @@
 
 {
   "name": "gestion-academica-iaev",
-  "version": "1.9.9",
+  "version": "2.0.0",
   "description": "Aplicacion de escritorio para gestion academica.",
   "author": "Kakit",
   "main": "dist-electron/main.js",
