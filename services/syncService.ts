@@ -127,73 +127,170 @@ export const syncGradesData = async (state: AppState, dispatch: Dispatch<AppActi
     }
 };
 
-export const syncTutorshipData = async (state: AppState, dispatch: Dispatch<AppAction>) => {
+export const syncTutorshipData = async (state: AppState, dispatch: Dispatch<AppAction>, silent = false) => {
     if (!checkSettings(state.settings, dispatch)) return;
+    
     const { settings, tutorshipData = {}, groups = [], groupTutors = {} } = state;
     const { apiUrl, apiKey, professorName } = settings;
+    
+    if (!silent) {
+        dispatch({ type: 'ADD_TOAST', payload: { message: 'Sincronizando datos de tutoría...', type: 'info' } });
+    }
+    
     try {
         const syncUrl = getBaseApiUrl(apiUrl);
-        // 1. PULL: Descargamos todas las notas disponibles para los alumnos de este profesor
+        
+        // ========================================
+        // PASO 1: DESCARGAR (PULL) - Obtener todas las notas del servidor
+        // ========================================
+        console.log('[SYNC] Descargando notas de tutoría del servidor...');
+        
         const getResponse = await fetch(syncUrl.toString(), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'X-API-KEY': apiKey },
-            body: JSON.stringify({ action: 'get-tutoreo', profesor_nombre: professorName })
+            body: JSON.stringify({ 
+                action: 'get-tutoreo', 
+                profesor_nombre: professorName 
+            })
         });
-        if (getResponse.ok) {
-            const rawServerData = await getResponse.json();
-            const serverRows = Array.isArray(rawServerData) ? rawServerData : (rawServerData.data || []);
-            const finalProcessedData: { [sid: string]: TutorshipEntry } = {};
-            const localStudentsMap = new Map<string, string>();
-            groups.forEach(g => g.students.forEach(s => {
-                const key = `${normalizeForMatch(s.name)}-${normalizeForMatch(g.name)}`;
-                localStudentsMap.set(key, s.id);
-            }));
-            serverRows.forEach((row: any) => {
-                const key = `${normalizeForMatch(row.alumno_nombre)}-${normalizeForMatch(row.grupo_nombre)}`;
-                const targetId = localStudentsMap.get(key) || row.alumno_id;
-                if (targetId && groups.some(g => g.students.some(s => s.id === targetId))) {
-                    finalProcessedData[targetId] = {
-                        strengths: row.fortalezas || '',
-                        opportunities: row.oportunidades || '',
-                        summary: row.resumen || '',
-                        author: row.profesor_nombre || 'Docente Externo' // Capturamos quién escribió la nota
-                    };
+        
+        if (!getResponse.ok) {
+            throw new Error('Error en la respuesta del servidor');
+        }
+        
+        const rawServerData = await getResponse.json();
+        console.log('[SYNC] Datos recibidos del servidor:', rawServerData);
+        
+        // Extraer los registros del servidor
+        const serverRows = Array.isArray(rawServerData) ? rawServerData : (rawServerData.data || []);
+        console.log(`[SYNC] Total de registros recibidos: ${serverRows.length}`);
+        
+        // Procesar los datos del servidor
+        const downloadedData: { [sid: string]: TutorshipEntry } = {};
+        const downloadedTutors: { [gid: string]: string } = {};
+        
+        // Crear mapa de estudiantes locales para hacer match
+        const studentMap = new Map<string, { id: string, groupId: string }>();
+        groups.forEach(g => {
+            g.students.forEach(s => {
+                const nameKey = normalizeForMatch(s.name);
+                const nameGroupKey = `${nameKey}-${normalizeForMatch(g.name)}`;
+                
+                studentMap.set(nameKey, { id: s.id, groupId: g.id });
+                studentMap.set(nameGroupKey, { id: s.id, groupId: g.id });
+            });
+        });
+        
+        // Procesar cada registro del servidor
+        serverRows.forEach((row: any) => {
+            const nameKey = normalizeForMatch(row.alumno_nombre);
+            const nameGroupKey = `${nameKey}-${normalizeForMatch(row.grupo_nombre)}`;
+            
+            // Prioridad al match por Nombre+Grupo, si no por Nombre solo
+            let match = studentMap.get(nameGroupKey) || studentMap.get(nameKey);
+            
+            if (match) {
+                console.log(`[SYNC] Match encontrado: ${row.alumno_nombre} -> Local ID: ${match.id}`);
+                downloadedData[match.id] = {
+                    strengths: row.fortalezas || '',
+                    opportunities: row.oportunidades || '',
+                    summary: row.resumen || '',
+                    author: row.profesor_nombre || 'Docente Externo'
+                };
+            }
+        });
+        
+        // Procesar tutores de grupos del servidor
+        if (rawServerData.groupTutors) {
+            Object.entries(rawServerData.groupTutors).forEach(([serverGroupName, tutor]) => {
+                const localGroup = groups.find(g => 
+                    normalizeForMatch(g.name) === normalizeForMatch(serverGroupName)
+                );
+                if (localGroup) {
+                    downloadedTutors[localGroup.id] = tutor as string;
                 }
             });
-            if (Object.keys(finalProcessedData).length > 0) dispatch({ type: 'SET_TUTORSHIP_DATA_BULK', payload: finalProcessedData });
-            if (rawServerData.groupTutors) {
-                const mappedTutors: { [gid: string]: string } = {};
-                Object.entries(rawServerData.groupTutors).forEach(([serverGroupName, tutor]) => {
-                    const localGroup = groups.find(g => normalizeForMatch(g.name) === normalizeForMatch(serverGroupName));
-                    if (localGroup) mappedTutors[localGroup.id] = tutor as string;
-                });
-                if (Object.keys(mappedTutors).length > 0) dispatch({ type: 'SET_GROUP_TUTORS_BULK', payload: mappedTutors });
-            }
         }
-        // 2. PUSH: Subimos nuestras notas locales si somos el tutor
+        
+        // Actualizar estado local con datos descargados (Colaboración)
+        if (Object.keys(downloadedData).length > 0) {
+            dispatch({ type: 'SET_TUTORSHIP_DATA_BULK', payload: downloadedData });
+        }
+        
+        if (Object.keys(downloadedTutors).length > 0) {
+            dispatch({ type: 'SET_GROUP_TUTORS_BULK', payload: downloadedTutors });
+        }
+        
+        // ========================================
+        // PASO 2: SUBIR (PUSH) - Enviar nuestras notas locales
+        // ========================================
         const recordsToUpload: any[] = [];
+        
         groups.forEach(g => {
             const tutorOfThisGroup = groupTutors[g.id];
-            // Solo subimos si nosotros somos los tutores asignados o si la nota no tiene autor previo
-            if (!tutorOfThisGroup || normalizeForMatch(tutorOfThisGroup) === normalizeForMatch(professorName)) {
+            // Solo subimos si nosotros somos los tutores o si la nota es "nuestra"
+            const isAuthorized = !tutorOfThisGroup || 
+                               normalizeForMatch(tutorOfThisGroup) === normalizeForMatch(professorName);
+            
+            if (isAuthorized) {
                 g.students.forEach(s => {
                     const entry = tutorshipData[s.id];
+                    // Solo subir si hay contenido
                     if (entry && (entry.strengths || entry.opportunities || entry.summary)) {
-                        recordsToUpload.push({ profesor_nombre: professorName, grupo_id: g.id, grupo_nombre: g.name, alumno_id: s.id, alumno_nombre: s.name, fortalezas: entry.strengths, oportunidades: entry.opportunities, resumen: entry.summary });
+                        recordsToUpload.push({
+                            profesor_nombre: professorName,
+                            grupo_id: g.id,
+                            grupo_nombre: g.name,
+                            alumno_id: s.id,
+                            alumno_nombre: s.name,
+                            fortalezas: entry.strengths || '',
+                            oportunidades: entry.opportunities || '',
+                            resumen: entry.summary || ''
+                        });
                     }
                 });
             }
         });
+        
         if (recordsToUpload.length > 0) {
-            await fetch(syncUrl.toString(), {
+            const uploadResponse = await fetch(syncUrl.toString(), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'X-API-KEY': apiKey },
-                body: JSON.stringify({ action: 'sync-tutoreo', data: recordsToUpload, groupTutors, profesor_nombre: professorName })
+                body: JSON.stringify({
+                    action: 'sync-tutoreo',
+                    data: recordsToUpload,
+                    groupTutors: groupTutors,
+                    profesor_nombre: professorName
+                })
             });
-            dispatch({ type: 'ADD_TOAST', payload: { message: 'Fichas compartidas en la nube.', type: 'success' } });
+            
+            if (uploadResponse.ok && !silent) {
+                dispatch({ 
+                    type: 'ADD_TOAST', 
+                    payload: { 
+                        message: `Sincronización completa. ${Object.keys(downloadedData).length} fichas actualizadas.`, 
+                        type: 'success' 
+                    } 
+                });
+            }
+        } else if (!silent) {
+            dispatch({ 
+                type: 'ADD_TOAST', 
+                payload: { 
+                    message: `Datos descargados: ${Object.keys(downloadedData).length} fichas encontradas.`, 
+                    type: 'success' 
+                } 
+            });
         }
+        
     } catch (error) {
-        dispatch({ type: 'ADD_TOAST', payload: { message: 'Error en sincronización colaborativa.', type: 'error' } });
+        console.error('[SYNC ERROR]', error);
+        if (!silent) {
+            dispatch({ 
+                type: 'ADD_TOAST', 
+                payload: { message: 'Error en sincronización colaborativa.', type: 'error' } 
+            });
+        }
     }
 };
 
