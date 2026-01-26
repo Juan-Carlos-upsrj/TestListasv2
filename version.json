@@ -1,6 +1,6 @@
 
 {
-  "version": "1.9.3",
-  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v1.9.3/app-debug.apk",
-  "notes": "¡Versión 1.9.3! Lógica de redondeo hacia arriba para faltas permitidas. Alertas diferenciadas: 'Riesgo' para el parcial actual y 'Baja' para el cuatrimestre total."
+  "version": "3.0.1",
+  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v3.0.1/app-debug.apk",
+  "notes": "¡Versión 3.0.1! Corrección crítica del sistema de actualización en Android. Se ha implementado un mecanismo anti-cache para asegurar que el APK descargado sea siempre el más reciente. Nota: Asegúrate de desinstalar la versión anterior si el sistema indica conflicto de paquetes."
 }

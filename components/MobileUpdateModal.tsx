@@ -15,9 +15,17 @@ const MobileUpdateModal: React.FC<MobileUpdateModalProps> = ({ isOpen, onClose, 
     if (!updateInfo) return null;
 
     const handleDownload = () => {
+        // Implement cache-busting to prevent Android from installing an old cached version of the APK.
+        const cacheBuster = `cb=${Date.now()}`;
+        const finalUrl = updateInfo.url.includes('?') 
+            ? `${updateInfo.url}&${cacheBuster}` 
+            : `${updateInfo.url}?${cacheBuster}`;
+            
+        console.log("Iniciando descarga con anti-cache:", finalUrl);
+        
         // Use '_system' to force opening in the external browser (Chrome/Safari)
         // This is crucial for Android to handle the download correctly without freezing the WebView.
-        window.open(updateInfo.url, '_system');
+        window.open(finalUrl, '_system');
         onClose();
     };
 

@@ -15,6 +15,18 @@ const ChangelogModal: React.FC<ChangelogModalProps> = ({ isOpen, onClose }) => {
         <Modal isOpen={isOpen} onClose={onClose} title={`¿Qué hay de nuevo en v${APP_VERSION}?`} size="md">
             <div className="space-y-6">
                 <div className="flex items-start gap-4">
+                    <div className="bg-emerald-100 p-2 rounded-xl text-emerald-600 shrink-0">
+                        <Icon name="check-circle-2" className="w-6 h-6" />
+                    </div>
+                    <div>
+                        <h4 className="font-bold text-slate-800">Actualizador Corregido</h4>
+                        <p className="text-sm text-slate-500 mt-1">
+                            Se implementó un sistema de <strong>anti-cache</strong> para las descargas de Android. Esto asegura que al pulsar "Actualizar", el teléfono descargue la versión real y no una copia antigua almacenada en memoria.
+                        </p>
+                    </div>
+                </div>
+
+                <div className="flex items-start gap-4">
                     <div className="bg-indigo-100 p-2 rounded-xl text-indigo-600 shrink-0">
                         <Icon name="check-square" className="w-6 h-6" />
                     </div>
@@ -26,21 +38,9 @@ const ChangelogModal: React.FC<ChangelogModalProps> = ({ isOpen, onClose }) => {
                     </div>
                 </div>
 
-                <div className="flex items-start gap-4">
-                    <div className="bg-orange-100 p-2 rounded-xl text-orange-600 shrink-0">
-                        <Icon name="upload-cloud" className="w-6 h-6" />
-                    </div>
-                    <div>
-                        <h4 className="font-bold text-slate-800">Corrección de Comunicación</h4>
-                        <p className="text-sm text-slate-500 mt-1">
-                            Se ajustó el formato de envío de asistencia para que coincida exactamente con lo que el servidor espera, eliminando los errores de "Bad Request".
-                        </p>
-                    </div>
-                </div>
-
                 <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200">
                     <p className="text-xs text-slate-400 italic text-center">
-                        "Build 3.0.0: Datos íntegros y sincronización masiva optimizada."
+                        "Build 3.0.1: Estabilidad en actualizaciones y flujos de datos."
                     </p>
                 </div>
 
