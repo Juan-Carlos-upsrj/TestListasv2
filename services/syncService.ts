@@ -1,4 +1,5 @@
-import { AppState, AppAction, Group, DayOfWeek, AttendanceStatus } from '../types';
+
+import { AppState, AppAction, DayOfWeek, AttendanceStatus, TutorshipEntry, Group } from '../types';
 import { Dispatch } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { fetchHorarioCompleto } from './horarioService';
@@ -263,21 +264,44 @@ export const syncTutorshipData = async (state: AppState, dispatch: Dispatch<AppA
         if (getResponse.ok) {
             const serverData = await getResponse.json();
             
-            // Sincronizar fichas de alumnos masivamente
+            // --- LÓGICA DE MAPEO INTELIGENTE DE ALUMNOS (ID vs NOMBRE) ---
             if (serverData && serverData.tutorshipData) {
-                dispatch({ type: 'SET_TUTORSHIP_DATA_BULK', payload: serverData.tutorshipData });
+                const incomingData = serverData.tutorshipData;
+                const normalizedLocalData: { [sid: string]: TutorshipEntry } = {};
+                
+                // Crear un mapa de todos los alumnos locales por Nombre Normalizado para fallback
+                const localStudentsMap = new Map<string, string>(); // Nombre -> ID
+                groups.forEach(g => g.students.forEach(s => {
+                    localStudentsMap.set(s.name.trim().toLowerCase(), s.id);
+                }));
+
+                Object.entries(incomingData).forEach(([serverSid, entry]: [string, any]) => {
+                    // 1. Intentar por ID exacto
+                    let localTargetId = serverSid;
+                    const existsLocally = groups.some(g => g.students.some(s => s.id === serverSid));
+
+                    if (!existsLocally && entry.studentName) {
+                        // 2. Si no existe el ID, intentar por Nombre (Fallback Crítico)
+                        const matchedId = localStudentsMap.get(entry.studentName.trim().toLowerCase());
+                        if (matchedId) {
+                            localTargetId = matchedId;
+                        }
+                    }
+                    
+                    normalizedLocalData[localTargetId] = entry as TutorshipEntry;
+                });
+
+                dispatch({ type: 'SET_TUTORSHIP_DATA_BULK', payload: normalizedLocalData });
             }
 
-            // LÓGICA DE MAPEO INTELIGENTE DE TUTORES
+            // LÓGICA DE MAPEO INTELIGENTE DE TUTORES DE GRUPO
             if (serverData && serverData.groupTutors) {
                 const mappedTutors: { [gid: string]: string } = {};
                 Object.entries(serverData.groupTutors).forEach(([serverKey, tutor]) => {
-                    // 1. Intentar emparejar por ID exacto
                     const groupById = groups.find(g => g.id === serverKey);
                     if (groupById) {
                         mappedTutors[serverKey] = tutor as string;
                     } else {
-                        // 2. Intentar emparejar por Nombre de Grupo (Ej: "IAEV-40")
                         const groupByNombre = groups.find(g => g.name.trim().toLowerCase() === serverKey.trim().toLowerCase());
                         if (groupByNombre) {
                             mappedTutors[groupByNombre.id] = tutor as string;
@@ -287,31 +311,37 @@ export const syncTutorshipData = async (state: AppState, dispatch: Dispatch<AppA
                 dispatch({ type: 'SET_GROUP_TUTORS_BULK', payload: mappedTutors });
             }
             
-            // Éxito en la descarga
-            dispatch({ type: 'ADD_TOAST', payload: { message: 'Fichas de tutoría actualizadas desde el servidor.', type: 'info' } });
-        } else {
-            console.error("Error al obtener datos de tutoreo:", getResponse.statusText);
+            dispatch({ type: 'ADD_TOAST', payload: { message: 'Fichas de tutoría actualizadas.', type: 'info' } });
         }
 
-        // 2. ENVIAR CAMBIOS LOCALES (PUSH) - Solo si el profesor actual es tutor oficial de algún grupo
+        // 2. ENVIAR CAMBIOS LOCALES (PUSH)
         const isOfficialTutor = Object.values(groupTutors).some(t => t.trim().toLowerCase() === professorName.trim().toLowerCase());
         
         if (isOfficialTutor) {
+            // Incluimos el nombre del alumno en la subida para facilitar el mapeo en otros dispositivos
+            const dataToUpload: any = {};
+            Object.entries(tutorshipData).forEach(([sid, entry]) => {
+                let sName = '';
+                groups.forEach(g => {
+                    const found = g.students.find(s => s.id === sid);
+                    if (found) sName = found.name;
+                });
+                dataToUpload[sid] = { ...entry, studentName: sName };
+            });
+
             const syncResponse = await fetch(syncUrl.toString(), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'X-API-KEY': apiKey },
                 body: JSON.stringify({
                     action: 'sync-tutoreo',
-                    tutorshipData,
+                    tutorshipData: dataToUpload,
                     groupTutors,
                     profesor_nombre: professorName
                 })
             });
             
             if (syncResponse.ok) {
-                dispatch({ type: 'ADD_TOAST', payload: { message: 'Tus cambios de tutoría han sido subidos.', type: 'success' } });
-            } else {
-                throw new Error("Error al subir cambios de tutoreo.");
+                dispatch({ type: 'ADD_TOAST', payload: { message: 'Tus cambios han sido subidos a la nube.', type: 'success' } });
             }
         }
 
@@ -360,6 +390,7 @@ export const syncScheduleData = async (state: AppState, dispatch: Dispatch<AppAc
             if (grupoExistente) {
                 dispatch({ type: 'SAVE_GROUP', payload: { ...grupoExistente, classDays: info.days as DayOfWeek[] } });
             } else {
+                // FIX: Add missing Group import from types.ts
                 const nuevoGrupo: Group = {
                     id: uuidv4(),
                     name: uniqueGroupName, 
