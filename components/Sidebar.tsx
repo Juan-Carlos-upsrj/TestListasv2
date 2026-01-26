@@ -83,7 +83,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
       <aside 
         className={`fixed inset-y-0 left-0 bg-surface flex flex-col z-30 border-r border-border-color transition-all duration-300 ease-in-out md:relative md:translate-x-0 md:flex-shrink-0 ${
             isOpen ? 'translate-x-0' : '-translate-x-full'
-        } ${isCollapsed ? 'md:w-20' : 'md:w-64'} w-64`}
+        } ${isCollapsed ? 'md:w-20' : 'md:w-64'} w-64 h-full`}
         aria-label="Barra lateral principal" 
         id="sidebar-main"
       >
@@ -129,7 +129,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
             )}
             
             {sortedGroups.length > 0 ? (
-                <div className={`flex flex-wrap gap-2 ${isCollapsed ? 'justify-center flex-col w-full' : ''}`}>
+                <div className={`flex flex-wrap gap-2 ${isCollapsed ? 'justify-center flex-col w-full' : ''} max-h-[30vh] overflow-y-auto custom-scrollbar pr-1`}>
                     {sortedGroups.map(g => {
                         const colorObj = GROUP_COLORS.find(c => c.name === g.color) || GROUP_COLORS[0];
                         const isActive = selectedGroupId === g.id;
@@ -154,7 +154,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
                                     whileHover={{ scale: 1.1 }}
                                     whileTap={{ scale: 0.95 }}
                                     title={`${g.name} - ${g.subject} (${g.quarter || '?'})`}
-                                    className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-200 border border-transparent mx-auto relative ${
+                                    className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-200 border border-transparent mx-auto mb-1 relative ${
                                         isActive ? activeClass : inactiveClass
                                     }`}
                                 >
@@ -171,7 +171,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
                                 whileHover={{ scale: 1.05 }}
                                 whileTap={{ scale: 0.95 }}
                                 title={`${g.name} - ${g.subject}`}
-                                className={`px-3 py-1.5 rounded-md text-[11px] font-bold transition-all duration-200 border border-transparent whitespace-nowrap overflow-hidden text-ellipsis max-w-full flex items-center justify-between gap-2 ${
+                                className={`px-3 py-1.5 rounded-md text-[11px] font-bold transition-all duration-200 border border-transparent whitespace-nowrap overflow-hidden text-ellipsis max-w-full flex items-center justify-between gap-2 mb-0.5 ${
                                     isActive ? activeClass : inactiveClass
                                 }`}
                             >
@@ -186,8 +186,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
             )}
         </div>
 
-        <nav className="flex-grow p-2 sm:p-4 overflow-y-auto custom-scrollbar" id="sidebar-nav">
-          <ul>
+        <nav className="flex-grow py-2 sm:py-4 overflow-y-auto custom-scrollbar" id="sidebar-nav">
+          <ul className="px-2">
             {navItems.map((item) => (
               <li key={item.view}>
                 <motion.a

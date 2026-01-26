@@ -1,7 +1,7 @@
 
 import React, { useContext, useMemo, useState, useEffect } from 'react';
 import { AppContext } from '../context/AppContext';
-import { Student, Group } from '../types';
+import { Student } from '../types';
 import Icon from './icons/Icon';
 import Button from './common/Button';
 import Modal from './common/Modal';
