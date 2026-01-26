@@ -1,6 +1,6 @@
 
 {
-  "version": "3.1.1",
-  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v3.1.1/app-debug.apk",
-  "notes": "¡Versión 3.1.1! Se ha detectado que Android retiene versiones antiguas. ES OBLIGATORIO: 1. Desinstalar la versión actual. 2. Instalar este nuevo APK. 3. Usar el botón 'Limpieza Profunda' en Configuración si no ves los cambios."
+  "version": "3.1.2",
+  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v3.1.2/app-debug.apk",
+  "notes": "¡Versión 3.1.2! Corrección de errores de compilación críticos. IMPORTANTE: En Android Studio, cambia el 'versionCode' a 312 en build.gradle para asegurar la actualización."
 }

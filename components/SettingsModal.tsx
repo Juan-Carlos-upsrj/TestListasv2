@@ -5,10 +5,10 @@ import { Settings, Archive } from '../types';
 import Modal from './common/Modal';
 import Button from './common/Button';
 import ConfirmationModal from './common/ConfirmationModal';
-import { GROUP_COLORS, APP_VERSION } from '../constants';
+import { APP_VERSION } from '../constants';
 import { exportBackup, importBackup } from '../services/backupService';
 import Icon from './icons/Icon';
-import { syncAttendanceData, syncScheduleData, syncGradesData } from '../services/syncService';
+import { syncAttendanceData, syncScheduleData } from '../services/syncService';
 import SemesterTransitionModal from './SemesterTransitionModal';
 import { checkForMobileUpdate } from '../services/mobileUpdateService';
 
