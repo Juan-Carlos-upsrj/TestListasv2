@@ -1,5 +1,5 @@
 
-import React, { useContext, useState, useMemo, useEffect } from 'react';
+import React, { useContext, useState, useMemo } from 'react';
 import { AppContext } from '../context/AppContext';
 import { Group, Student, DayOfWeek, EvaluationType } from '../types';
 import { v4 as uuidv4 } from 'uuid';
@@ -260,6 +260,19 @@ export const GroupForm: React.FC<{ group?: Group; existingGroups?: Group[]; onSa
             <div>
                 <label className="block text-xs font-bold mb-2">Días de Clase</label>
                 <div className="flex flex-wrap gap-1.5">{DAYS_OF_WEEK.map(day => (<button type="button" key={day} onClick={() => handleDayToggle(day)} className={`px-3 py-1 rounded-full text-[11px] font-bold transition-all ${classDays.includes(day) ? 'bg-primary text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}>{day}</button>))}</div>
+            </div>
+            <div>
+                <label className="block text-xs font-bold mb-2">Color del Grupo</label>
+                <div className="flex flex-wrap gap-2.5">
+                    {GROUP_COLORS.map(c => (
+                        <button 
+                            type="button" 
+                            key={c.name} 
+                            onClick={() => setColor(c.name)} 
+                            className={`w-7 h-7 rounded-full ${c.bg} transition-transform hover:scale-110 ${color === c.name ? 'ring-2 ring-offset-2 ring-primary' : ''}`}
+                        />
+                    ))}
+                </div>
             </div>
             <div className="space-y-3">
                 <div className="flex justify-between items-center border-b border-slate-100 pb-2"><label className="text-sm font-black uppercase text-slate-800 tracking-tight">Criterios de Evaluación</label>{existingGroups.length > 1 && <select className="text-[10px] p-1 border border-slate-200 rounded-lg bg-white font-bold" onChange={e => { if(e.target.value) { handleCopyCriteria(e.target.value); e.target.value = ""; } }} defaultValue=""><option value="" disabled>Copiar de...</option>{existingGroups.filter(g => g.id !== group?.id).map(g => (<option key={g.id} value={g.id}>{g.name}</option>))}</select>}</div>
