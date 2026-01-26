@@ -1,4 +1,3 @@
-
 import { AppState, AppAction, DayOfWeek, AttendanceStatus, TutorshipEntry, Group } from '../types';
 import { Dispatch } from 'react';
 import { v4 as uuidv4 } from 'uuid';
@@ -251,7 +250,7 @@ export const syncTutorshipData = async (state: AppState, dispatch: Dispatch<AppA
     try {
         const syncUrl = getBaseApiUrl(apiUrl);
 
-        // 1. OBTENER DATOS DEL SERVIDOR (PULL)
+        // 1. DESCARGAR DATOS (PULL)
         const getResponse = await fetch(syncUrl.toString(), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'X-API-KEY': apiKey },
@@ -263,71 +262,68 @@ export const syncTutorshipData = async (state: AppState, dispatch: Dispatch<AppA
 
         if (getResponse.ok) {
             const rawServerData = await getResponse.json();
-            
-            // Flexibilidad: Manejar si el servidor devuelve un objeto estructurado o un array plano de registros
-            let incomingData: any = {};
-            let incomingTutors: any = {};
+            let serverRows: any[] = [];
 
             if (Array.isArray(rawServerData)) {
-                // Formato Plano (Tabla de DB): Convertir array de filas a objeto indexado por ID
-                rawServerData.forEach((row: any) => {
-                    if (row.alumno_id) {
-                        incomingData[row.alumno_id] = {
-                            strengths: row.fortalezas || '',
-                            opportunities: row.oportunidades || '',
-                            summary: row.resumen || '',
-                            studentName: row.alumno_nombre || row.nombre || '' // Si existe en la consulta
-                        };
-                    }
-                });
-            } else if (rawServerData && typeof rawServerData === 'object') {
-                // Formato Estructurado { tutorshipData: {}, groupTutors: {} }
-                incomingData = rawServerData.tutorshipData || {};
-                incomingTutors = rawServerData.groupTutors || {};
+                serverRows = rawServerData;
+            } else if (rawServerData && rawServerData.tutorshipData) {
+                // Compatibilidad con formato antiguo
+                serverRows = Object.entries(rawServerData.tutorshipData).map(([id, data]: [string, any]) => ({
+                    alumno_id: id,
+                    alumno_nombre: data.studentName || '',
+                    fortalezas: data.strengths || '',
+                    oportunidades: data.opportunities || '',
+                    resumen: data.summary || ''
+                }));
             }
 
-            // --- MAPEADO INTELIGENTE (Cruzar datos del servidor con alumnos locales) ---
             const finalProcessedData: { [sid: string]: TutorshipEntry } = {};
             let matchedCount = 0;
 
-            // Mapa de alumnos locales para búsqueda rápida por nombre
-            const localStudentsByName = new Map<string, string>();
+            // Mapa para búsqueda ultra rápida por Nombre + Grupo
+            const localMap = new Map<string, string>(); // "NombreAlumno-NombreGrupo" -> localStudentId
             groups.forEach(g => g.students.forEach(s => {
-                localStudentsByName.set(s.name.trim().toLowerCase(), s.id);
+                const identityKey = `${s.name.trim().toLowerCase()}-${g.name.trim().toLowerCase()}`;
+                localMap.set(identityKey, s.id);
             }));
 
-            Object.entries(incomingData).forEach(([serverSid, entry]: [string, any]) => {
-                let localTargetId = '';
-                
-                // Intento 1: ¿El ID coincide exactamente?
-                const existsById = groups.some(g => g.students.some(s => s.id === serverSid));
-                if (existsById) {
-                    localTargetId = serverSid;
+            serverRows.forEach((row: any) => {
+                let targetLocalId = '';
+
+                // Intento 1: ¿El ID coincide exactamente? (Misma computadora)
+                const studentExistsById = groups.some(g => g.students.some(s => s.id === row.alumno_id));
+                if (studentExistsById) {
+                    targetLocalId = row.alumno_id;
                 } 
-                // Intento 2: ¿Coincide el nombre (si el servidor lo envió)?
-                else if (entry.studentName) {
-                    localTargetId = localStudentsByName.get(entry.studentName.trim().toLowerCase()) || '';
+                // Intento 2: ¿Coincide por Nombre + Grupo? (Diferente computadora)
+                else if (row.alumno_nombre && row.grupo_nombre) {
+                    const identityKey = `${row.alumno_nombre.trim().toLowerCase()}-${row.grupo_nombre.trim().toLowerCase()}`;
+                    targetLocalId = localMap.get(identityKey) || '';
+                }
+                // Intento 3: Solo Nombre (Fallback arriesgado pero útil)
+                else if (row.alumno_nombre) {
+                    const studentByName = groups.flatMap(g => g.students).find(s => s.name.trim().toLowerCase() === row.alumno_nombre.trim().toLowerCase());
+                    if (studentByName) targetLocalId = studentByName.id;
                 }
 
-                if (localTargetId) {
-                    finalProcessedData[localTargetId] = {
-                        strengths: entry.strengths || '',
-                        opportunities: entry.opportunities || '',
-                        summary: entry.summary || ''
+                if (targetLocalId) {
+                    finalProcessedData[targetLocalId] = {
+                        strengths: row.fortalezas || '',
+                        opportunities: row.oportunidades || '',
+                        summary: row.resumen || ''
                     };
                     matchedCount++;
                 }
             });
 
-            // Guardar datos en el estado
             if (matchedCount > 0) {
                 dispatch({ type: 'SET_TUTORSHIP_DATA_BULK', payload: finalProcessedData });
             }
 
-            // Mapeado de tutores de grupo
-            if (Object.keys(incomingTutors).length > 0) {
+            // Sincronizar Tutores de Grupo (Misma lógica de identidad)
+            if (rawServerData && rawServerData.groupTutors) {
                 const mappedTutors: { [gid: string]: string } = {};
-                Object.entries(incomingTutors).forEach(([serverKey, tutor]) => {
+                Object.entries(rawServerData.groupTutors).forEach(([serverKey, tutor]) => {
                     const groupById = groups.find(g => g.id === serverKey);
                     if (groupById) {
                         mappedTutors[serverKey] = tutor as string;
@@ -339,44 +335,56 @@ export const syncTutorshipData = async (state: AppState, dispatch: Dispatch<AppA
                 dispatch({ type: 'SET_GROUP_TUTORS_BULK', payload: mappedTutors });
             }
             
-            dispatch({ 
-                type: 'ADD_TOAST', 
-                payload: { 
-                    message: `Sincronización de tutoreo: ${matchedCount} fichas vinculadas con éxito.`, 
-                    type: matchedCount > 0 ? 'success' : 'info' 
-                } 
-            });
+            dispatch({ type: 'ADD_TOAST', payload: { message: `Descarga: ${matchedCount} fichas vinculadas con éxito.`, type: 'info' } });
         }
 
-        // 2. ENVIAR CAMBIOS LOCALES (PUSH)
+        // 2. SUBIR CAMBIOS (PUSH)
+        // Solo si soy el tutor de algún grupo subo mis cambios
         const isOfficialTutor = Object.values(groupTutors).some(t => t.trim().toLowerCase() === professorName.trim().toLowerCase());
         
         if (isOfficialTutor) {
-            // Adjuntamos nombres para que otras computadoras puedan vincular por nombre si el ID falla
-            const dataToUpload: any = {};
-            Object.entries(tutorshipData).forEach(([sid, entry]) => {
-                let sName = '';
-                groups.forEach(g => {
-                    const found = g.students.find(s => s.id === sid);
-                    if (found) sName = found.name;
+            // Construimos una lista plana con identidades completas para la base de datos
+            const recordsToUpload: any[] = [];
+            
+            groups.forEach(g => {
+                g.students.forEach(s => {
+                    const entry = tutorshipData[s.id];
+                    if (entry && (entry.strengths || entry.opportunities || entry.summary)) {
+                        recordsToUpload.push({
+                            profesor_nombre: professorName,
+                            grupo_id: g.id,
+                            grupo_nombre: g.name,
+                            alumno_id: s.id,
+                            alumno_nombre: s.name,
+                            fortalezas: entry.strengths,
+                            oportunidades: entry.opportunities,
+                            resumen: entry.summary
+                        });
+                    }
                 });
-                dataToUpload[sid] = { ...entry, studentName: sName };
             });
 
-            await fetch(syncUrl.toString(), {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-API-KEY': apiKey },
-                body: JSON.stringify({
-                    action: 'sync-tutoreo',
-                    tutorshipData: dataToUpload,
-                    groupTutors,
-                    profesor_nombre: professorName
-                })
-            });
+            if (recordsToUpload.length > 0) {
+                const syncResponse = await fetch(syncUrl.toString(), {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-API-KEY': apiKey },
+                    body: JSON.stringify({
+                        action: 'sync-tutoreo',
+                        data: recordsToUpload,
+                        groupTutors, // Enviamos el mapeo de tutores también
+                        profesor_nombre: professorName
+                    })
+                });
+                
+                if (syncResponse.ok) {
+                    dispatch({ type: 'ADD_TOAST', payload: { message: 'Tus fichas se han subido a la nube.', type: 'success' } });
+                }
+            }
         }
 
     } catch (error) {
         console.error("Sync tutoreo error:", error);
+        dispatch({ type: 'ADD_TOAST', payload: { message: 'Error de red en tutoría.', type: 'error' } });
     }
 };
 
