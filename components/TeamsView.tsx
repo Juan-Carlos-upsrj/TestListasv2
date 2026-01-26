@@ -36,7 +36,16 @@ const TeamsView: React.FC = () => {
         const teamMap = new Map<string, { student: Student; groupName: string }[]>();
         const unassignedList: { student: Student; groupName: string }[] = [];
         
+        // --- REGISTRO DE DEDUPLICACIÓN ---
+        const processedStudentNames = new Set<string>();
+
         const processStudent = (s: Student, gName: string) => {
+            // Si es vista Coyote, no procesamos si el nombre ya fue visto en otro grupo del mismo ciclo
+            if (isCoyote) {
+                if (processedStudentNames.has(s.name)) return;
+                processedStudentNames.add(s.name);
+            }
+
             const tName = isCoyote ? s.teamCoyote : s.team;
             if (tName) {
                 if (!teamMap.has(tName)) teamMap.set(tName, []);
@@ -49,8 +58,15 @@ const TeamsView: React.FC = () => {
         if (isCoyote) {
             const targetQuarter = group.quarter;
             const groupsInSameQuarter = groups.filter(g => g.quarter === targetQuarter);
+            
+            // Procesamos primero el grupo seleccionado para darle prioridad visual
+            group.students.forEach(s => processStudent(s, group.name));
+            
+            // Luego el resto de los grupos del mismo cuatrimestre
             groupsInSameQuarter.forEach(g => {
-                g.students.forEach(s => processStudent(s, g.name));
+                if (g.id !== group.id) {
+                    g.students.forEach(s => processStudent(s, g.name));
+                }
             });
         } else {
             group.students.forEach(s => processStudent(s, group.name));
@@ -171,7 +187,7 @@ const TeamsView: React.FC = () => {
                     <div className="bg-orange-50 border border-orange-100 p-2 rounded-xl flex items-center gap-2">
                         <Icon name="info" className="w-4 h-4 text-orange-500 shrink-0" />
                         <p className="text-[10px] font-bold text-orange-700 uppercase">
-                            Vista Global Cuatrimestre {group.quarter}: Sincronizando alumnos de todos los grupos {group.quarter}.
+                            Limpieza Automática Activada: Los alumnos con el mismo nombre en diferentes grupos solo se muestran una vez.
                         </p>
                     </div>
                 )}

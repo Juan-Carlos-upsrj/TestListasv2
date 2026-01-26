@@ -16,43 +16,31 @@ const ChangelogModal: React.FC<ChangelogModalProps> = ({ isOpen, onClose }) => {
             <div className="space-y-6">
                 <div className="flex items-start gap-4">
                     <div className="bg-indigo-100 p-2 rounded-xl text-indigo-600 shrink-0">
-                        <Icon name="grid" className="w-6 h-6" />
+                        <Icon name="users" className="w-6 h-6" />
                     </div>
                     <div>
-                        <h4 className="font-bold text-slate-800">Control de Equipos Avanzado</h4>
+                        <h4 className="font-bold text-slate-800">Deduplicación de Alumnos</h4>
                         <p className="text-sm text-slate-500 mt-1">
-                            ¡Vuelven los trabajos individuales! Ahora puedes buscar por equipo o alumno y ver rápidamente quién falta por asignar en una sección especial de "Sin Asignar".
+                            ¡Limpieza automática! Si tienes al mismo alumno en varias materias del mismo cuatrimestre, ahora solo aparecerá una vez en la vista de <strong>Equipo Coyote</strong>.
                         </p>
                     </div>
                 </div>
 
                 <div className="flex items-start gap-4">
                     <div className="bg-orange-100 p-2 rounded-xl text-orange-600 shrink-0">
-                        <Icon name="search" className="w-6 h-6" />
+                        <Icon name="grid" className="w-6 h-6" />
                     </div>
                     <div>
-                        <h4 className="font-bold text-slate-800">Búsqueda Unificada (Nombre + Apodo)</h4>
+                        <h4 className="font-bold text-slate-800">Control de Equipos Optimizado</h4>
                         <p className="text-sm text-slate-500 mt-1">
-                            En todas las secciones (Asistencia, Calificaciones, Grupos y Tutoreo), el buscador ahora reconoce tanto el nombre oficial como el apodo/nickname del alumno.
-                        </p>
-                    </div>
-                </div>
-
-                <div className="flex items-start gap-4">
-                    <div className="bg-emerald-100 p-2 rounded-xl text-emerald-600 shrink-0">
-                        <Icon name="user-plus" className="w-6 h-6" />
-                    </div>
-                    <div>
-                        <h4 className="font-bold text-slate-800">Asignación Rápida</h4>
-                        <p className="text-sm text-slate-500 mt-1">
-                            Se añadió un botón en la vista de equipos para marcar directamente a un alumno como "Trabajo Individual" sin tener que escribirlo manualmente.
+                            Se ha refinado la lógica de búsqueda y visualización para que la gestión de equipos inter-grupales sea mucho más clara y rápida.
                         </p>
                     </div>
                 </div>
 
                 <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200">
                     <p className="text-xs text-slate-400 italic text-center">
-                        "Build 2.7.0: Optimizando la velocidad de gestión y el control de equipos Coyote."
+                        "Build 2.8.0: Eliminando redundancias para una gestión más limpia."
                     </p>
                 </div>
 
