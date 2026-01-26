@@ -12,10 +12,10 @@ import useLocalStorage from '../hooks/useLocalStorage';
 // Helper to parse quarter for sorting (e.g. "5º" -> 5)
 const parseQ = (q?: string) => parseInt(q || '0') || 0;
 
-// FIX: Changed 'View' to 'ActiveView' to match the imported type from types.ts
 const navItems: { view: ActiveView; label: string; icon: string; id: string }[] = [
   { view: 'dashboard', label: 'Inicio', icon: 'home', id: 'nav-item-dashboard' },
   { view: 'groups', label: 'Grupos', icon: 'users', id: 'nav-item-groups' },
+  { view: 'teams', label: 'Equipos', icon: 'grid', id: 'nav-item-teams' },
   { view: 'tutorship', label: 'Tutoreo', icon: 'book-marked', id: 'nav-item-tutorship' },
   { view: 'attendance', label: 'Asistencia', icon: 'check-square', id: 'nav-item-attendance' },
   { view: 'calendar', label: 'Calendario', icon: 'calendar', id: 'nav-item-calendar' },
@@ -35,7 +35,6 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
   
   const [isCollapsed, setIsCollapsed] = useLocalStorage('sidebarCollapsed', false);
 
-  // Grupos ordenados por cuatrimestre
   const sortedGroups = useMemo(() => {
     return [...groups].sort((a, b) => parseQ(a.quarter) - parseQ(b.quarter) || a.name.localeCompare(b.name));
   }, [groups]);
@@ -96,7 +95,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
             <Icon name={isCollapsed ? 'chevron-right' : 'chevron-left'} className="w-4 h-4" />
         </button>
 
-        <div className={`p-4 border-b border-border-color flex items-center gap-3 h-[73px] ${isCollapsed ? 'justify-center' : ''}`} id="sidebar-logo">
+        <div className={`p-4 border-b border-border-color flex items-center gap-3 h-[73px] flex-shrink-0 ${isCollapsed ? 'justify-center' : ''}`} id="sidebar-logo">
             <motion.img 
                 src="logo.png" 
                 alt="IAEV Logo" 
@@ -115,7 +114,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
             )}
         </div>
         
-        <div className={`p-4 border-b border-border-color ${isCollapsed ? 'flex flex-col items-center' : ''}`} id="sidebar-quick-groups">
+        <div className={`p-4 border-b border-border-color flex-shrink-0 ${isCollapsed ? 'flex flex-col items-center' : ''}`} id="sidebar-quick-groups">
             {!isCollapsed && (
                 <div className="flex items-center justify-between mb-3">
                     <h3 className="text-xs font-bold text-text-secondary uppercase tracking-wider">Grupos Rápidos</h3>
@@ -160,7 +159,6 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
                                     }`}
                                 >
                                     {displayLabel.charAt(0).toUpperCase()}
-                                    {/* Mini badge for quarter in collapsed mode */}
                                     <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-white text-slate-800 rounded-full flex items-center justify-center text-[7px] font-black shadow-sm ring-1 ring-slate-200">{parseQ(g.quarter)}</span>
                                 </motion.button>
                             );
@@ -188,7 +186,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
             )}
         </div>
 
-        <nav className="flex-grow p-2 sm:p-4" id="sidebar-nav">
+        <nav className="flex-grow p-2 sm:p-4 overflow-y-auto custom-scrollbar" id="sidebar-nav">
           <ul>
             {navItems.map((item) => (
               <li key={item.view}>
@@ -215,7 +213,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
             ))}
           </ul>
         </nav>
-        <div className={`p-4 border-t border-border-color space-y-2 ${isCollapsed ? 'flex flex-col items-center px-2' : ''}`}>
+        
+        <div className={`p-4 border-t border-border-color space-y-2 flex-shrink-0 ${isCollapsed ? 'flex flex-col items-center px-2' : ''}`}>
           <button
             onClick={startTour}
             title={isCollapsed ? "Guía Rápida" : ""}

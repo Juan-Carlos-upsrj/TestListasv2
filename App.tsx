@@ -4,6 +4,7 @@ import { AppContext } from './context/AppContext';
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
 import GroupManagement from './components/GroupManagement';
+import TeamsView from './components/TeamsView';
 import AttendanceView from './components/AttendanceView';
 import ReportsView from './components/ReportsView';
 import GradesView from './components/GradesView';
@@ -33,7 +34,6 @@ const App: React.FC = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isChangelogOpen, setIsChangelogOpen] = useState(false);
   
-  // Control de versión vista para el Changelog
   const [lastSeenVersion, setLastSeenVersion] = useLocalStorage('lastSeenVersion', '0.0.0');
 
   const notifiedClassesRef = useRef<Set<string>>(new Set());
@@ -51,7 +51,6 @@ const App: React.FC = () => {
       }
     }
 
-    // Lógica para mostrar Changelog
     if (lastSeenVersion !== APP_VERSION) {
         setIsChangelogOpen(true);
         setLastSeenVersion(APP_VERSION);
@@ -176,6 +175,7 @@ const App: React.FC = () => {
     switch (state.activeView) {
       case 'dashboard': return <Dashboard />;
       case 'groups': return <GroupManagement />;
+      case 'teams': return <TeamsView />;
       case 'attendance': return <AttendanceView />;
       case 'calendar': return <CalendarView />;
       case 'grades': return <GradesView />;
@@ -188,6 +188,7 @@ const App: React.FC = () => {
   const viewTitles: { [key in typeof state.activeView]: string } = {
     dashboard: 'Inicio',
     groups: 'Grupos',
+    teams: 'Equipos',
     attendance: 'Asistencia',
     calendar: 'Calendario',
     grades: 'Calificaciones',
@@ -195,7 +196,7 @@ const App: React.FC = () => {
     tutorship: 'Tutoreo'
   };
 
-  const isFullScreenView = state.activeView === 'attendance' || state.activeView === 'grades';
+  const isFullScreenView = state.activeView === 'attendance' || state.activeView === 'grades' || state.activeView === 'teams';
   const showFridayBanner = isFriday && !isBirthday;
 
   return (

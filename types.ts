@@ -85,7 +85,7 @@ export interface Settings {
   reminderTime: number;    
 }
 
-export type ActiveView = 'dashboard' | 'groups' | 'attendance' | 'grades' | 'reports' | 'calendar' | 'tutorship';
+export type ActiveView = 'dashboard' | 'groups' | 'teams' | 'attendance' | 'grades' | 'reports' | 'calendar' | 'tutorship';
 
 export interface Toast {
     id: number;
