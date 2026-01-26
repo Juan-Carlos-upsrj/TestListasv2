@@ -1,4 +1,3 @@
-
 import React, { useContext, useMemo, useState, useEffect } from 'react';
 import { AppContext } from '../context/AppContext';
 import { Student, TutorshipEntry } from '../types';
@@ -60,7 +59,7 @@ const TutorshipView: React.FC = () => {
     
     const group = useMemo(() => groups.find(g => g.id === selectedGroupId), [groups, selectedGroupId]);
     
-    // AUTO-SYNC: Cargar datos del tutor al entrar o cambiar de grupo
+    // AUTO-SYNC: Cargar datos al entrar
     useEffect(() => {
         if (selectedGroupId && settings.apiUrl) {
             handleSync(true); // sync silencioso
@@ -82,12 +81,11 @@ const TutorshipView: React.FC = () => {
         );
     }, [group, searchTerm]);
 
-    // Lógica para obtener el tutor actual o manejar el estado vacío
     const currentTutor = useMemo(() => {
         if (!group) return '';
         const tutor = groupTutors[group.id];
         if (tutor) return tutor;
-        return isSyncing ? 'Buscando tutor...' : 'Sin asignar en servidor';
+        return isSyncing ? 'Buscando...' : 'Sin asignar';
     }, [group, groupTutors, isSyncing]);
 
     const canEdit = settings.professorName.trim().toLowerCase() === currentTutor.trim().toLowerCase();
@@ -97,7 +95,7 @@ const TutorshipView: React.FC = () => {
             dispatch({ type: 'UPDATE_TUTORSHIP', payload: { studentId: editingStudent.id, entry } });
             setIsEditorOpen(false);
             setEditingStudent(null);
-            // Auto-subir cambios tras editar para que los demás profes lo vean
+            // Auto-subir cambios tras editar
             setTimeout(() => handleSync(true), 500);
         }
     };
@@ -146,9 +144,7 @@ const TutorshipView: React.FC = () => {
                     
                     <div className="flex items-center gap-3 w-full md:w-auto">
                         <div className="relative flex-1 md:w-64">
-                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                                <Icon name="search" className="h-4 w-4" />
-                            </div>
+                            <Icon name="search" className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                             <input type="text" className="block w-full pl-9 pr-3 py-2 border-2 border-border-color rounded-xl bg-white text-sm focus:ring-2 focus:ring-primary" placeholder="Buscar..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
                         </div>
                         <Button 
@@ -158,8 +154,10 @@ const TutorshipView: React.FC = () => {
                             disabled={isSyncing}
                             className={`${canEdit ? 'bg-indigo-600 !text-white hover:bg-indigo-700' : 'bg-white border-indigo-200 text-indigo-700'}`}
                         >
-                            <Icon name={isSyncing ? "loader" : "download-cloud"} className={`w-4 h-4 ${isSyncing ? 'animate-spin' : ''}`} />
-                            <span className="hidden sm:inline">{isSyncing ? 'Sincronizando...' : 'Sincronizar Datos'}</span>
+                            <div className="flex items-center gap-2">
+                                <Icon name="download-cloud" className={`w-4 h-4 ${isSyncing ? 'animate-bounce' : ''}`} />
+                                <span className="hidden sm:inline">{isSyncing ? 'Sincronizando...' : 'Sincronizar'}</span>
+                            </div>
                         </Button>
                     </div>
                 </div>
@@ -169,8 +167,8 @@ const TutorshipView: React.FC = () => {
                         <Icon name={canEdit ? "check-circle-2" : "info"} className="w-4 h-4 shrink-0" />
                         <p className="text-xs font-medium">
                             {canEdit ? 
-                                <span><b>Acceso de Tutor.</b> Tus notas se guardarán en la nube.</span> : 
-                                <span><b>Vista de Profesor.</b> Estás viendo las notas registradas por <b>{currentTutor}</b>.</span>
+                                <span><b>Modo Tutor.</b> Estás editando la ficha oficial de este grupo.</span> : 
+                                <span><b>Modo Lectura.</b> Notas registradas por <b>{currentTutor}</b>. Solo el tutor puede editar.</span>
                             }
                         </p>
                     </div>
@@ -179,6 +177,11 @@ const TutorshipView: React.FC = () => {
 
             {group ? (
                 <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 pb-10">
+                    {isSyncing && (
+                        <div className="mb-4 p-2 bg-indigo-50 text-indigo-600 rounded-lg text-center text-xs font-bold animate-pulse">
+                            Actualizando fichas desde el servidor...
+                        </div>
+                    )}
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                         <AnimatePresence>
                             {filteredStudents.map((student) => {
@@ -217,15 +220,15 @@ const TutorshipView: React.FC = () => {
                                             <div className="space-y-3">
                                                 <div>
                                                     <h5 className="text-[9px] font-black uppercase tracking-widest text-emerald-600 flex items-center gap-1.5 mb-1"><Icon name="check-circle-2" className="w-3 h-3" /> Fortalezas</h5>
-                                                    <p className="text-[11px] leading-relaxed text-slate-600 italic">{entry?.strengths || 'Sin registro...'}</p>
+                                                    <p className="text-[11px] leading-relaxed text-slate-600 italic whitespace-pre-wrap">{entry?.strengths || 'Sin registro...'}</p>
                                                 </div>
                                                 <div>
                                                     <h5 className="text-[9px] font-black uppercase tracking-widest text-amber-600 flex items-center gap-1.5 mb-1"><Icon name="info" className="w-3 h-3" /> Oportunidades</h5>
-                                                    <p className="text-[11px] leading-relaxed text-slate-600 italic">{entry?.opportunities || 'Sin registro...'}</p>
+                                                    <p className="text-[11px] leading-relaxed text-slate-600 italic whitespace-pre-wrap">{entry?.opportunities || 'Sin registro...'}</p>
                                                 </div>
                                                 <div className="pt-2 border-t border-slate-100">
                                                     <h5 className="text-[9px] font-black uppercase tracking-widest text-indigo-700 flex items-center gap-1.5 mb-1"><Icon name="book-marked" className="w-3 h-3" /> Académico</h5>
-                                                    <p className="text-[11px] font-medium leading-relaxed text-slate-700 bg-indigo-50/30 p-2 rounded-lg border border-indigo-100/50">{entry?.summary || 'Sin comentarios.'}</p>
+                                                    <p className="text-[11px] font-medium leading-relaxed text-slate-700 bg-indigo-50/30 p-2 rounded-lg border border-indigo-100/50 whitespace-pre-wrap">{entry?.summary || 'Sin comentarios.'}</p>
                                                 </div>
                                             </div>
                                         </div>
@@ -244,8 +247,8 @@ const TutorshipView: React.FC = () => {
             )}
 
             {editingStudent && (
-                <Modal isOpen={isEditorOpen} onClose={() => setIsEditorOpen(false)} title="Editar Ficha" size="lg">
-                    <TutorshipForm student={editingStudent} initialEntry={tutorshipData[editingStudent.id]} onSave={handleSaveEntry} onCancel={() => setIsEditorOpen(false)} />
+                <Modal isOpen={isEditorOpen} onClose={() => {setIsEditorOpen(false); setEditingStudent(null);}} title="Editar Ficha" size="lg">
+                    <TutorshipForm student={editingStudent} initialEntry={tutorshipData[editingStudent.id]} onSave={handleSaveEntry} onCancel={() => {setIsEditorOpen(false); setEditingStudent(null);}} />
                 </Modal>
             )}
         </div>
