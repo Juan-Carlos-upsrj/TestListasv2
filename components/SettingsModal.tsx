@@ -293,7 +293,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                             </Button>
                             <input
                                 type="file"
-                                ref={fileInputRef}
+                                useRef={fileInputRef}
                                 onChange={handleFileChange}
                                 accept=".json"
                                 className="hidden"
