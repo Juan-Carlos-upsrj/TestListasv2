@@ -19,33 +19,21 @@ const ChangelogModal: React.FC<ChangelogModalProps> = ({ isOpen, onClose }) => {
                         <Icon name="check-circle-2" className="w-6 h-6" />
                     </div>
                     <div>
-                        <h4 className="font-bold text-slate-800">¡Error de Build Solucionado!</h4>
+                        <h4 className="font-bold text-slate-800">¡Build Exitosa!</h4>
                         <p className="text-sm text-slate-500 mt-1">
-                            Se corrigió un error de sintaxis que bloqueaba la generación de nuevos archivos. Ahora el comando <code>npm run build</code> funciona correctamente.
+                            Tu sistema acaba de confirmar que no hay errores críticos en el código. Los mensajes de "Deprecated" que viste son normales en Android.
                         </p>
                     </div>
                 </div>
 
-                <div className="flex items-start gap-4">
-                    <div className="bg-rose-100 p-2 rounded-xl text-rose-600 shrink-0">
-                        <Icon name="info" className="w-6 h-6" />
-                    </div>
-                    <div>
-                        <h4 className="font-bold text-slate-800">Actualización en el Teléfono</h4>
-                        <p className="text-sm text-slate-500 mt-1">
-                            Debido a la caché de Android, <strong>debes desinstalar la app v1.8.5</strong> antes de instalar este nuevo APK para ver los cambios reflejados.
-                        </p>
-                    </div>
-                </div>
-
-                <div className="bg-indigo-50 p-4 rounded-2xl border border-indigo-100">
-                    <p className="text-xs text-indigo-700 font-bold text-center italic">
-                        "Build 3.1.4: Compilación limpia y lista para Android."
+                <div className="bg-amber-50 p-4 rounded-2xl border border-amber-200">
+                    <p className="text-xs text-amber-800 font-bold text-center">
+                        RECUERDA: Si ves la versión vieja, desinstala la app antes de poner el nuevo APK generado con versionCode 315.
                     </p>
                 </div>
 
                 <Button onClick={onClose} className="w-full justify-center">
-                    ¡Vamos allá!
+                    ¡Entendido, vamos!
                 </Button>
             </div>
         </Modal>
