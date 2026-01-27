@@ -1,6 +1,6 @@
 
 {
-  "version": "3.1.5",
-  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v3.1.5/app-debug.apk",
-  "notes": "¡Versión 3.1.5! Build exitosa confirmada. RECUERDA: Debes subir el 'versionCode' en Android Studio para que se vea el cambio en tu celular."
+  "version": "3.1.6",
+  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v3.1.6/app-debug.apk",
+  "notes": "¡Versión 3.1.6! Se mejoró la sincronización de tutorías para rescatar notas incluso si los identificadores de alumnos han cambiado. RECUERDA: Sube el 'versionCode' a 316 en Android Studio."
 }

@@ -195,25 +195,37 @@ export const syncTutorshipData = async (state: AppState, dispatch: Dispatch<AppA
         if (!getResponse.ok) throw new Error('Error en la respuesta del servidor');
         const rawServerData = await getResponse.json();
         
-        // El servidor envía los datos en 'tutorshipData' (según logs de consola)
         const serverRows = rawServerData.tutorshipData || [];
         console.log(`[SYNC] Se encontraron ${serverRows.length} registros en el servidor.`);
 
         const downloadedData: { [sid: string]: TutorshipEntry } = {};
         const downloadedTutors: { [gid: string]: string } = {};
         
-        // Mapeo: ID Local -> Student
-        const localStudentsMap = new Map<string, string>();
+        // Mapeo: ID Local -> Student e Identificadores por Nombre (para rescatar datos sin ID coincidente)
+        const localStudentsById = new Map<string, string>();
+        const localStudentsByName = new Map<string, string>(); // Nombre normalizado -> ID local
+
         groups.forEach(g => {
             g.students.forEach(s => {
-                localStudentsMap.set(s.id, s.name);
+                localStudentsById.set(s.id, s.name);
+                localStudentsByName.set(normalizeForMatch(s.name), s.id);
             });
         });
 
-        // Procesar registros recibidos (priorizando ID, luego nombre)
+        // Procesar registros recibidos con lógica de rescate por nombre
         serverRows.forEach((row: any) => {
-            const sid = row.alumno_id;
-            if (sid && localStudentsMap.has(sid)) {
+            let sid = row.alumno_id;
+            
+            // Si el ID del servidor no existe localmente, intentamos por nombre
+            if (!sid || !localStudentsById.has(sid)) {
+                const matchedId = localStudentsByName.get(normalizeForMatch(row.alumno_nombre));
+                if (matchedId) {
+                    sid = matchedId;
+                    console.log(`[SYNC] Rescatando nota de "${row.alumno_nombre}" vinculándola al ID local ${sid}`);
+                }
+            }
+
+            if (sid && (localStudentsById.has(sid) || localStudentsByName.has(normalizeForMatch(row.alumno_nombre)))) {
                 downloadedData[sid] = {
                     strengths: row.fortalezas || '',
                     opportunities: row.oportunidades || '',
