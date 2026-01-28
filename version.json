@@ -1,6 +1,6 @@
 
 {
-  "version": "3.1.9",
-  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v3.1.9/app-debug.apk",
-  "notes": "¡Rediseño de Configuración! Nueva navegación lateral y sistema circular de progreso para descargas de actualizaciones en PC."
+  "version": "3.2.0",
+  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v3.2.0/app-debug.apk",
+  "notes": "¡Versión Estable! Se corrigieron errores de compilación, se eliminó el botón de limpieza profunda y se optimizó la nueva navegación lateral de configuración."
 }

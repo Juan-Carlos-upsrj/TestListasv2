@@ -11,7 +11,6 @@ import Icon from './icons/Icon';
 import { syncAttendanceData, syncScheduleData } from '../services/syncService';
 import SemesterTransitionModal from './SemesterTransitionModal';
 import { checkForMobileUpdate } from '../services/mobileUpdateService';
-import { motion, AnimatePresence } from 'framer-motion';
 
 interface SettingsModalProps {
     isOpen: boolean;
