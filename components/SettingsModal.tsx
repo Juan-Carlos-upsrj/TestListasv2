@@ -193,14 +193,14 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                             {/* CATEGORÍA: ACCIONES RÁPIDAS */}
                             <div className="space-y-4">
                                 <div>
-                                    <p className="text-[9px] font-black text-indigo-400 uppercase tracking-widest mb-2 ml-2">Inicio de Cuatri</p>
+                                    <p className="text-[9px] font-black text-blue-500 uppercase tracking-widest mb-2 ml-2">Inicio de Cuatri</p>
                                     <button onClick={() => syncScheduleData(state, dispatch)} className="w-full flex items-center gap-2 px-3 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg text-[10px] font-black transition-colors uppercase border border-blue-100 shadow-sm">
                                         <Icon name="calendar" className="w-3.5 h-3.5" /> Cargar Horario
                                     </button>
                                 </div>
 
                                 <div>
-                                    <p className="text-[9px] font-black text-emerald-400 uppercase tracking-widest mb-2 ml-2">Sincronización Nube</p>
+                                    <p className="text-[9px] font-black text-emerald-500 uppercase tracking-widest mb-2 ml-2">Sincronización Nube</p>
                                     <div className="space-y-2">
                                         <button onClick={() => syncAttendanceData(state, dispatch, 'all')} className="w-full flex items-center gap-2 px-3 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg text-[10px] font-black transition-colors uppercase border border-indigo-100 shadow-sm">
                                             <Icon name="upload-cloud" className="w-3.5 h-3.5" /> Subir Asistencias todo el cuatri
@@ -212,7 +212,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                                 </div>
 
                                 <div>
-                                    <p className="text-[9px] font-black text-rose-400 uppercase tracking-widest mb-2 ml-2">Fin de Cuatri</p>
+                                    <p className="text-[9px] font-black text-rose-500 uppercase tracking-widest mb-2 ml-2">Fin de Cuatri</p>
                                     <button onClick={() => setTransitionOpen(true)} className="w-full flex items-center gap-2 px-3 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-lg text-[10px] font-black transition-colors uppercase border border-rose-100 shadow-sm">
                                         <Icon name="users" className="w-3.5 h-3.5" /> Asistente Fin Ciclo
                                     </button>
@@ -241,8 +241,9 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
 
                         <div className="p-4 border-t border-border-color bg-slate-100/50">
                              <div className="flex gap-2">
-                                <button onClick={handleExport} className="flex-1 p-2 bg-white text-slate-600 rounded-lg border border-slate-200 hover:bg-slate-50 transition-all flex items-center justify-center" title="Exportar JSON"><Icon name="download-cloud" className="w-4 h-4"/></button>
-                                <button onClick={handleImportClick} className="flex-1 p-2 bg-white text-slate-600 rounded-lg border border-slate-200 hover:bg-slate-50 transition-all flex items-center justify-center" title="Importar JSON"><Icon name="upload-cloud" className="w-4 h-4"/></button>
+                                <button onClick={handleExport} className="flex-1 p-2 bg-white text-slate-600 rounded-lg border border-slate-200 hover:bg-slate-50 transition-all flex items-center justify-center shadow-sm" title="Exportar JSON"><Icon name="download-cloud" className="w-4 h-4"/></button>
+                                <button onClick={handleImportClick} className="flex-1 p-2 bg-white text-slate-600 rounded-lg border border-slate-200 hover:bg-slate-50 transition-all flex items-center justify-center shadow-sm" title="Importar JSON"><Icon name="upload-cloud" className="w-4 h-4"/></button>
+                                <input type="file" ref={fileInputRef} onChange={(e) => setPendingImportFile(e.target.files?.[0] || null)} accept=".json" className="hidden" />
                              </div>
                              <p className="text-center font-black text-slate-400 text-[10px] mt-3">BUILD v{APP_VERSION}</p>
                         </div>
@@ -251,56 +252,51 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                     {/* CONTENIDO DERECHA (Formularios) */}
                     <div ref={scrollContainerRef} className="flex-1 overflow-y-auto p-8 space-y-12 custom-scrollbar bg-white dark:bg-slate-900/20">
                         
-                        {/* SECCIÓN: PERIODO Y DOCENCIA (Rediseñada) */}
+                        {/* SECCIÓN: PERIODO Y DOCENCIA (Diseño Vertical Compacto Solicitado) */}
                         <section id="settings-sec-periodo" className="space-y-6">
                             <div className="flex items-center gap-2 border-b border-slate-100 pb-2">
                                 <Icon name="graduation-cap" className="w-5 h-5 text-indigo-600" />
                                 <h4 className="text-sm font-black uppercase text-slate-400 tracking-widest">Periodo y Docencia</h4>
                             </div>
                             
-                            <div className="grid grid-cols-1 gap-6 bg-slate-50 p-6 rounded-3xl border border-slate-100">
+                            <div className="bg-slate-50 p-8 rounded-3xl border border-slate-200 space-y-6">
+                                {/* Nombre del docente */}
                                 <div>
-                                    <label className="block text-[10px] font-black uppercase text-slate-400 ml-1 mb-1">Nombre del Docente</label>
-                                    <input type="text" name="professorName" value={settings.professorName} onChange={handleChange} className="w-full p-3 border-2 border-slate-200 rounded-2xl bg-white text-sm font-black" />
+                                    <label className="block text-[11px] font-black uppercase text-slate-400 ml-1 mb-1.5">Nombre del docente:</label>
+                                    <input type="text" name="professorName" value={settings.professorName} onChange={handleChange} className="w-full p-3 border-2 border-slate-200 rounded-xl bg-white text-sm font-black text-indigo-700" />
                                 </div>
 
+                                {/* Inicio de Cuatrimestre */}
                                 <div>
-                                    <label className="block text-[10px] font-black uppercase text-slate-400 ml-1 mb-1">Inicio de Cuatrimestre</label>
-                                    <input type="date" name="semesterStart" value={settings.semesterStart} onChange={handleChange} className="w-full p-3 border-2 border-slate-200 rounded-2xl bg-white text-sm font-bold" />
+                                    <label className="block text-[11px] font-black uppercase text-slate-400 ml-1 mb-1.5">Inicio de Cuatrimestre:</label>
+                                    <input type="date" name="semesterStart" value={settings.semesterStart} onChange={handleChange} className="w-full p-3 border-2 border-slate-200 rounded-xl bg-white text-sm font-bold" />
                                 </div>
 
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    <div className="col-span-full">
-                                        <p className="text-[10px] font-black uppercase text-indigo-600 mb-2 ml-1">Evaluación De primer parcial</p>
+                                {/* Evaluación De primer parcial */}
+                                <div className="p-4 bg-white rounded-2xl border-2 border-slate-100">
+                                    <label className="block text-[11px] font-black uppercase text-indigo-600 ml-1 mb-2">Evaluación De primer parcial:</label>
+                                    <div className="flex flex-col sm:flex-row items-center gap-2">
+                                        <input type="date" name="p1EvalStart" value={settings.p1EvalStart} onChange={handleChange} className="w-full p-2.5 border-2 border-slate-100 rounded-lg bg-slate-50 text-xs font-bold" />
+                                        <span className="text-slate-400 font-black">—</span>
+                                        <input type="date" name="p1EvalEnd" value={settings.p1EvalEnd} onChange={handleChange} className="w-full p-2.5 border-2 border-indigo-200 rounded-lg bg-indigo-50 text-xs font-black text-indigo-700" />
                                     </div>
-                                    <div>
-                                        <label className="block text-[9px] font-bold text-slate-400 ml-1 uppercase">Fecha Inicio</label>
-                                        <input type="date" name="p1EvalStart" value={settings.p1EvalStart} onChange={handleChange} className="w-full p-2.5 border-2 border-slate-200 rounded-xl bg-white text-xs" />
-                                    </div>
-                                    <div>
-                                        <label className="block text-[9px] font-bold text-slate-400 ml-1 uppercase">Fecha Fin (Corte Parcial)</label>
-                                        <input type="date" name="p1EvalEnd" value={settings.p1EvalEnd} onChange={handleChange} className="w-full p-2.5 border-2 border-indigo-200 rounded-xl bg-indigo-50 text-xs font-bold text-indigo-800" />
-                                    </div>
-                                    <p className="col-span-full text-[9px] text-indigo-500 italic mt-1">Nota: El último día de evaluación del 1er parcial marca el inicio del segundo parcial.</p>
+                                    <p className="text-[9px] text-indigo-500 font-bold mt-2 ml-1 italic">El fin de este rango marca el inicio automático del segundo parcial.</p>
                                 </div>
 
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    <div className="col-span-full">
-                                        <p className="text-[10px] font-black uppercase text-blue-600 mb-2 ml-1">Evaluación De Segundo Parcial</p>
-                                    </div>
-                                    <div>
-                                        <label className="block text-[9px] font-bold text-slate-400 ml-1 uppercase">Fecha Inicio</label>
-                                        <input type="date" name="p2EvalStart" value={settings.p2EvalStart} onChange={handleChange} className="w-full p-2.5 border-2 border-slate-200 rounded-xl bg-white text-xs" />
-                                    </div>
-                                    <div>
-                                        <label className="block text-[9px] font-bold text-slate-400 ml-1 uppercase">Fecha Fin</label>
-                                        <input type="date" name="p2EvalEnd" value={settings.p2EvalEnd} onChange={handleChange} className="w-full p-2.5 border-2 border-slate-200 rounded-xl bg-white text-xs" />
+                                {/* Evaluación De Segundo Parcial */}
+                                <div className="p-4 bg-white rounded-2xl border-2 border-slate-100">
+                                    <label className="block text-[11px] font-black uppercase text-blue-600 ml-1 mb-2">Evaluación De Segundo Parcial:</label>
+                                    <div className="flex flex-col sm:flex-row items-center gap-2">
+                                        <input type="date" name="p2EvalStart" value={settings.p2EvalStart} onChange={handleChange} className="w-full p-2.5 border-2 border-slate-100 rounded-lg bg-slate-50 text-xs font-bold" />
+                                        <span className="text-slate-400 font-black">—</span>
+                                        <input type="date" name="p2EvalEnd" value={settings.p2EvalEnd} onChange={handleChange} className="w-full p-2.5 border-2 border-blue-200 rounded-lg bg-blue-50 text-xs font-black text-blue-700" />
                                     </div>
                                 </div>
 
+                                {/* Fin de Cuatrimestre */}
                                 <div>
-                                    <label className="block text-[10px] font-black uppercase text-slate-400 ml-1 mb-1">Fin de Cuatrimestre</label>
-                                    <input type="date" name="semesterEnd" value={settings.semesterEnd} onChange={handleChange} className="w-full p-3 border-2 border-slate-200 rounded-2xl bg-white text-sm font-bold" />
+                                    <label className="block text-[11px] font-black uppercase text-slate-400 ml-1 mb-1.5">Fin de Cuatrimestre:</label>
+                                    <input type="date" name="semesterEnd" value={settings.semesterEnd} onChange={handleChange} className="w-full p-3 border-2 border-slate-200 rounded-xl bg-white text-sm font-bold" />
                                 </div>
                             </div>
                         </section>
@@ -346,6 +342,16 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                                     </Button>
                                 </div>
                             </div>
+                            
+                            {/* SOLO MOSTRAR REPOSITORIO EN MOBILE O WEB, NO EN WINDOWS PARA EVITAR ERRORES */}
+                            {!window.electronAPI && (
+                                <div className="grid grid-cols-1 gap-4">
+                                    <label className="block">
+                                        <span className="text-[10px] font-black uppercase text-slate-400 ml-1">Repositorio GitHub</span>
+                                        <input type="url" name="mobileUpdateUrl" value={settings.mobileUpdateUrl} onChange={handleChange} className="mt-1 w-full p-3 border-2 border-slate-100 rounded-2xl bg-slate-50 focus:bg-white transition-all text-sm font-bold" />
+                                    </label>
+                                </div>
+                            )}
                         </section>
 
                         {/* SECCIÓN: CALENDARIO */}
@@ -404,22 +410,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                                 <div className="flex items-center justify-between">
                                     <span className="text-xs font-bold text-slate-700">Anticipación Notificación (min)</span>
                                     <input type="number" name="reminderTime" value={settings.reminderTime} onChange={handleChange} className="w-20 p-2 border-2 border-slate-200 rounded-xl bg-white text-xs font-bold text-center" />
-                                </div>
-                            </div>
-                        </section>
-
-                        {/* SECCIÓN: RESPALDO */}
-                        <section id="settings-sec-respaldo" className="space-y-6 pt-6 mb-10">
-                            <div className="flex items-center gap-2 border-b border-slate-100 pb-2">
-                                <Icon name="layout" className="w-5 h-5 text-indigo-600" />
-                                <h4 className="text-sm font-black uppercase text-slate-400 tracking-widest">Seguridad de Datos</h4>
-                            </div>
-                            <div className="bg-rose-50 p-6 rounded-3xl border border-rose-100">
-                                <p className="text-xs text-rose-800 font-bold mb-4">Usa estos botones para mover tus datos entre dispositivos manualmente.</p>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <Button variant="secondary" onClick={handleExport} className="w-full bg-white text-slate-700 py-4"><Icon name="download-cloud" className="w-5 h-5"/> Exportar JSON</Button>
-                                    <Button variant="secondary" onClick={handleImportClick} className="w-full bg-white text-slate-700 py-4"><Icon name="upload-cloud" className="w-5 h-5"/> Importar JSON</Button>
-                                    <input type="file" ref={fileInputRef} onChange={(e) => setPendingImportFile(e.target.files?.[0] || null)} accept=".json" className="hidden" />
                                 </div>
                             </div>
                         </section>

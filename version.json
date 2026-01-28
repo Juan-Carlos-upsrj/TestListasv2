@@ -1,6 +1,6 @@
 
 {
-  "version": "3.2.2",
-  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v3.2.2/app-debug.apk",
-  "notes": "¡Control Académico Total! Se rediseñó la barra lateral de configuración para mayor agilidad y se implementó un nuevo sistema de rangos de evaluación por fechas."
+  "version": "3.2.3",
+  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v3.2.3/app-debug.apk",
+  "notes": "¡Versión Estable! Se corrigió el error de compilación TS6133, se reorganizó el sidebar de ajustes y se perfeccionó la sección de Periodo y Docencia."
 }
