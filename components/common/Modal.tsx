@@ -9,6 +9,7 @@ interface ModalProps {
   title: string;
   children: ReactNode;
   footer?: ReactNode;
+  headerActions?: ReactNode;
   size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | '4xl' | '5xl' | '6xl' | '7xl';
 }
 
@@ -25,7 +26,7 @@ const sizeClasses = {
     '7xl': 'max-w-[98vw] lg:max-w-7xl',
 };
 
-const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, footer, size = 'md' }) => {
+const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, footer, headerActions, size = 'md' }) => {
   const [sidebarOffset, setSidebarOffset] = useState(0);
 
   useEffect(() => {
@@ -86,12 +87,15 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, footer,
           >
             <header className="flex items-center justify-between p-4 sm:p-5 border-b border-border-color bg-surface shrink-0">
               <h2 className="text-lg sm:text-xl font-bold text-text-primary tracking-tight truncate pr-4">{title}</h2>
-              <button
-                onClick={onClose}
-                className="p-2 rounded-xl text-text-secondary hover:bg-surface-secondary hover:text-accent-red transition-all focus:outline-none"
-              >
-                <Icon name="x" className="w-5 h-5"/>
-              </button>
+              <div className="flex items-center gap-2">
+                {headerActions && <div className="mr-2">{headerActions}</div>}
+                <button
+                  onClick={onClose}
+                  className="p-2 rounded-xl text-text-secondary hover:bg-surface-secondary hover:text-accent-red transition-all focus:outline-none"
+                >
+                  <Icon name="x" className="w-5 h-5"/>
+                </button>
+              </div>
             </header>
             <div className="p-4 sm:p-6 overflow-y-auto flex-grow custom-scrollbar bg-surface">
               {children}

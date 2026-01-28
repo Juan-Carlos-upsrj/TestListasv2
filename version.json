@@ -1,6 +1,6 @@
 
 {
-  "version": "3.2.3",
-  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v3.2.3/app-debug.apk",
-  "notes": "¡Versión Estable! Se corrigió el error de compilación TS6133, se reorganizó el sidebar de ajustes y se perfeccionó la sección de Periodo y Docencia."
+  "version": "3.2.4",
+  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v3.2.4/app-debug.apk",
+  "notes": "¡Optimización del panel de Configuración! Rediseño a dos columnas para maximizar el espacio y botón de guardado siempre visible en la cabecera."
 }
