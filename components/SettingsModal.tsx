@@ -5,7 +5,7 @@ import { Settings, Archive } from '../types';
 import Modal from './common/Modal';
 import Button from './common/Button';
 import ConfirmationModal from './common/ConfirmationModal';
-import { APP_VERSION } from '../constants';
+import { APP_VERSION, GROUP_COLORS } from '../constants';
 import { exportBackup, importBackup } from '../services/backupService';
 import Icon from './icons/Icon';
 import { syncAttendanceData, syncScheduleData } from '../services/syncService';
@@ -110,7 +110,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
     };
 
     const handleHardReset = () => {
-        // Clear all caches and reload
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.getRegistrations().then(registrations => {
                 for (let registration of registrations) {
@@ -118,8 +117,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                 }
             });
         }
-        
-        // Force clean cache reload
         window.location.href = window.location.origin + '?cb=' + Date.now();
     };
 
@@ -170,11 +167,11 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                 <div className="space-y-6">
                     
                     <fieldset className="border p-4 rounded-lg border-border-color">
-                         <legend className="px-2 font-semibold">Sistema</legend>
+                         <legend className="px-2 font-semibold">Sistema y Actualizaciones</legend>
                          
-                        <div className="flex items-center justify-between">
+                        <div className="flex items-center justify-between mb-4">
                             <div>
-                                <p className="text-sm font-medium">Actualizaciones Automáticas</p>
+                                <p className="text-sm font-medium">Estado de la Versión</p>
                                 <p className="text-xs text-text-secondary truncate max-w-[200px]" title={updateStatus}>
                                     {updateStatus || 'Versión actual instalada.'}
                                 </p>
@@ -189,9 +186,9 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                             </div>
                         </div>
                         
-                         {!window.electronAPI && (
-                             <div className="mt-4 pt-4 border-t border-border-color">
-                                <label htmlFor="mobileUpdateUrl" className="block text-sm font-medium">Repositorio de GitHub</label>
+                        <div className="space-y-3">
+                            <div>
+                                <label htmlFor="mobileUpdateUrl" className="block text-sm font-medium">Repositorio de Actualizaciones (GitHub)</label>
                                 <input
                                     type="url"
                                     id="mobileUpdateUrl"
@@ -201,72 +198,121 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                                     placeholder="https://github.com/usuario/repositorio"
                                     className="mt-1 w-full p-2 border border-border-color rounded-md bg-surface focus:ring-2 focus:ring-primary"
                                 />
-                             </div>
-                         )}
+                            </div>
+                        </div>
+                    </fieldset>
+
+                    <fieldset className="border p-4 rounded-lg border-border-color bg-indigo-50/30">
+                        <legend className="px-2 font-bold text-indigo-700">Conexión a la Nube (API)</legend>
+                        <div className="space-y-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div>
+                                    <label htmlFor="apiUrl" className="block text-sm font-medium">URL de la API (api.php)</label>
+                                    <input type="url" name="apiUrl" value={settings.apiUrl} onChange={handleChange} placeholder="https://tu-sitio.com/api.php" className="mt-1 w-full p-2 border border-border-color rounded-md bg-surface focus:ring-2 focus:ring-indigo-500" />
+                                </div>
+                                <div>
+                                    <label htmlFor="apiKey" className="block text-sm font-medium">API Key (X-API-KEY)</label>
+                                    <input type="password" name="apiKey" value={settings.apiKey} onChange={handleChange} placeholder="Tu clave secreta" className="mt-1 w-full p-2 border border-border-color rounded-md bg-surface focus:ring-2 focus:ring-indigo-500" />
+                                </div>
+                            </div>
+                            <div className="flex gap-2">
+                                <Button variant="secondary" onClick={() => syncAttendanceData(state, dispatch, 'all')} className="w-full text-xs">
+                                    <Icon name="upload-cloud" className="w-4 h-4" /> Sinc. Asistencia Completa
+                                </Button>
+                                <Button variant="secondary" onClick={() => syncScheduleData(state, dispatch)} className="w-full text-xs bg-indigo-600 text-white hover:bg-indigo-700">
+                                    <Icon name="download-cloud" className="w-4 h-4" /> Forzar Sinc. Horario
+                                </Button>
+                            </div>
+                        </div>
                     </fieldset>
 
                     <fieldset className="border p-4 rounded-lg border-border-color">
-                        <legend className="px-2 font-semibold">Periodo del Semestre</legend>
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <legend className="px-2 font-semibold">Calendario Externo (Google)</legend>
+                        <div className="space-y-4">
                             <div>
-                                <label className="block text-sm font-medium">Inicio del Semestre</label>
-                                <input type="date" name="semesterStart" value={settings.semesterStart} onChange={handleChange} className="mt-1 w-full p-2 border border-border-color rounded-md bg-surface focus:ring-2 focus:ring-primary" />
+                                <label htmlFor="googleCalendarUrl" className="block text-sm font-medium">URL Pública del Calendario (iCal/ICS)</label>
+                                <input
+                                    type="url"
+                                    id="googleCalendarUrl"
+                                    name="googleCalendarUrl"
+                                    value={settings.googleCalendarUrl || ''}
+                                    onChange={handleChange}
+                                    placeholder="https://calendar.google.com/.../basic.ics"
+                                    className="mt-1 w-full p-2 border border-border-color rounded-md bg-surface focus:ring-2 focus:ring-primary"
+                                />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium">Fin del Primer Parcial</label>
-                                <input type="date" name="firstPartialEnd" value={settings.firstPartialEnd} onChange={handleChange} className="mt-1 w-full p-2 border border-border-color rounded-md bg-surface focus:ring-2 focus:ring-primary" />
+                                <label className="block text-sm font-medium mb-2">Color de los Eventos</label>
+                                <div className="flex flex-wrap gap-2">
+                                    {GROUP_COLORS.slice(0, 8).map(color => (
+                                        <button
+                                            key={color.name}
+                                            type="button"
+                                            onClick={() => setSettings(prev => ({ ...prev, googleCalendarColor: color.name }))}
+                                            className={`w-8 h-8 rounded-full border-2 transition-all ${color.bg} ${settings.googleCalendarColor === color.name ? 'border-primary scale-110 shadow-md' : 'border-transparent opacity-60 hover:opacity-100'}`}
+                                            title={color.name}
+                                        />
+                                    ))}
+                                </div>
                             </div>
-                            <div>
-                                <label className="block text-sm font-medium">Fin del Semestre</label>
-                                <input type="date" name="semesterEnd" value={settings.semesterEnd} onChange={handleChange} className="mt-1 w-full p-2 border border-border-color rounded-md bg-surface focus:ring-2 focus:ring-primary" />
-                            </div>
-                        </div>
-                        <div className="mt-4 pt-3 border-t border-border-color">
-                            <Button onClick={() => setTransitionOpen(true)} className="w-full justify-center bg-indigo-600 hover:bg-indigo-700 text-white">
-                                <Icon name="users" className="w-4 h-4"/> Asistente de Cierre de Ciclo
-                            </Button>
-                        </div>
-                    </fieldset>
-                    
-                     <fieldset className="border p-4 rounded-lg border-border-color">
-                        <legend className="px-2 font-semibold">Información del Docente</legend>
-                        <div>
-                            <label htmlFor="professorName" className="block text-sm font-medium">Nombre del Profesor/a</label>
-                            <input
-                                type="text"
-                                id="professorName"
-                                name="professorName"
-                                value={settings.professorName}
-                                onChange={handleChange}
-                                placeholder="Ej. Prof. Juan Pérez"
-                                className="mt-1 w-full p-2 border border-border-color rounded-md bg-surface focus:ring-2 focus:ring-primary"
-                            />
                         </div>
                     </fieldset>
 
+                    <fieldset className="border p-4 rounded-lg border-border-color">
+                        <legend className="px-2 font-semibold">Periodo y Docencia</legend>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                            <div className="col-span-1 sm:col-span-2">
+                                <label htmlFor="professorName" className="block text-sm font-medium">Nombre del Profesor/a</label>
+                                <input
+                                    type="text"
+                                    id="professorName"
+                                    name="professorName"
+                                    value={settings.professorName}
+                                    onChange={handleChange}
+                                    className="mt-1 w-full p-2 border border-border-color rounded-md bg-surface focus:ring-2 focus:ring-primary font-bold"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium">Inicio Semestre</label>
+                                <input type="date" name="semesterStart" value={settings.semesterStart} onChange={handleChange} className="mt-1 w-full p-2 border border-border-color rounded-md bg-surface" />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium">Fin Semestre</label>
+                                <input type="date" name="semesterEnd" value={settings.semesterEnd} onChange={handleChange} className="mt-1 w-full p-2 border border-border-color rounded-md bg-surface" />
+                            </div>
+                        </div>
+                        <Button onClick={() => setTransitionOpen(true)} className="w-full justify-center bg-rose-600 hover:bg-rose-700 text-white">
+                            <Icon name="users" className="w-4 h-4"/> Asistente de Cierre de Ciclo
+                        </Button>
+                    </fieldset>
+
                      <fieldset className="border p-4 rounded-lg border-border-color">
-                         <legend className="px-2 font-semibold">Visualización y Alertas</legend>
+                         <legend className="px-2 font-semibold">Preferencias y Notificaciones</legend>
                          <div className="space-y-4">
                             <div className="flex items-center justify-between">
-                                <label htmlFor="showMatricula" className="font-medium text-sm">Mostrar Columna de Matrícula</label>
-                                <input type="checkbox" id="showMatricula" name="showMatricula" checked={settings.showMatricula} onChange={handleChange} className="h-5 w-5 rounded text-primary focus:ring-primary" />
+                                <label htmlFor="showMatricula" className="font-medium text-sm">Mostrar Matrícula</label>
+                                <input type="checkbox" id="showMatricula" name="showMatricula" checked={settings.showMatricula} onChange={handleChange} className="h-5 w-5 rounded text-primary" />
                             </div>
                             
-                            <div className="pt-2 border-t border-border-color space-y-3">
-                                <div className="flex items-center justify-between">
-                                    <label htmlFor="enableReminders" className="font-bold text-sm text-indigo-600">Habilitar Recordatorios de Clase</label>
-                                    <input type="checkbox" id="enableReminders" name="enableReminders" checked={settings.enableReminders} onChange={handleChange} className="h-5 w-5 rounded text-indigo-600 focus:ring-indigo-500" />
+                            <div className="pt-2 border-t border-border-color">
+                                <div className="flex items-center justify-between mb-3">
+                                    <label htmlFor="enableReminders" className="font-bold text-sm text-indigo-600">Recordatorios de Clase</label>
+                                    <input type="checkbox" id="enableReminders" name="enableReminders" checked={settings.enableReminders} onChange={handleChange} className="h-5 w-5 rounded text-indigo-600" />
+                                </div>
+                                <div className="flex items-center gap-3">
+                                    <label className="text-xs text-text-secondary whitespace-nowrap">Anticipación (minutos):</label>
+                                    <input type="number" name="reminderTime" value={settings.reminderTime} onChange={handleChange} min="1" max="60" className="w-20 p-1 text-sm border border-border-color rounded bg-surface" />
                                 </div>
                             </div>
 
                             <div className="pt-2 border-t border-border-color">
-                                <label htmlFor="sidebarGroupDisplayMode" className="block text-sm font-medium mb-1">Visualización de Grupos Rápidos</label>
+                                <label htmlFor="sidebarGroupDisplayMode" className="block text-sm font-medium mb-1">Vista de Grupos en Barra Lateral</label>
                                 <select 
                                     id="sidebarGroupDisplayMode" 
                                     name="sidebarGroupDisplayMode" 
                                     value={settings.sidebarGroupDisplayMode} 
                                     onChange={handleChange}
-                                    className="w-full p-2 border border-border-color rounded-md bg-surface focus:ring-2 focus:ring-primary text-sm"
+                                    className="w-full p-2 border border-border-color rounded-md bg-surface text-sm"
                                 >
                                     <option value="name">Solo Nombre (6A)</option>
                                     <option value="name-abbrev">Nombre + Abreviatura (6A - MAT)</option>
@@ -277,27 +323,15 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                      </fieldset>
 
                      <fieldset className="border p-4 rounded-lg border-border-color">
-                        <legend className="px-2 font-semibold">Datos y Sincronización</legend>
-                        <div className="grid grid-cols-2 gap-4">
-                            <Button variant="secondary" onClick={handleExport} className="w-full">
-                                <Icon name="download-cloud" /> Exportar Respaldo
+                        <legend className="px-2 font-semibold">Respaldo Local</legend>
+                        <div className="grid grid-cols-2 gap-3">
+                            <Button variant="secondary" onClick={handleExport} className="w-full text-xs">
+                                <Icon name="download-cloud" className="w-4 h-4" /> Exportar JSON
                             </Button>
-                            <Button variant="secondary" onClick={handleImportClick} className="w-full">
-                                <Icon name="upload-cloud" /> Importar Respaldo
+                            <Button variant="secondary" onClick={handleImportClick} className="w-full text-xs">
+                                <Icon name="upload-cloud" className="w-4 h-4" /> Importar JSON
                             </Button>
-                            <Button variant="secondary" onClick={() => syncAttendanceData(state, dispatch, 'all')} className="w-full">
-                                <Icon name="upload-cloud" /> Sinc. Asistencia
-                            </Button>
-                            <Button variant="secondary" onClick={() => syncScheduleData(state, dispatch)} className="w-full bg-accent text-white hover:opacity-90">
-                                <Icon name="download-cloud" /> Actualizar Horario
-                            </Button>
-                            <input
-                                type="file"
-                                ref={fileInputRef}
-                                onChange={handleFileChange}
-                                accept=".json"
-                                className="hidden"
-                            />
+                            <input type="file" ref={fileInputRef} onChange={handleFileChange} accept=".json" className="hidden" />
                         </div>
                     </fieldset>
                     
@@ -320,7 +354,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
             >
                 Esta acción intentará eliminar la caché del navegador para forzar la actualización a la v{APP_VERSION}. 
                 <br/><br/>
-                <strong>No se borrarán tus datos guardados</strong>, solo se recargarán los archivos del programa.
+                <strong>No se borrarán tus datos guardados</strong>.
             </ConfirmationModal>
 
             <ConfirmationModal
@@ -331,29 +365,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                 variant="danger"
                 confirmText="Importar"
             >
-                ¿Estás seguro de que quieres importar este archivo? <strong>Todos los datos actuales se reemplazarán permanentemente.</strong>
-            </ConfirmationModal>
-
-            <ConfirmationModal
-                isOpen={!!pendingRestoreArchive}
-                onClose={() => setPendingRestoreArchive(null)}
-                onConfirm={confirmRestoreAction}
-                title="Restaurar Ciclo"
-                variant="danger"
-                confirmText="Restaurar"
-            >
-                ¿Deseas restaurar el ciclo <strong>"{pendingRestoreArchive?.name}"</strong>? 
-            </ConfirmationModal>
-
-            <ConfirmationModal
-                isOpen={!!pendingDeleteArchive}
-                onClose={() => setPendingDeleteArchive(null)}
-                onConfirm={confirmDeleteArchiveAction}
-                title="Eliminar Respaldo"
-                variant="danger"
-                confirmText="Eliminar"
-            >
-                ¿Eliminar permanentemente el respaldo <strong>"{pendingDeleteArchive?.name}"</strong>?
+                ¿Estás seguro? <strong>Todos los datos actuales se reemplazarán permanentemente.</strong>
             </ConfirmationModal>
         </>
     );
