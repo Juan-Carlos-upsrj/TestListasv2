@@ -1,6 +1,6 @@
 
 {
-  "version": "3.2.0",
-  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v3.2.0/app-debug.apk",
-  "notes": "¡Versión Estable! Se corrigieron errores de compilación, se eliminó el botón de limpieza profunda y se optimizó la nueva navegación lateral de configuración."
+  "version": "3.2.1",
+  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v3.2.1/app-debug.apk",
+  "notes": "¡Panel de Configuración mejorado! Se agregaron botones de acción rápida en la barra lateral izquierda y se ocultaron ajustes técnicos innecesarios en Windows."
 }

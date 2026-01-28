@@ -15,37 +15,37 @@ const ChangelogModal: React.FC<ChangelogModalProps> = ({ isOpen, onClose }) => {
         <Modal isOpen={isOpen} onClose={onClose} title={`Actualizado a v${APP_VERSION}`} size="md">
             <div className="space-y-6">
                 <div className="flex items-start gap-4">
-                    <div className="bg-emerald-100 p-2 rounded-xl text-emerald-600 shrink-0">
-                        <Icon name="check-circle-2" className="w-6 h-6" />
+                    <div className="bg-indigo-100 p-2 rounded-xl text-indigo-600 shrink-0">
+                        <Icon name="layout" className="w-6 h-6" />
                     </div>
                     <div>
-                        <h4 className="font-bold text-slate-800">Versión Estable 3.2.0</h4>
+                        <h4 className="font-bold text-slate-800">Panel Rápido de Ajustes</h4>
                         <p className="text-sm text-slate-500 mt-1">
-                            Se corrigió el error que impedía generar el instalador de Windows. ¡La compilación ahora es 100% exitosa!
+                            Se agregaron botones de acceso directo en el panel izquierdo de Configuración para sincronizar asistencias, cargar horario y cerrar ciclo sin dar vueltas.
                         </p>
                     </div>
                 </div>
 
                 <div className="flex items-start gap-4">
-                    <div className="bg-indigo-100 p-2 rounded-xl text-indigo-600 shrink-0">
-                        <Icon name="settings" className="w-6 h-6" />
+                    <div className="bg-emerald-100 p-2 rounded-xl text-emerald-600 shrink-0">
+                        <Icon name="upload-cloud" className="w-6 h-6" />
                     </div>
                     <div>
-                        <h4 className="font-bold text-slate-800">Interfaz Pulida</h4>
+                        <h4 className="font-bold text-slate-800">Sincronización Total</h4>
                         <p className="text-sm text-slate-500 mt-1">
-                            Se eliminaron funciones obsoletas y se optimizó el panel lateral de navegación en Configuración para un acceso más rápido.
+                            Ahora puedes subir las calificaciones (promedios) a la nube directamente desde la ventana de configuración.
                         </p>
                     </div>
                 </div>
 
-                <div className="bg-indigo-50 p-4 rounded-2xl border border-indigo-200">
-                    <p className="text-xs text-indigo-800 font-bold text-center italic">
-                        "Código limpio, mente tranquila. ¡A seguir enseñando!"
+                <div className="bg-blue-50 p-4 rounded-2xl border border-blue-200">
+                    <p className="text-xs text-blue-800 font-bold text-center italic">
+                        "Optimizamos tu flujo de trabajo para que te enfoques en enseñar."
                     </p>
                 </div>
 
                 <Button onClick={onClose} className="w-full justify-center">
-                    ¡Listo, a trabajar!
+                    ¡Probar nuevo panel!
                 </Button>
             </div>
         </Modal>

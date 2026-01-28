@@ -8,7 +8,7 @@ import ConfirmationModal from './common/ConfirmationModal';
 import { APP_VERSION, GROUP_COLORS } from '../constants';
 import { exportBackup, importBackup } from '../services/backupService';
 import Icon from './icons/Icon';
-import { syncAttendanceData, syncScheduleData } from '../services/syncService';
+import { syncAttendanceData, syncScheduleData, syncGradesData } from '../services/syncService';
 import SemesterTransitionModal from './SemesterTransitionModal';
 import { checkForMobileUpdate } from '../services/mobileUpdateService';
 
@@ -175,12 +175,12 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
 
     return (
         <>
-            <Modal isOpen={isOpen} onClose={onClose} title="Gestión Académica - Configuración" size="7xl">
-                <div className="flex h-[75vh] -m-6 overflow-hidden">
-                    {/* MINI VENTANA IZQUIERDA (Navegación) */}
-                    <div className="w-64 bg-slate-50 dark:bg-slate-900/50 border-r border-border-color flex flex-col shrink-0">
+            <Modal isOpen={isOpen} onClose={onClose} title="Centro de Control - Configuración" size="7xl">
+                <div className="flex h-[78vh] -m-6 overflow-hidden">
+                    {/* MINI VENTANA IZQUIERDA (Navegación + Acciones Rápidas) */}
+                    <div className="w-72 bg-slate-50 dark:bg-slate-900 border-r border-border-color flex flex-col shrink-0">
                         <div className="p-6 text-center border-b border-border-color">
-                            <div className="w-16 h-16 bg-indigo-600 text-white rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-lg shadow-indigo-200">
+                            <div className="w-16 h-16 bg-indigo-600 text-white rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-lg shadow-indigo-200 ring-4 ring-white">
                                 <span className="text-2xl font-black">{settings.professorName.charAt(0)}</span>
                             </div>
                             <h3 className="font-bold text-slate-800 dark:text-slate-100 truncate text-sm px-2">
@@ -190,32 +190,52 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                         </div>
                         
                         <nav className="flex-1 overflow-y-auto p-4 space-y-1 custom-scrollbar">
+                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-2">Navegación</p>
                             {navItems.filter(i => i.show !== false).map(item => (
                                 <button
                                     key={item.id}
                                     onClick={() => scrollToSection(item.id)}
-                                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold transition-all ${
+                                    className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-xs font-bold transition-all ${
                                         activeSection === item.id 
                                         ? 'bg-white dark:bg-slate-800 text-indigo-600 shadow-sm ring-1 ring-slate-200' 
-                                        : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800/50'
+                                        : 'text-slate-500 hover:bg-slate-200/50 dark:hover:bg-slate-800/50'
                                     }`}
                                 >
                                     <Icon name={item.icon} className="w-4 h-4" />
                                     {item.label}
                                 </button>
                             ))}
+
+                            <div className="pt-4 mt-2 border-t border-slate-200">
+                                <p className="text-[9px] font-black text-indigo-400 uppercase tracking-widest mb-3 ml-2">Acciones Rápidas</p>
+                                <div className="space-y-2 px-1">
+                                    <button onClick={() => syncAttendanceData(state, dispatch, 'all')} className="w-full flex items-center gap-2 px-3 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg text-[10px] font-black transition-colors uppercase border border-indigo-100 shadow-sm">
+                                        <Icon name="upload-cloud" className="w-3.5 h-3.5" /> Subir Asistencias
+                                    </button>
+                                    <button onClick={() => syncGradesData(state, dispatch)} className="w-full flex items-center gap-2 px-3 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-lg text-[10px] font-black transition-colors uppercase border border-emerald-100 shadow-sm">
+                                        <Icon name="graduation-cap" className="w-3.5 h-3.5" /> Subir Califics.
+                                    </button>
+                                    <button onClick={() => syncScheduleData(state, dispatch)} className="w-full flex items-center gap-2 px-3 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg text-[10px] font-black transition-colors uppercase border border-blue-100 shadow-sm">
+                                        <Icon name="calendar" className="w-3.5 h-3.5" /> Cargar Horario
+                                    </button>
+                                    <button onClick={() => setTransitionOpen(true)} className="w-full flex items-center gap-2 px-3 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-lg text-[10px] font-black transition-colors uppercase border border-rose-100 shadow-sm">
+                                        <Icon name="users" className="w-3.5 h-3.5" /> Asistente Fin Ciclo
+                                    </button>
+                                </div>
+                            </div>
                         </nav>
 
-                        <div className="p-4 border-t border-border-color">
-                             <div className="bg-indigo-50 dark:bg-indigo-900/20 p-3 rounded-xl">
-                                <p className="text-[9px] font-black text-indigo-400 uppercase tracking-tighter mb-1 text-center">Version Build</p>
-                                <p className="text-center font-black text-indigo-700 dark:text-indigo-400">v{APP_VERSION}</p>
+                        <div className="p-4 border-t border-border-color bg-slate-100/50">
+                             <div className="flex gap-2">
+                                <button onClick={handleExport} className="flex-1 p-2 bg-white text-slate-600 rounded-lg border border-slate-200 hover:bg-slate-50 transition-all flex items-center justify-center" title="Exportar JSON"><Icon name="download-cloud" className="w-4 h-4"/></button>
+                                <button onClick={handleImportClick} className="flex-1 p-2 bg-white text-slate-600 rounded-lg border border-slate-200 hover:bg-slate-50 transition-all flex items-center justify-center" title="Importar JSON"><Icon name="upload-cloud" className="w-4 h-4"/></button>
                              </div>
+                             <p className="text-center font-black text-slate-400 text-[10px] mt-3">BUILD v{APP_VERSION}</p>
                         </div>
                     </div>
 
                     {/* CONTENIDO DERECHA (Formularios) */}
-                    <div ref={scrollContainerRef} className="flex-1 overflow-y-auto p-8 space-y-12 custom-scrollbar">
+                    <div ref={scrollContainerRef} className="flex-1 overflow-y-auto p-8 space-y-12 custom-scrollbar bg-white dark:bg-slate-900/20">
                         
                         {/* SECCIÓN: SISTEMA */}
                         <section id="settings-sec-sistema" className="space-y-6">
@@ -224,11 +244,11 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                                 <h4 className="text-sm font-black uppercase text-slate-400 tracking-widest">Sistema y Actualización</h4>
                             </div>
                             
-                            <div className="bg-white dark:bg-slate-800 p-6 rounded-3xl border border-slate-200 shadow-sm flex flex-col sm:flex-row items-center gap-8">
+                            <div className="bg-slate-50 dark:bg-slate-800/50 p-6 rounded-3xl border border-slate-200 shadow-sm flex flex-col sm:flex-row items-center gap-8">
                                 {isDownloading ? (
                                     <ProgressCircle percent={downloadPercent} />
                                 ) : (
-                                    <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center border-4 border-slate-100">
+                                    <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center border-4 border-slate-100 shadow-inner">
                                         <Icon name="check-circle-2" className="w-10 h-10 text-emerald-500" />
                                     </div>
                                 )}
@@ -241,12 +261,15 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                                 </div>
                             </div>
                             
-                            <div className="grid grid-cols-1 gap-4">
-                                <label className="block">
-                                    <span className="text-[10px] font-black uppercase text-slate-400 ml-1">Repositorio GitHub</span>
-                                    <input type="url" name="mobileUpdateUrl" value={settings.mobileUpdateUrl} onChange={handleChange} className="mt-1 w-full p-3 border-2 border-slate-100 rounded-2xl bg-slate-50 focus:bg-white transition-all text-sm font-bold" />
-                                </label>
-                            </div>
+                            {/* SOLO MOSTRAR REPOSITORIO EN MOBILE O WEB, NO EN WINDOWS */}
+                            {!window.electronAPI && (
+                                <div className="grid grid-cols-1 gap-4">
+                                    <label className="block">
+                                        <span className="text-[10px] font-black uppercase text-slate-400 ml-1">Repositorio GitHub</span>
+                                        <input type="url" name="mobileUpdateUrl" value={settings.mobileUpdateUrl} onChange={handleChange} className="mt-1 w-full p-3 border-2 border-slate-100 rounded-2xl bg-slate-50 focus:bg-white transition-all text-sm font-bold" />
+                                    </label>
+                                </div>
+                            )}
                         </section>
 
                         {/* SECCIÓN: NUBE */}
@@ -264,10 +287,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                                     <span className="text-[10px] font-black uppercase text-slate-400 ml-1">X-API-KEY</span>
                                     <input type="password" name="apiKey" value={settings.apiKey} onChange={handleChange} className="mt-1 w-full p-3 border-2 border-slate-100 rounded-2xl bg-slate-50 text-sm font-bold" />
                                 </label>
-                            </div>
-                            <div className="flex gap-3">
-                                <Button variant="secondary" onClick={() => syncAttendanceData(state, dispatch, 'all')} className="flex-1 text-xs">Sinc. Asistencias</Button>
-                                <Button variant="secondary" onClick={() => syncScheduleData(state, dispatch)} className="flex-1 text-xs bg-indigo-600 text-white border-none">Actualizar Horario</Button>
                             </div>
                         </section>
 
@@ -292,7 +311,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                                 <h4 className="text-sm font-black uppercase text-slate-400 tracking-widest">Periodo y Docencia</h4>
                             </div>
                             <label className="block">
-                                <span className="text-[10px] font-black uppercase text-slate-400 ml-1">Nombre Completo</span>
+                                <span className="text-[10px] font-black uppercase text-slate-400 ml-1">Nombre Completo del Profesor</span>
                                 <input type="text" name="professorName" value={settings.professorName} onChange={handleChange} className="mt-1 w-full p-3 border-2 border-slate-100 rounded-2xl bg-slate-50 text-sm font-black" />
                             </label>
                             <div className="grid grid-cols-2 gap-4">
@@ -305,9 +324,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                                     <input type="date" name="semesterEnd" value={settings.semesterEnd} onChange={handleChange} className="mt-1 w-full p-2 border-2 border-slate-100 rounded-xl bg-slate-50 text-sm" />
                                 </label>
                             </div>
-                            <Button onClick={() => setTransitionOpen(true)} className="w-full bg-rose-600 text-white border-none py-3 shadow-lg shadow-rose-200">
-                                <Icon name="users" className="w-4 h-4"/> Asistente de Cierre de Ciclo
-                            </Button>
                         </section>
 
                         {/* SECCIÓN: HISTORIAL */}
@@ -360,12 +376,15 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                         <section id="settings-sec-respaldo" className="space-y-6 pt-6 mb-10">
                             <div className="flex items-center gap-2 border-b border-slate-100 pb-2">
                                 <Icon name="layout" className="w-5 h-5 text-indigo-600" />
-                                <h4 className="text-sm font-black uppercase text-slate-400 tracking-widest">Respaldo Local</h4>
+                                <h4 className="text-sm font-black uppercase text-slate-400 tracking-widest">Seguridad de Datos</h4>
                             </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <Button variant="secondary" onClick={handleExport} className="w-full bg-white text-slate-700 py-4"><Icon name="download-cloud" className="w-5 h-5"/> Exportar JSON</Button>
-                                <Button variant="secondary" onClick={handleImportClick} className="w-full bg-white text-slate-700 py-4"><Icon name="upload-cloud" className="w-5 h-5"/> Importar JSON</Button>
-                                <input type="file" ref={fileInputRef} onChange={(e) => setPendingImportFile(e.target.files?.[0] || null)} accept=".json" className="hidden" />
+                            <div className="bg-rose-50 p-6 rounded-3xl border border-rose-100">
+                                <p className="text-xs text-rose-800 font-bold mb-4">Usa estos botones para mover tus datos entre dispositivos manualmente.</p>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <Button variant="secondary" onClick={handleExport} className="w-full bg-white text-slate-700 py-4"><Icon name="download-cloud" className="w-5 h-5"/> Exportar JSON</Button>
+                                    <Button variant="secondary" onClick={handleImportClick} className="w-full bg-white text-slate-700 py-4"><Icon name="upload-cloud" className="w-5 h-5"/> Importar JSON</Button>
+                                    <input type="file" ref={fileInputRef} onChange={(e) => setPendingImportFile(e.target.files?.[0] || null)} accept=".json" className="hidden" />
+                                </div>
                             </div>
                         </section>
                     </div>
