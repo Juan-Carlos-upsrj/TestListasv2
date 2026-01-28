@@ -68,8 +68,14 @@ export type SidebarGroupDisplayMode = 'name' | 'name-abbrev' | 'abbrev';
 
 export interface Settings {
   semesterStart: string;
-  firstPartialEnd: string;
+  firstPartialEnd: string; // Keep for legacy logic support if needed, functional pivot is p1EvalEnd
   semesterEnd: string;
+  // Nuevos campos para rangos de evaluación
+  p1EvalStart: string;
+  p1EvalEnd: string;
+  p2EvalStart: string;
+  p2EvalEnd: string;
+  
   showMatricula: boolean;
   showTeamsInGrades: boolean;
   sidebarGroupDisplayMode: SidebarGroupDisplayMode; // Replaces boolean

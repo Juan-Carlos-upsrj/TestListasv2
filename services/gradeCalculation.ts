@@ -1,3 +1,4 @@
+
 import { Group, Settings, AttendanceStatus, Evaluation, EvaluationType } from '../types';
 import { getClassDates } from './dateUtils';
 
@@ -15,14 +16,14 @@ export const calculateAttendancePercentage = (
     const today = new Date();
     const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
     
-    // Rango de fechas del parcial
+    // Rango de fechas del parcial pivotado en p1EvalEnd
     const start = settings.semesterStart;
-    const end = partial === 1 ? settings.firstPartialEnd : settings.semesterEnd;
+    const end = partial === 1 ? settings.p1EvalEnd : settings.semesterEnd;
     
     let partialStart = start;
     if (partial === 2) {
-        // El parcial 2 empieza después de que termine el 1
-        const p1End = new Date(settings.firstPartialEnd + 'T00:00:00');
+        // El parcial 2 empieza después de que termine el 1 (p1EvalEnd)
+        const p1End = new Date(settings.p1EvalEnd + 'T00:00:00');
         p1End.setDate(p1End.getDate() + 1);
         partialStart = p1End.toISOString().split('T')[0];
     }
@@ -36,7 +37,6 @@ export const calculateAttendancePercentage = (
     dates.forEach(date => {
         const status = (attendanceData[date] || AttendanceStatus.Pending) as AttendanceStatus;
         
-        // Seguir la misma lógica que AttendanceView: contar si pasó hoy O si ya se capturó
         if (date <= todayStr || status !== AttendanceStatus.Pending) {
             totalCount++;
             if (status === AttendanceStatus.Present || 
@@ -99,7 +99,6 @@ export const calculatePartialAverage = (
 
     if (totalWeightOfGradedItems === 0) return null;
 
-    // Escala 0-10
     const weightedAverage = (finalPartialScore / totalWeightOfGradedItems) * 10;
     return weightedAverage;
 };

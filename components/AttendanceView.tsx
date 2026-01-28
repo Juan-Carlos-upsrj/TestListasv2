@@ -379,9 +379,9 @@ const AttendanceView: React.FC = () => {
     }, [handleStatusChange]);
 
     const { p1Dates, p2Dates } = useMemo(() => ({
-        p1Dates: classDates.filter(d => d <= settings.firstPartialEnd),
-        p2Dates: classDates.filter(d => d > settings.firstPartialEnd)
-    }), [classDates, settings.firstPartialEnd]);
+        p1Dates: classDates.filter(d => d <= settings.p1EvalEnd),
+        p2Dates: classDates.filter(d => d > settings.p1EvalEnd)
+    }), [classDates, settings.p1EvalEnd]);
 
     const precalcStats = useMemo(() => {
         if (!selectedGroupId) return [];
@@ -396,9 +396,9 @@ const AttendanceView: React.FC = () => {
     }, [filteredStudents, attendance, selectedGroupId, p1Dates, p2Dates, classDates]);
 
     const { isCurrentP1, isCurrentP2 } = useMemo(() => ({
-        isCurrentP1: todayStr <= settings.firstPartialEnd,
-        isCurrentP2: todayStr > settings.firstPartialEnd
-    }), [todayStr, settings.firstPartialEnd]);
+        isCurrentP1: todayStr <= settings.p1EvalEnd,
+        isCurrentP2: todayStr > settings.p1EvalEnd
+    }), [todayStr, settings.p1EvalEnd]);
 
     const allowedAbsencesLimits = useMemo(() => {
         if (!group || classDates.length === 0) return { p1: 0, p2: 0, global: 0, p1Total: 0, p2Total: 0, totalClasses: 0 };
@@ -419,8 +419,8 @@ const AttendanceView: React.FC = () => {
 
     const headerStructure = useMemo(() => {
         const structure = [];
-        const p1 = classDates.filter(d => d <= settings.firstPartialEnd);
-        const p2 = classDates.filter(d => d > settings.firstPartialEnd);
+        const p1 = classDates.filter(d => d <= settings.p1EvalEnd);
+        const p2 = classDates.filter(d => d > settings.p1EvalEnd);
         
         const getMonths = (dates: string[]) => {
              const months: any[] = [];
@@ -436,7 +436,7 @@ const AttendanceView: React.FC = () => {
         if (p1.length) structure.push({ label: 'Primer Parcial', width: p1.length * DATE_COL_WIDTH, months: getMonths(p1) });
         if (p2.length) structure.push({ label: 'Segundo Parcial', width: p2.length * DATE_COL_WIDTH, months: getMonths(p2) });
         return structure;
-    }, [classDates, settings.firstPartialEnd]);
+    }, [classDates, settings.p1EvalEnd]);
 
     const totalWidth = useMemo(() => nameColWidth + (classDates.length * DATE_COL_WIDTH) + (STAT_COL_WIDTH * 3), [classDates.length, nameColWidth]);
     

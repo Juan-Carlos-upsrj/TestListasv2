@@ -1,6 +1,6 @@
 
 import React, { createContext, useReducer, useEffect, ReactNode, Dispatch, useState } from 'react';
-import { AppState, AppAction, AttendanceStatus, Group, Evaluation, Archive, Student } from '../types';
+import { AppState, AppAction, AttendanceStatus, Group, Evaluation, Archive, Student, Settings } from '../types';
 import { GROUP_COLORS } from '../constants';
 import { getState, saveState } from '../services/dbService';
 import { fetchGoogleCalendarEvents } from '../services/calendarService';
@@ -24,6 +24,10 @@ const defaultState: AppState = {
     semesterStart: today.toISOString().split('T')[0],
     firstPartialEnd: nextMonth.toISOString().split('T')[0],
     semesterEnd: fourMonthsLater.toISOString().split('T')[0],
+    p1EvalStart: today.toISOString().split('T')[0],
+    p1EvalEnd: nextMonth.toISOString().split('T')[0],
+    p2EvalStart: nextMonth.toISOString().split('T')[0],
+    p2EvalEnd: fourMonthsLater.toISOString().split('T')[0],
     showMatricula: true,
     showTeamsInGrades: true,
     sidebarGroupDisplayMode: 'name-abbrev', 
@@ -55,7 +59,7 @@ const appReducer = (state: AppState, action: AppAction): AppState => {
         const loadedState = action.payload || {};
         const loadedGroups: Group[] = (Array.isArray(loadedState.groups) ? loadedState.groups : []).filter(g => g && g.id);
         
-        // MIGRACIÓN DE GRUPOS Y ALUMNOS: Rescate exhaustivo de equipos y prevención de nulos
+        // MIGRACIÓN DE GRUPOS Y ALUMNOS
         const migratedGroups = loadedGroups.map((group, index) => {
             const hasEvalTypes = group.evaluationTypes && group.evaluationTypes.partial1 && group.evaluationTypes.partial2;
             return {
@@ -96,16 +100,21 @@ const appReducer = (state: AppState, action: AppAction): AppState => {
             }));
         });
 
-        const loadedSettings = loadedState.settings;
-        const migratedSettings = { ...defaultState.settings, ...loadedSettings };
+        const loadedSettingsRaw = loadedState.settings || {};
+        // FIX: Cast loadedSettings to Partial<Settings> to avoid property access errors on empty object type
+        const loadedSettings = loadedSettingsRaw as Partial<Settings>;
+        const migratedSettings = { 
+            ...defaultState.settings, 
+            ...loadedSettings,
+            // Migrar firstPartialEnd a p1EvalEnd si p1EvalEnd no existe
+            p1EvalEnd: loadedSettings.p1EvalEnd || loadedSettings.firstPartialEnd || defaultState.settings.p1EvalEnd
+        };
         migratedSettings.theme = 'classic';
 
         // --- SISTEMA DE RESCATE PROFUNDO DE NOTAS 1.7.0 ---
-        
         let recoveredTeamNotes: Record<string, string> = {};
         let recoveredCoyoteNotes: Record<string, string> = {};
 
-        // 1. INTENTO: LocalStorage (algunas versiones antiguas guardaban aquí)
         try {
             const lsTeam = localStorage.getItem('teamNotes');
             const lsCoyote = localStorage.getItem('coyoteTeamNotes');
@@ -115,45 +124,18 @@ const appReducer = (state: AppState, action: AppAction): AppState => {
             if (lsLegacy) recoveredTeamNotes = { ...recoveredTeamNotes, ...JSON.parse(lsLegacy) };
         } catch (e) { console.warn("Error leyendo notas de localStorage", e); }
 
-        // 2. INTENTO: Raíz del estado cargado (todas las variantes posibles de nombre)
-        const possibleRoots = [
-            'teamNotes', 'teamsNotes', 'notasEquipos', 'team_notes', 'notas_equipos', 'legacyTeamNotes',
-            'coyoteTeamNotes', 'notasCoyote', 'coyote_notes', 'legacyCoyoteNotes'
-        ];
-        
+        const possibleRoots = ['teamNotes', 'teamsNotes', 'notasEquipos', 'team_notes', 'notas_equipos', 'legacyTeamNotes', 'coyoteTeamNotes', 'notasCoyote', 'coyote_notes', 'legacyCoyoteNotes'];
         possibleRoots.forEach(key => {
             const data = (loadedState as any)[key];
             if (data && typeof data === 'object') {
-                if (key.toLowerCase().includes('coyote')) {
-                    recoveredCoyoteNotes = { ...recoveredCoyoteNotes, ...data };
-                } else {
-                    recoveredTeamNotes = { ...recoveredTeamNotes, ...data };
-                }
+                if (key.toLowerCase().includes('coyote')) recoveredCoyoteNotes = { ...recoveredCoyoteNotes, ...data };
+                else recoveredTeamNotes = { ...recoveredTeamNotes, ...data };
             }
         });
 
-        // 3. INTENTO: Dentro de cada objeto de Grupo (v1.6.0 y anteriores)
-        loadedGroups.forEach((g: any) => {
-            Object.entries(g).forEach(([key, val]) => {
-                if (val && typeof val === 'object' && !Array.isArray(val)) {
-                    const isNoteKey = key.toLowerCase().includes('note') || key.toLowerCase().includes('nota');
-                    if (isNoteKey) {
-                        if (key.toLowerCase().includes('coyote')) {
-                            recoveredCoyoteNotes = { ...recoveredCoyoteNotes, ...(val as any) };
-                        } else {
-                            recoveredTeamNotes = { ...recoveredTeamNotes, ...(val as any) };
-                        }
-                    }
-                }
-            });
-        });
-
-        // 4. LIMPIEZA: Asegurar que las llaves (nombres de equipos) no tengan espacios accidentales
         const cleanNotes = (notes: Record<string, string>) => {
             const cleaned: Record<string, string> = {};
-            Object.entries(notes).forEach(([k, v]) => {
-                if (k && v && typeof v === 'string') cleaned[k.trim()] = v;
-            });
+            Object.entries(notes).forEach(([k, v]) => { if (k && v && typeof v === 'string') cleaned[k.trim()] = v; });
             return cleaned;
         };
 
@@ -176,22 +158,12 @@ const appReducer = (state: AppState, action: AppAction): AppState => {
             groupTutors: loadedState.groupTutors ?? {},
         };
     }
-    case 'SET_VIEW':
-      return { ...state, activeView: action.payload };
-    case 'SET_SELECTED_GROUP':
-      return { ...state, selectedGroupId: action.payload };
+    case 'SET_VIEW': return { ...state, activeView: action.payload };
+    case 'SET_SELECTED_GROUP': return { ...state, selectedGroupId: action.payload };
     case 'SAVE_GROUP': {
       const existingGroup = state.groups.find(g => g.id === action.payload.id);
-      if (existingGroup) {
-        return {
-          ...state,
-          groups: state.groups.map(g => g.id === action.payload.id ? action.payload : g),
-        };
-      }
-      return { 
-        ...state, 
-        groups: [...state.groups, { ...action.payload, color: action.payload.color || GROUP_COLORS[state.groups.length % GROUP_COLORS.length].name }] 
-      };
+      if (existingGroup) return { ...state, groups: state.groups.map(g => g.id === action.payload.id ? action.payload : g) };
+      return { ...state, groups: [...state.groups, { ...action.payload, color: action.payload.color || GROUP_COLORS[state.groups.length % GROUP_COLORS.length].name }] };
     }
     case 'DELETE_GROUP': {
         const newGroups = state.groups.filter(g => g.id !== action.payload);
@@ -199,99 +171,46 @@ const appReducer = (state: AppState, action: AppAction): AppState => {
         const newEvaluations = {...state.evaluations}; delete newEvaluations[action.payload];
         const newGrades = {...state.grades}; delete newGrades[action.payload];
         const newTutors = {...state.groupTutors}; delete newTutors[action.payload];
-        return {
-            ...state,
-            groups: newGroups,
-            attendance: newAttendance,
-            evaluations: newEvaluations,
-            grades: newGrades,
-            groupTutors: newTutors,
-            selectedGroupId: state.selectedGroupId === action.payload ? null : state.selectedGroupId,
-        };
+        return { ...state, groups: newGroups, attendance: newAttendance, evaluations: newEvaluations, grades: newGrades, groupTutors: newTutors, selectedGroupId: state.selectedGroupId === action.payload ? null : state.selectedGroupId };
     }
     case 'SAVE_STUDENT': {
       const { groupId, student } = action.payload;
-      return {
-        ...state,
-        groups: state.groups.map(g => {
-          if (g.id === groupId) {
-            const studentExists = g.students.some(s => s.id === student.id);
-            if (studentExists) return { ...g, students: g.students.map(s => s.id === student.id ? student : s) };
-            return { ...g, students: [...g.students, student] };
-          }
-          return g;
-        }),
-      };
+      return { ...state, groups: state.groups.map(g => { if (g.id === groupId) { const studentExists = g.students.some(s => s.id === student.id); if (studentExists) return { ...g, students: g.students.map(s => s.id === student.id ? student : s) }; return { ...g, students: [...g.students, student] }; } return g; }) };
     }
-    case 'BULK_ADD_STUDENTS': {
-        const { groupId, students } = action.payload;
-        return {
-            ...state,
-            groups: state.groups.map(g => (g.id === groupId ? { ...g, students: [...g.students, ...students] } : g)),
-        };
-    }
+    case 'BULK_ADD_STUDENTS': return { ...state, groups: state.groups.map(g => (g.id === action.payload.groupId ? { ...g, students: [...g.students, ...action.payload.students] } : g)) };
     case 'DELETE_STUDENT': {
         const { groupId, studentId } = action.payload;
-        const newGrades = {...state.grades};
-        if(newGrades[groupId]) delete newGrades[groupId][studentId];
-        const newTutorship = {...state.tutorshipData};
-        delete newTutorship[studentId];
-        return {
-            ...state,
-            grades: newGrades,
-            tutorshipData: newTutorship,
-            groups: state.groups.map(g => (g.id === groupId ? { ...g, students: g.students.filter(s => s.id !== studentId) } : g)),
-        };
+        const newGrades = {...state.grades}; if(newGrades[groupId]) delete newGrades[groupId][studentId];
+        const newTutorship = {...state.tutorshipData}; delete newTutorship[studentId];
+        return { ...state, grades: newGrades, tutorshipData: newTutorship, groups: state.groups.map(g => (g.id === groupId ? { ...g, students: g.students.filter(s => s.id !== studentId) } : g)) };
     }
     case 'UPDATE_ATTENDANCE': {
         const { groupId, studentId, date, status } = action.payload;
         const groupAttendance = state.attendance[groupId] || {};
         const studentAttendance = groupAttendance[studentId] || {};
-        return {
-            ...state,
-            attendance: { ...state.attendance, [groupId]: { ...groupAttendance, [studentId]: { ...studentAttendance, [date]: status } } },
-        };
+        return { ...state, attendance: { ...state.attendance, [groupId]: { ...groupAttendance, [studentId]: { ...studentAttendance, [date]: status } } } };
     }
     case 'QUICK_ATTENDANCE': {
         const { groupId, date } = action.payload;
-        const group = state.groups.find(g => g.id === groupId);
-        if (!group) return state;
+        const group = state.groups.find(g => g.id === groupId); if (!group) return state;
         const updatedAttendance = { ...state.attendance[groupId] };
-        group.students.forEach(student => {
-            const currentStatus = updatedAttendance[student.id]?.[date];
-            if (!currentStatus || currentStatus === AttendanceStatus.Pending) {
-                if (!updatedAttendance[student.id]) updatedAttendance[student.id] = {};
-                updatedAttendance[student.id][date] = AttendanceStatus.Present;
-            }
-        });
+        group.students.forEach(student => { const currentStatus = updatedAttendance[student.id]?.[date]; if (!currentStatus || currentStatus === AttendanceStatus.Pending) { if (!updatedAttendance[student.id]) updatedAttendance[student.id] = {}; updatedAttendance[student.id][date] = AttendanceStatus.Present; } });
         return { ...state, attendance: { ...state.attendance, [groupId]: updatedAttendance } };
     }
     case 'BULK_UPDATE_ATTENDANCE': {
         const { groupId, startDate, endDate, status, overwrite } = action.payload;
-        const group = state.groups.find(g => g.id === groupId);
-        if (!group) return state;
+        const group = state.groups.find(g => g.id === groupId); if (!group) return state;
         const datesToUpdate = getClassDates(startDate, endDate, group.classDays);
         const newAttendance = JSON.parse(JSON.stringify(state.attendance));
         if (!newAttendance[groupId]) newAttendance[groupId] = {};
-        group.students.forEach(student => {
-            if (!newAttendance[groupId][student.id]) newAttendance[groupId][student.id] = {};
-            datesToUpdate.forEach(date => {
-                const currentStatus = newAttendance[groupId][student.id][date];
-                if (overwrite || !currentStatus || currentStatus === AttendanceStatus.Pending) newAttendance[groupId][student.id][date] = status;
-            });
-        });
+        group.students.forEach(student => { if (!newAttendance[groupId][student.id]) newAttendance[groupId][student.id] = {}; datesToUpdate.forEach(date => { const currentStatus = newAttendance[groupId][student.id][date]; if (overwrite || !currentStatus || currentStatus === AttendanceStatus.Pending) newAttendance[groupId][student.id][date] = status; }); });
         return { ...state, attendance: newAttendance };
     }
     case 'BULK_SET_ATTENDANCE': {
         const { groupId, records } = action.payload;
         const updatedAttendance = { ...state.attendance };
-        // FIX: Correctly access the existing group attendance and avoid using 'record' before it's defined
         const updatedGroupAttendance = { ...(updatedAttendance[groupId] || {}) };
-        records.forEach(record => {
-            const updatedStudentAttendance = { ...(updatedGroupAttendance[record.studentId] || {}) };
-            updatedStudentAttendance[record.date] = record.status;
-            updatedGroupAttendance[record.studentId] = updatedStudentAttendance;
-        });
+        records.forEach(record => { const updatedStudentAttendance = { ...(updatedGroupAttendance[record.studentId] || {}) }; updatedStudentAttendance[record.date] = record.status; updatedGroupAttendance[record.studentId] = updatedStudentAttendance; });
         updatedAttendance[groupId] = updatedGroupAttendance;
         return { ...state, attendance: updatedAttendance };
     }
@@ -299,346 +218,65 @@ const appReducer = (state: AppState, action: AppAction): AppState => {
         const { groupId, evaluation } = action.payload;
         const groupEvaluations = state.evaluations[groupId] || [];
         const evalExists = groupEvaluations.some(e => e.id === evaluation.id);
-        return {
-            ...state,
-            evaluations: {
-                ...state.evaluations,
-                [groupId]: evalExists ? groupEvaluations.map(e => e.id === evaluation.id ? evaluation : e) : [...groupEvaluations, evaluation],
-            },
-        };
+        return { ...state, evaluations: { ...state.evaluations, [groupId]: evalExists ? groupEvaluations.map(e => e.id === evaluation.id ? evaluation : e) : [...groupEvaluations, evaluation] } };
     }
     case 'DELETE_EVALUATION': {
         const { groupId, evaluationId } = action.payload;
-        const newGrades = {...state.grades};
-        if(newGrades[groupId]) Object.keys(newGrades[groupId]).forEach(sid => { delete newGrades[groupId][sid][evaluationId]; });
-        return {
-            ...state,
-            grades: newGrades,
-            evaluations: { ...state.evaluations, [groupId]: (state.evaluations[groupId] || []).filter(e => e.id !== evaluationId) },
-        };
+        const newGrades = {...state.grades}; if(newGrades[groupId]) Object.keys(newGrades[groupId]).forEach(sid => { delete newGrades[groupId][sid][evaluationId]; });
+        return { ...state, grades: newGrades, evaluations: { ...state.evaluations, [groupId]: (state.evaluations[groupId] || []).filter(e => e.id !== evaluationId) } };
     }
     case 'UPDATE_GRADE': {
         const { groupId, studentId, evaluationId, score } = action.payload;
         const group = state.groups.find(g => g.id === groupId);
         const groupEvaluations = state.evaluations[groupId] || [];
         const evaluation = groupEvaluations.find(e => e.id === evaluationId);
-        
         const updatedGrades = { ...state.grades };
         const updatedGroupGrades = { ...(updatedGrades[groupId] || {}) };
-
         const studentGrades = { ...(updatedGroupGrades[studentId] || {}) };
         studentGrades[evaluationId] = score;
         updatedGroupGrades[studentId] = studentGrades;
-
         if (evaluation?.isTeamBased && group) {
             const currentStudent = group.students.find(s => s.id === studentId);
-            // Selección dinámica del tipo de equipo según la configuración de la evaluación
             const teamFieldName = evaluation.teamType === 'coyote' ? 'teamCoyote' : 'team';
             const teamName = currentStudent ? (currentStudent as any)[teamFieldName] : undefined;
-            
-            if (teamName) {
-                group.students.forEach(s => {
-                    const studentTeamName = (s as any)[teamFieldName];
-                    if (studentTeamName === teamName && s.id !== studentId) {
-                        const otherStudentGrades = { ...(updatedGroupGrades[s.id] || {}) };
-                        otherStudentGrades[evaluationId] = score;
-                        updatedGroupGrades[s.id] = otherStudentGrades;
-                    }
-                });
-            }
+            if (teamName) { group.students.forEach(s => { const studentTeamName = (s as any)[teamFieldName]; if (studentTeamName === teamName && s.id !== studentId) { const otherStudentGrades = { ...(updatedGroupGrades[s.id] || {}) }; otherStudentGrades[evaluationId] = score; updatedGroupGrades[s.id] = otherStudentGrades; } }); }
         }
-
         updatedGrades[groupId] = updatedGroupGrades;
         return { ...state, grades: updatedGrades };
     }
-    case 'UPDATE_SETTINGS': {
-        return { ...state, settings: { ...state.settings, ...action.payload } };
-    }
-    case 'ADD_TOAST':
-      return { ...state, toasts: [...state.toasts, { ...action.payload, id: Date.now() }] };
-    case 'REMOVE_TOAST':
-      return { ...state, toasts: state.toasts.filter(t => t.id !== action.payload) };
-    case 'SAVE_EVENT': {
-        const eventExists = state.calendarEvents.some(e => e.id === action.payload.id);
-        return { ...state, calendarEvents: eventExists ? state.calendarEvents.map(e => e.id === action.payload.id ? action.payload : e) : [...state.calendarEvents, action.payload] };
-    }
-    case 'DELETE_EVENT':
-        return { ...state, calendarEvents: state.calendarEvents.filter(e => e.type !== 'class' && e.type !== 'evaluation'),
-            selectedGroupId: null,
-        };
-    case 'SET_GCAL_EVENTS':
-        return { ...state, gcalEvents: action.payload };
-    case 'ARCHIVE_CURRENT_STATE': {
-        const newArchive: Archive = {
-            id: uuidv4(),
-            name: action.payload,
-            dateArchived: new Date().toISOString(),
-            data: JSON.parse(JSON.stringify(state))
-        };
-        return { ...state, archives: [...state.archives, newArchive] };
-    }
-    case 'RESTORE_ARCHIVE': {
-        const archive = state.archives.find(a => a.id === action.payload);
-        if (!archive) return state;
-        return { ...archive.data, archives: state.archives, toasts: [] };
-    }
-    case 'DELETE_ARCHIVE':
-        return { ...state, archives: state.archives.filter(a => a.id !== action.payload) };
-    case 'TRANSITION_SEMESTER': {
-        const { newGroups, newSettings } = action.payload;
-        return {
-            ...state,
-            groups: newGroups,
-            settings: { ...state.settings, ...newSettings },
-            attendance: {}, grades: {}, evaluations: {},
-            calendarEvents: state.calendarEvents.filter(e => e.type !== 'class' && e.type !== 'evaluation'),
-            selectedGroupId: null,
-        };
-    }
-    case 'RENAME_TEAM': {
-        const { oldName, newName, isCoyote } = action.payload;
-        const targetNotesField = isCoyote ? 'coyoteTeamNotes' : 'teamNotes';
-        const newNotes = { ...(state[targetNotesField] || {}) };
-        if (newNotes[oldName]) {
-            newNotes[newName] = newNotes[oldName];
-            delete newNotes[oldName];
-        }
-        return {
-            ...state,
-            [targetNotesField]: newNotes,
-            groups: state.groups.map(g => ({
-                ...g,
-                students: g.students.map(s => {
-                    const currentTeam = isCoyote ? s.teamCoyote : s.team;
-                    if (currentTeam === oldName) {
-                        return { ...s, [isCoyote ? 'teamCoyote' : 'team']: newName };
-                    }
-                    return s;
-                })
-            }))
-        };
-    }
-    case 'DELETE_TEAM': {
-        const { teamName, isCoyote } = action.payload;
-        const targetNotesField = isCoyote ? 'coyoteTeamNotes' : 'teamNotes';
-        const newNotes = { ...(state[targetNotesField] || {}) };
-        delete newNotes[teamName];
-        return {
-            ...state,
-            [targetNotesField]: newNotes,
-            groups: state.groups.map(g => ({
-                ...g,
-                students: g.students.map(s => {
-                    const currentTeam = isCoyote ? s.teamCoyote : s.team;
-                    if (currentTeam === teamName) {
-                        const updatedStudent = { ...s };
-                        if (isCoyote) delete (updatedStudent as any).teamCoyote;
-                        else delete (updatedStudent as any).team;
-                        return updatedStudent;
-                    }
-                    return s;
-                })
-            }))
-        };
-    }
-    case 'UPDATE_TEAM_NOTE': {
-        const { teamName, note, isCoyote } = action.payload;
-        const targetNotesField = isCoyote ? 'coyoteTeamNotes' : 'teamNotes';
-        return {
-            ...state,
-            [targetNotesField]: {
-                ...(state[targetNotesField] || {}),
-                [teamName]: note
-            }
-        };
-    }
-    case 'ASSIGN_STUDENT_TEAM': {
-        const { studentId, teamName, isCoyote } = action.payload;
-        return {
-            ...state,
-            groups: state.groups.map(g => ({
-                ...g,
-                students: g.students.map(s => {
-                    if (s.id === studentId) {
-                        const updated = { ...s };
-                        if (isCoyote) updated.teamCoyote = teamName;
-                        else updated.team = teamName;
-                        return updated;
-                    }
-                    return s;
-                })
-            }))
-        };
-    }
-    case 'CONVERT_TEAM_TYPE': {
-        const { teamName, fromCoyote, groupId } = action.payload;
-        const sourceNotes = fromCoyote ? state.coyoteTeamNotes : state.teamNotes;
-        const targetNotes = fromCoyote ? state.teamNotes : state.coyoteTeamNotes;
-        const note = (sourceNotes || {})[teamName] || '';
-        
-        // 1. Mover la nota
-        const newSourceNotes = { ...(sourceNotes || {}) };
-        delete newSourceNotes[teamName];
-        const newTargetNotes = { ...(targetNotes || {}), [teamName]: note };
-
-        // 2. Mover los alumnos
-        return {
-            ...state,
-            teamNotes: fromCoyote ? newTargetNotes : newSourceNotes,
-            coyoteTeamNotes: fromCoyote ? newSourceNotes : newTargetNotes,
-            groups: state.groups.map(g => {
-                // Si movemos DE Coyote A Base, solo aplica al grupo actual
-                if (fromCoyote && g.id !== groupId) {
-                    return {
-                        ...g,
-                        students: g.students.map(s => s.teamCoyote === teamName ? { ...s, teamCoyote: undefined } : s)
-                    };
-                }
-                
-                // Actualizar asignaciones
-                return {
-                    ...g,
-                    students: g.students.map(s => {
-                        if (fromCoyote && s.teamCoyote === teamName) {
-                            return { ...s, teamCoyote: undefined, team: teamName };
-                        }
-                        if (!fromCoyote && s.team === teamName) {
-                            return { ...s, team: undefined, teamCoyote: teamName };
-                        }
-                        return s;
-                    })
-                };
-            })
-        };
-    }
-    case 'GENERATE_RANDOM_TEAMS': {
-        const { groupId, maxTeamSize } = action.payload;
-        const currentGroup = state.groups.find(g => g.id === groupId);
-        if (!currentGroup) return state;
-
-        // Filtrar alumnos sin equipo base
-        const studentsWithoutTeam = currentGroup.students.filter(s => !s.team);
-        if (studentsWithoutTeam.length === 0) return state;
-
-        // Shuffle
-        const shuffled = [...studentsWithoutTeam].sort(() => Math.random() - 0.5);
-        
-        const updatedStudents = [...currentGroup.students];
-        let teamCounter = 1;
-
-        // Encontrar el nombre de equipo más alto existente para no chocar
-        const baseTeams = new Set<string>();
-        currentGroup.students.forEach(s => { if(s.team) baseTeams.add(s.team); });
-        
-        while (baseTeams.has(`Equipo ${teamCounter}`)) {
-            teamCounter++;
-        }
-
-        for (let i = 0; i < shuffled.length; i += maxTeamSize) {
-            const teamName = `Equipo ${teamCounter++}`;
-            const chunk = shuffled.slice(i, i + maxTeamSize);
-            chunk.forEach(s => {
-                const idx = updatedStudents.findIndex(st => st.id === s.id);
-                if (idx !== -1) updatedStudents[idx] = { ...updatedStudents[idx], team: teamName };
-            });
-        }
-
-        return {
-            ...state,
-            groups: state.groups.map(g => g.id === groupId ? { ...g, students: updatedStudents } : g)
-        };
-    }
-    case 'SET_TEACHER_SCHEDULE':
-        return { ...state, teacherSchedule: action.payload };
-    case 'UPDATE_TUTORSHIP':
-        return {
-            ...state,
-            tutorshipData: {
-                ...state.tutorshipData,
-                [action.payload.studentId]: action.payload.entry
-            }
-        };
-    case 'SET_TUTORSHIP_DATA_BULK':
-        return {
-            ...state,
-            tutorshipData: {
-                ...state.tutorshipData,
-                ...action.payload
-            }
-        };
-    case 'SET_GROUP_TUTORS_BULK':
-        return {
-            ...state,
-            groupTutors: {
-                ...state.groupTutors,
-                ...action.payload
-            }
-        };
-    case 'SET_GROUP_TUTOR':
-        return {
-            ...state,
-            groupTutors: {
-                ...state.groupTutors,
-                [action.payload.groupId]: action.payload.tutorName
-            }
-        };
-    default:
-      return state;
+    case 'UPDATE_SETTINGS': return { ...state, settings: { ...state.settings, ...action.payload } };
+    case 'ADD_TOAST': return { ...state, toasts: [...state.toasts, { ...action.payload, id: Date.now() }] };
+    case 'REMOVE_TOAST': return { ...state, toasts: state.toasts.filter(t => t.id !== action.payload) };
+    case 'SAVE_EVENT': { const eventExists = state.calendarEvents.some(e => e.id === action.payload.id); return { ...state, calendarEvents: eventExists ? state.calendarEvents.map(e => e.id === action.payload.id ? action.payload : e) : [...state.calendarEvents, action.payload] }; }
+    case 'DELETE_EVENT': return { ...state, calendarEvents: state.calendarEvents.filter(e => e.type !== 'class' && e.type !== 'evaluation'), selectedGroupId: null };
+    case 'SET_GCAL_EVENTS': return { ...state, gcalEvents: action.payload };
+    case 'ARCHIVE_CURRENT_STATE': return { ...state, archives: [...state.archives, { id: uuidv4(), name: action.payload, dateArchived: new Date().toISOString(), data: JSON.parse(JSON.stringify(state)) }] };
+    case 'RESTORE_ARCHIVE': { const archive = state.archives.find(a => a.id === action.payload); if (!archive) return state; return { ...archive.data, archives: state.archives, toasts: [] }; }
+    case 'DELETE_ARCHIVE': return { ...state, archives: state.archives.filter(a => a.id !== action.payload) };
+    case 'TRANSITION_SEMESTER': { const { newGroups, newSettings } = action.payload; return { ...state, groups: newGroups, settings: { ...state.settings, ...newSettings }, attendance: {}, grades: {}, evaluations: {}, calendarEvents: state.calendarEvents.filter(e => e.type !== 'class' && e.type !== 'evaluation'), selectedGroupId: null }; }
+    case 'RENAME_TEAM': { const { oldName, newName, isCoyote } = action.payload; const targetNotesField = isCoyote ? 'coyoteTeamNotes' : 'teamNotes'; const newNotes = { ...(state[targetNotesField] || {}) }; if (newNotes[oldName]) { newNotes[newName] = newNotes[oldName]; delete newNotes[oldName]; } return { ...state, [targetNotesField]: newNotes, groups: state.groups.map(g => ({ ...g, students: g.students.map(s => { const currentTeam = isCoyote ? s.teamCoyote : s.team; if (currentTeam === oldName) return { ...s, [isCoyote ? 'teamCoyote' : 'team']: newName }; return s; }) })) }; }
+    case 'DELETE_TEAM': { const { teamName, isCoyote } = action.payload; const targetNotesField = isCoyote ? 'coyoteTeamNotes' : 'teamNotes'; const newNotes = { ...(state[targetNotesField] || {}) }; delete newNotes[teamName]; return { ...state, [targetNotesField]: newNotes, groups: state.groups.map(g => ({ ...g, students: g.students.map(s => { const currentTeam = isCoyote ? s.teamCoyote : s.team; if (currentTeam === teamName) { const updatedStudent = { ...s }; if (isCoyote) delete (updatedStudent as any).teamCoyote; else delete (updatedStudent as any).team; return updatedStudent; } return s; }) })) }; }
+    case 'UPDATE_TEAM_NOTE': { const { teamName, note, isCoyote } = action.payload; const targetNotesField = isCoyote ? 'coyoteTeamNotes' : 'teamNotes'; return { ...state, [targetNotesField]: { ...(state[targetNotesField] || {}), [teamName]: note } }; }
+    case 'ASSIGN_STUDENT_TEAM': return { ...state, groups: state.groups.map(g => ({ ...g, students: g.students.map(s => { if (s.id === action.payload.studentId) { const updated = { ...s }; if (action.payload.isCoyote) updated.teamCoyote = action.payload.teamName; else updated.team = action.payload.teamName; return updated; } return s; }) })) };
+    case 'CONVERT_TEAM_TYPE': { const { teamName, fromCoyote, groupId } = action.payload; const sourceNotes = fromCoyote ? state.coyoteTeamNotes : state.teamNotes; const targetNotes = fromCoyote ? state.teamNotes : state.coyoteTeamNotes; const note = (sourceNotes || {})[teamName] || ''; const newSourceNotes = { ...(sourceNotes || {}) }; delete newSourceNotes[teamName]; const newTargetNotes = { ...(targetNotes || {}), [teamName]: note }; return { ...state, teamNotes: fromCoyote ? newTargetNotes : newSourceNotes, coyoteTeamNotes: fromCoyote ? newSourceNotes : newTargetNotes, groups: state.groups.map(g => { if (fromCoyote && g.id !== groupId) return { ...g, students: g.students.map(s => s.teamCoyote === teamName ? { ...s, teamCoyote: undefined } : s) }; return { ...g, students: g.students.map(s => { if (fromCoyote && s.teamCoyote === teamName) return { ...s, teamCoyote: undefined, team: teamName }; if (!fromCoyote && s.team === teamName) return { ...s, team: undefined, teamCoyote: teamName }; return s; }) }; }) }; }
+    case 'GENERATE_RANDOM_TEAMS': { const { groupId, maxTeamSize } = action.payload; const currentGroup = state.groups.find(g => g.id === groupId); if (!currentGroup) return state; const studentsWithoutTeam = currentGroup.students.filter(s => !s.team); if (studentsWithoutTeam.length === 0) return state; const shuffled = [...studentsWithoutTeam].sort(() => Math.random() - 0.5); const updatedStudents = [...currentGroup.students]; let teamCounter = 1; const baseTeams = new Set<string>(); currentGroup.students.forEach(s => { if(s.team) baseTeams.add(s.team); }); while (baseTeams.has(`Equipo ${teamCounter}`)) teamCounter++; for (let i = 0; i < shuffled.length; i += maxTeamSize) { const teamName = `Equipo ${teamCounter++}`; const chunk = shuffled.slice(i, i + maxTeamSize); chunk.forEach(s => { const idx = updatedStudents.findIndex(st => st.id === s.id); if (idx !== -1) updatedStudents[idx] = { ...updatedStudents[idx], team: teamName }; }); } return { ...state, groups: state.groups.map(g => g.id === groupId ? { ...g, students: updatedStudents } : g) }; }
+    case 'SET_TEACHER_SCHEDULE': return { ...state, teacherSchedule: action.payload };
+    case 'UPDATE_TUTORSHIP': return { ...state, tutorshipData: { ...state.tutorshipData, [action.payload.studentId]: action.payload.entry } };
+    case 'SET_TUTORSHIP_DATA_BULK': return { ...state, tutorshipData: { ...state.tutorshipData, ...action.payload } };
+    case 'SET_GROUP_TUTORS_BULK': return { ...state, groupTutors: { ...state.groupTutors, ...action.payload } };
+    case 'SET_GROUP_TUTOR': return { ...state, groupTutors: { ...state.groupTutors, [action.payload.groupId]: action.payload.tutorName } };
+    default: return state;
   }
 };
 
-export const AppContext = createContext<{
-  state: AppState;
-  dispatch: Dispatch<AppAction>;
-}>({
-  state: defaultState,
-  dispatch: () => null,
-});
+export const AppContext = createContext<{ state: AppState; dispatch: Dispatch<AppAction>; }>({ state: defaultState, dispatch: () => null });
 
 export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [state, dispatch] = useReducer(appReducer, defaultState);
   const [isInitialized, setIsInitialized] = useState(false);
-
-  useEffect(() => {
-    const loadState = async () => {
-      try {
-        const savedState = await getState();
-        if (savedState) dispatch({ type: 'SET_INITIAL_STATE', payload: savedState });
-      } catch (error) {
-        console.error("Failed to load state from DB:", error);
-      } finally {
-        setIsInitialized(true);
-      }
-    };
-    loadState();
-  }, []);
-  
-  useEffect(() => {
-    if (!isInitialized) return;
-    const timeoutId = setTimeout(() => { saveState(state); }, 1000);
-    return () => clearTimeout(timeoutId);
-  }, [state, isInitialized]);
-  
-  useEffect(() => {
-    if (isInitialized && state.settings.googleCalendarUrl) {
-      const gcalColor = GROUP_COLORS.find(c => c.name === state.settings.googleCalendarColor)?.calendar || GROUP_COLORS[0].calendar;
-      fetchGoogleCalendarEvents(state.settings.googleCalendarUrl, gcalColor)
-        .then(events => { dispatch({ type: 'SET_GCAL_EVENTS', payload: events }); })
-        .catch(error => {
-            console.error("Failed to fetch GCal events:", error);
-            dispatch({ type: 'ADD_TOAST', payload: { message: error.message, type: 'error' } });
-            dispatch({ type: 'SET_GCAL_EVENTS', payload: [] });
-        });
-    } else if (isInitialized) {
-        dispatch({ type: 'SET_GCAL_EVENTS', payload: [] });
-    }
-  }, [isInitialized, state.settings.googleCalendarUrl, state.settings.googleCalendarColor]);
-
+  useEffect(() => { const loadState = async () => { try { const savedState = await getState(); if (savedState) dispatch({ type: 'SET_INITIAL_STATE', payload: savedState }); } catch (error) { console.error("Failed to load state from DB:", error); } finally { setIsInitialized(true); } }; loadState(); }, []);
+  useEffect(() => { if (!isInitialized) return; const timeoutId = setTimeout(() => { saveState(state); }, 1000); return () => clearTimeout(timeoutId); }, [state, isInitialized]);
+  useEffect(() => { if (isInitialized && state.settings.googleCalendarUrl) { const gcalColor = GROUP_COLORS.find(c => c.name === state.settings.googleCalendarColor)?.calendar || GROUP_COLORS[0].calendar; fetchGoogleCalendarEvents(state.settings.googleCalendarUrl, gcalColor).then(events => { dispatch({ type: 'SET_GCAL_EVENTS', payload: events }); }).catch(error => { console.error("Failed to fetch GCal events:", error); dispatch({ type: 'ADD_TOAST', payload: { message: error.message, type: 'error' } }); dispatch({ type: 'SET_GCAL_EVENTS', payload: [] }); }); } else if (isInitialized) { dispatch({ type: 'SET_GCAL_EVENTS', payload: [] }); } }, [isInitialized, state.settings.googleCalendarUrl, state.settings.googleCalendarColor]);
   if (!isInitialized) return null; 
-
-  return (
-    <AppContext.Provider value={{ state, dispatch }}>
-      {children}
-    </AppContext.Provider>
-  );
+  return ( <AppContext.Provider value={{ state, dispatch }}> {children} </AppContext.Provider> );
 };

@@ -61,7 +61,7 @@ const ReportsView: React.FC = () => {
     }, [group, settings.semesterStart, settings.semesterEnd]);
 
     const getAttendanceHeaders = (g: Group) => {
-        const partial1End = new Date(settings.firstPartialEnd + 'T00:00:00');
+        const partial1End = new Date(settings.p1EvalEnd + 'T00:00:00');
         const grouped: Record<string, Record<string, string[]>> = {};
         const gDates = getClassDates(settings.semesterStart, settings.semesterEnd, g.classDays);
 
@@ -118,7 +118,7 @@ const ReportsView: React.FC = () => {
         return summary;
     };
     
-    const attendanceHeaders = useMemo(() => group ? getAttendanceHeaders(group) : null, [group, settings.firstPartialEnd]);
+    const attendanceHeaders = useMemo(() => group ? getAttendanceHeaders(group) : null, [group, settings.p1EvalEnd]);
     const groupSummaryData = useMemo(() => group ? getSummaryData(group) : null, [group, settings, attendance]);
 
     const handleMassiveExport = async () => {
@@ -128,7 +128,6 @@ const ReportsView: React.FC = () => {
         dispatch({ type: 'ADD_TOAST', payload: { message: 'Iniciando generación masiva de PDFs...', type: 'info' } });
 
         try {
-            // Load library dynamically to satisfy static analysis of Vite during dist
             const JSZipConstructor = await getJSZip();
             const zip = new JSZipConstructor();
             const rootFolder = zip.folder(`Reportes_IAEV_PDF_${new Date().toISOString().split('T')[0]}`);
@@ -146,7 +145,6 @@ const ReportsView: React.FC = () => {
                 const gDates = getClassDates(settings.semesterStart, settings.semesterEnd, g.classDays);
                 const gEvals = evaluations[g.id] || [];
 
-                // Generate PDF as Blob
                 const pdfBlob = await generateReportPDFBlob(
                     g,
                     summary,

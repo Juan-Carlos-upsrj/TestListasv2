@@ -53,7 +53,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
     const [isDownloading, setIsDownloading] = useState(false);
     const [isChecking, setIsChecking] = useState(false);
     const [isTransitionOpen, setTransitionOpen] = useState(false);
-    const [activeSection, setActiveSection] = useState('sistema');
+    const [activeSection, setActiveSection] = useState('periodo');
 
     const [pendingImportFile, setPendingImportFile] = useState<File | null>(null);
     const [pendingRestoreArchive, setPendingRestoreArchive] = useState<Archive | null>(null);
@@ -164,10 +164,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
     };
 
     const navItems = [
-        { id: 'sistema', label: 'Actualización', icon: 'download-cloud' },
+        { id: 'periodo', label: 'Periodo y Docencia', icon: 'graduation-cap' },
         { id: 'nube', label: 'Conexión Nube', icon: 'upload-cloud' },
+        { id: 'sistema', label: 'Actualización', icon: 'download-cloud' },
         { id: 'calendario', label: 'Google Calendar', icon: 'calendar' },
-        { id: 'periodo', label: 'Ciclo Escolar', icon: 'graduation-cap' },
         { id: 'historial', label: 'Historial', icon: 'list-checks', show: state.archives.length > 0 },
         { id: 'preferencias', label: 'Preferencias', icon: 'settings' },
         { id: 'respaldo', label: 'Seguridad', icon: 'layout' },
@@ -176,8 +176,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
     return (
         <>
             <Modal isOpen={isOpen} onClose={onClose} title="Centro de Control - Configuración" size="7xl">
-                <div className="flex h-[78vh] -m-6 overflow-hidden">
-                    {/* MINI VENTANA IZQUIERDA (Navegación + Acciones Rápidas) */}
+                <div className="flex h-[80vh] -m-6 overflow-hidden">
+                    {/* MINI VENTANA IZQUIERDA (Acciones Rápidas ARRIBA + Navegación) */}
                     <div className="w-72 bg-slate-50 dark:bg-slate-900 border-r border-border-color flex flex-col shrink-0">
                         <div className="p-6 text-center border-b border-border-color">
                             <div className="w-16 h-16 bg-indigo-600 text-white rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-lg shadow-indigo-200 ring-4 ring-white">
@@ -189,39 +189,53 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                             <p className="text-[10px] text-indigo-500 font-black uppercase tracking-widest mt-1">Docente IAEV</p>
                         </div>
                         
-                        <nav className="flex-1 overflow-y-auto p-4 space-y-1 custom-scrollbar">
-                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-2">Navegación</p>
-                            {navItems.filter(i => i.show !== false).map(item => (
-                                <button
-                                    key={item.id}
-                                    onClick={() => scrollToSection(item.id)}
-                                    className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-xs font-bold transition-all ${
-                                        activeSection === item.id 
-                                        ? 'bg-white dark:bg-slate-800 text-indigo-600 shadow-sm ring-1 ring-slate-200' 
-                                        : 'text-slate-500 hover:bg-slate-200/50 dark:hover:bg-slate-800/50'
-                                    }`}
-                                >
-                                    <Icon name={item.icon} className="w-4 h-4" />
-                                    {item.label}
-                                </button>
-                            ))}
-
-                            <div className="pt-4 mt-2 border-t border-slate-200">
-                                <p className="text-[9px] font-black text-indigo-400 uppercase tracking-widest mb-3 ml-2">Acciones Rápidas</p>
-                                <div className="space-y-2 px-1">
-                                    <button onClick={() => syncAttendanceData(state, dispatch, 'all')} className="w-full flex items-center gap-2 px-3 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg text-[10px] font-black transition-colors uppercase border border-indigo-100 shadow-sm">
-                                        <Icon name="upload-cloud" className="w-3.5 h-3.5" /> Subir Asistencias
-                                    </button>
-                                    <button onClick={() => syncGradesData(state, dispatch)} className="w-full flex items-center gap-2 px-3 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-lg text-[10px] font-black transition-colors uppercase border border-emerald-100 shadow-sm">
-                                        <Icon name="graduation-cap" className="w-3.5 h-3.5" /> Subir Califics.
-                                    </button>
+                        <nav className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
+                            {/* CATEGORÍA: ACCIONES RÁPIDAS */}
+                            <div className="space-y-4">
+                                <div>
+                                    <p className="text-[9px] font-black text-indigo-400 uppercase tracking-widest mb-2 ml-2">Inicio de Cuatri</p>
                                     <button onClick={() => syncScheduleData(state, dispatch)} className="w-full flex items-center gap-2 px-3 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg text-[10px] font-black transition-colors uppercase border border-blue-100 shadow-sm">
                                         <Icon name="calendar" className="w-3.5 h-3.5" /> Cargar Horario
                                     </button>
+                                </div>
+
+                                <div>
+                                    <p className="text-[9px] font-black text-emerald-400 uppercase tracking-widest mb-2 ml-2">Sincronización Nube</p>
+                                    <div className="space-y-2">
+                                        <button onClick={() => syncAttendanceData(state, dispatch, 'all')} className="w-full flex items-center gap-2 px-3 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg text-[10px] font-black transition-colors uppercase border border-indigo-100 shadow-sm">
+                                            <Icon name="upload-cloud" className="w-3.5 h-3.5" /> Subir Asistencias todo el cuatri
+                                        </button>
+                                        <button onClick={() => syncGradesData(state, dispatch)} className="w-full flex items-center gap-2 px-3 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-lg text-[10px] font-black transition-colors uppercase border border-emerald-100 shadow-sm">
+                                            <Icon name="graduation-cap" className="w-3.5 h-3.5" /> Subir Califics.
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <p className="text-[9px] font-black text-rose-400 uppercase tracking-widest mb-2 ml-2">Fin de Cuatri</p>
                                     <button onClick={() => setTransitionOpen(true)} className="w-full flex items-center gap-2 px-3 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-lg text-[10px] font-black transition-colors uppercase border border-rose-100 shadow-sm">
                                         <Icon name="users" className="w-3.5 h-3.5" /> Asistente Fin Ciclo
                                     </button>
                                 </div>
+                            </div>
+
+                            {/* CATEGORÍA: NAVEGACIÓN */}
+                            <div className="pt-4 border-t border-slate-200">
+                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-2">Navegación Secciones</p>
+                                {navItems.filter(i => i.show !== false).map(item => (
+                                    <button
+                                        key={item.id}
+                                        onClick={() => scrollToSection(item.id)}
+                                        className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-xs font-bold transition-all ${
+                                            activeSection === item.id 
+                                            ? 'bg-white dark:bg-slate-800 text-indigo-600 shadow-sm ring-1 ring-slate-200' 
+                                            : 'text-slate-500 hover:bg-slate-200/50 dark:hover:bg-slate-800/50'
+                                        }`}
+                                    >
+                                        <Icon name={item.icon} className="w-4 h-4" />
+                                        {item.label}
+                                    </button>
+                                ))}
                             </div>
                         </nav>
 
@@ -237,8 +251,80 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                     {/* CONTENIDO DERECHA (Formularios) */}
                     <div ref={scrollContainerRef} className="flex-1 overflow-y-auto p-8 space-y-12 custom-scrollbar bg-white dark:bg-slate-900/20">
                         
+                        {/* SECCIÓN: PERIODO Y DOCENCIA (Rediseñada) */}
+                        <section id="settings-sec-periodo" className="space-y-6">
+                            <div className="flex items-center gap-2 border-b border-slate-100 pb-2">
+                                <Icon name="graduation-cap" className="w-5 h-5 text-indigo-600" />
+                                <h4 className="text-sm font-black uppercase text-slate-400 tracking-widest">Periodo y Docencia</h4>
+                            </div>
+                            
+                            <div className="grid grid-cols-1 gap-6 bg-slate-50 p-6 rounded-3xl border border-slate-100">
+                                <div>
+                                    <label className="block text-[10px] font-black uppercase text-slate-400 ml-1 mb-1">Nombre del Docente</label>
+                                    <input type="text" name="professorName" value={settings.professorName} onChange={handleChange} className="w-full p-3 border-2 border-slate-200 rounded-2xl bg-white text-sm font-black" />
+                                </div>
+
+                                <div>
+                                    <label className="block text-[10px] font-black uppercase text-slate-400 ml-1 mb-1">Inicio de Cuatrimestre</label>
+                                    <input type="date" name="semesterStart" value={settings.semesterStart} onChange={handleChange} className="w-full p-3 border-2 border-slate-200 rounded-2xl bg-white text-sm font-bold" />
+                                </div>
+
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <div className="col-span-full">
+                                        <p className="text-[10px] font-black uppercase text-indigo-600 mb-2 ml-1">Evaluación De primer parcial</p>
+                                    </div>
+                                    <div>
+                                        <label className="block text-[9px] font-bold text-slate-400 ml-1 uppercase">Fecha Inicio</label>
+                                        <input type="date" name="p1EvalStart" value={settings.p1EvalStart} onChange={handleChange} className="w-full p-2.5 border-2 border-slate-200 rounded-xl bg-white text-xs" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-[9px] font-bold text-slate-400 ml-1 uppercase">Fecha Fin (Corte Parcial)</label>
+                                        <input type="date" name="p1EvalEnd" value={settings.p1EvalEnd} onChange={handleChange} className="w-full p-2.5 border-2 border-indigo-200 rounded-xl bg-indigo-50 text-xs font-bold text-indigo-800" />
+                                    </div>
+                                    <p className="col-span-full text-[9px] text-indigo-500 italic mt-1">Nota: El último día de evaluación del 1er parcial marca el inicio del segundo parcial.</p>
+                                </div>
+
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <div className="col-span-full">
+                                        <p className="text-[10px] font-black uppercase text-blue-600 mb-2 ml-1">Evaluación De Segundo Parcial</p>
+                                    </div>
+                                    <div>
+                                        <label className="block text-[9px] font-bold text-slate-400 ml-1 uppercase">Fecha Inicio</label>
+                                        <input type="date" name="p2EvalStart" value={settings.p2EvalStart} onChange={handleChange} className="w-full p-2.5 border-2 border-slate-200 rounded-xl bg-white text-xs" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-[9px] font-bold text-slate-400 ml-1 uppercase">Fecha Fin</label>
+                                        <input type="date" name="p2EvalEnd" value={settings.p2EvalEnd} onChange={handleChange} className="w-full p-2.5 border-2 border-slate-200 rounded-xl bg-white text-xs" />
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="block text-[10px] font-black uppercase text-slate-400 ml-1 mb-1">Fin de Cuatrimestre</label>
+                                    <input type="date" name="semesterEnd" value={settings.semesterEnd} onChange={handleChange} className="w-full p-3 border-2 border-slate-200 rounded-2xl bg-white text-sm font-bold" />
+                                </div>
+                            </div>
+                        </section>
+
+                        {/* SECCIÓN: NUBE */}
+                        <section id="settings-sec-nube" className="space-y-6 pt-6">
+                            <div className="flex items-center gap-2 border-b border-slate-100 pb-2">
+                                <Icon name="upload-cloud" className="w-5 h-5 text-indigo-600" />
+                                <h4 className="text-sm font-black uppercase text-slate-400 tracking-widest">Conexión a la Nube (API)</h4>
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                                <label className="block">
+                                    <span className="text-[10px] font-black uppercase text-slate-400 ml-1">URL api.php</span>
+                                    <input type="url" name="apiUrl" value={settings.apiUrl} onChange={handleChange} className="mt-1 w-full p-3 border-2 border-slate-100 rounded-2xl bg-slate-50 text-sm font-bold" />
+                                </label>
+                                <label className="block">
+                                    <span className="text-[10px] font-black uppercase text-slate-400 ml-1">X-API-KEY</span>
+                                    <input type="password" name="apiKey" value={settings.apiKey} onChange={handleChange} className="mt-1 w-full p-3 border-2 border-slate-100 rounded-2xl bg-slate-50 text-sm font-bold" />
+                                </label>
+                            </div>
+                        </section>
+
                         {/* SECCIÓN: SISTEMA */}
-                        <section id="settings-sec-sistema" className="space-y-6">
+                        <section id="settings-sec-sistema" className="space-y-6 pt-6">
                             <div className="flex items-center gap-2 border-b border-slate-100 pb-2">
                                 <Icon name="download-cloud" className="w-5 h-5 text-indigo-600" />
                                 <h4 className="text-sm font-black uppercase text-slate-400 tracking-widest">Sistema y Actualización</h4>
@@ -260,34 +346,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                                     </Button>
                                 </div>
                             </div>
-                            
-                            {/* SOLO MOSTRAR REPOSITORIO EN MOBILE O WEB, NO EN WINDOWS */}
-                            {!window.electronAPI && (
-                                <div className="grid grid-cols-1 gap-4">
-                                    <label className="block">
-                                        <span className="text-[10px] font-black uppercase text-slate-400 ml-1">Repositorio GitHub</span>
-                                        <input type="url" name="mobileUpdateUrl" value={settings.mobileUpdateUrl} onChange={handleChange} className="mt-1 w-full p-3 border-2 border-slate-100 rounded-2xl bg-slate-50 focus:bg-white transition-all text-sm font-bold" />
-                                    </label>
-                                </div>
-                            )}
-                        </section>
-
-                        {/* SECCIÓN: NUBE */}
-                        <section id="settings-sec-nube" className="space-y-6 pt-6">
-                            <div className="flex items-center gap-2 border-b border-slate-100 pb-2">
-                                <Icon name="upload-cloud" className="w-5 h-5 text-indigo-600" />
-                                <h4 className="text-sm font-black uppercase text-slate-400 tracking-widest">Conexión a la Nube (API)</h4>
-                            </div>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                                <label className="block">
-                                    <span className="text-[10px] font-black uppercase text-slate-400 ml-1">URL api.php</span>
-                                    <input type="url" name="apiUrl" value={settings.apiUrl} onChange={handleChange} className="mt-1 w-full p-3 border-2 border-slate-100 rounded-2xl bg-slate-50 text-sm font-bold" />
-                                </label>
-                                <label className="block">
-                                    <span className="text-[10px] font-black uppercase text-slate-400 ml-1">X-API-KEY</span>
-                                    <input type="password" name="apiKey" value={settings.apiKey} onChange={handleChange} className="mt-1 w-full p-3 border-2 border-slate-100 rounded-2xl bg-slate-50 text-sm font-bold" />
-                                </label>
-                            </div>
                         </section>
 
                         {/* SECCIÓN: CALENDARIO */}
@@ -301,28 +359,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                                 {GROUP_COLORS.slice(0, 12).map(c => (
                                     <button key={c.name} onClick={() => setSettings(p => ({ ...p, googleCalendarColor: c.name }))} className={`w-8 h-8 rounded-full border-2 transition-all ${c.bg} ${settings.googleCalendarColor === c.name ? 'ring-2 ring-offset-2 ring-indigo-500 scale-110' : 'opacity-40'}`} />
                                 ))}
-                            </div>
-                        </section>
-
-                        {/* SECCIÓN: DOCENCIA */}
-                        <section id="settings-sec-periodo" className="space-y-6 pt-6">
-                            <div className="flex items-center gap-2 border-b border-slate-100 pb-2">
-                                <Icon name="graduation-cap" className="w-5 h-5 text-indigo-600" />
-                                <h4 className="text-sm font-black uppercase text-slate-400 tracking-widest">Periodo y Docencia</h4>
-                            </div>
-                            <label className="block">
-                                <span className="text-[10px] font-black uppercase text-slate-400 ml-1">Nombre Completo del Profesor</span>
-                                <input type="text" name="professorName" value={settings.professorName} onChange={handleChange} className="mt-1 w-full p-3 border-2 border-slate-100 rounded-2xl bg-slate-50 text-sm font-black" />
-                            </label>
-                            <div className="grid grid-cols-2 gap-4">
-                                <label className="block">
-                                    <span className="text-[10px] font-black uppercase text-slate-400 ml-1">Inicio Semestre</span>
-                                    <input type="date" name="semesterStart" value={settings.semesterStart} onChange={handleChange} className="mt-1 w-full p-2 border-2 border-slate-100 rounded-xl bg-slate-50 text-sm" />
-                                </label>
-                                <label className="block">
-                                    <span className="text-[10px] font-black uppercase text-slate-400 ml-1">Fin Semestre</span>
-                                    <input type="date" name="semesterEnd" value={settings.semesterEnd} onChange={handleChange} className="mt-1 w-full p-2 border-2 border-slate-100 rounded-xl bg-slate-50 text-sm" />
-                                </label>
                             </div>
                         </section>
 

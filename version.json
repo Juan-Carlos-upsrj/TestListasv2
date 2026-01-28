@@ -1,6 +1,6 @@
 
 {
-  "version": "3.2.1",
-  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v3.2.1/app-debug.apk",
-  "notes": "¡Panel de Configuración mejorado! Se agregaron botones de acción rápida en la barra lateral izquierda y se ocultaron ajustes técnicos innecesarios en Windows."
+  "version": "3.2.2",
+  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v3.2.2/app-debug.apk",
+  "notes": "¡Control Académico Total! Se rediseñó la barra lateral de configuración para mayor agilidad y se implementó un nuevo sistema de rangos de evaluación por fechas."
 }
