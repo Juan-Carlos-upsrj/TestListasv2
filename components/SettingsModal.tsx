@@ -148,7 +148,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
     const confirmRestoreAction = () => {
         if (pendingRestoreArchive) {
             dispatch({ type: 'RESTORE_ARCHIVE', payload: pendingRestoreArchive.id });
-            dispatch({ type: 'ADD_TOAST', payload: { message: 'Ciclo restaurado.', type: 'success' } });
+            dispatch({ type: 'ADD_TOAST', payload: { message: 'Ciclo restaurado con éxito.', type: 'success' } });
             onClose();
             setPendingRestoreArchive(null);
         }
@@ -157,6 +157,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
     const confirmDeleteArchiveAction = () => {
         if (pendingDeleteArchive) {
             dispatch({ type: 'DELETE_ARCHIVE', payload: pendingDeleteArchive.id });
+            dispatch({ type: 'ADD_TOAST', payload: { message: 'Archivo eliminado.', type: 'info' } });
             setPendingDeleteArchive(null);
         }
     };
@@ -286,6 +287,38 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                         </Button>
                     </fieldset>
 
+                    {state.archives.length > 0 && (
+                        <fieldset className="border p-4 rounded-lg border-border-color bg-slate-50">
+                            <legend className="px-2 font-semibold text-slate-600">Historial de Ciclos (Archivos)</legend>
+                            <div className="space-y-2 max-h-[200px] overflow-y-auto custom-scrollbar">
+                                {state.archives.map(archive => (
+                                    <div key={archive.id} className="flex items-center justify-between p-2 bg-white rounded-lg border border-slate-200 shadow-sm">
+                                        <div className="min-w-0">
+                                            <p className="text-xs font-bold truncate">{archive.name}</p>
+                                            <p className="text-[10px] text-slate-400">{new Date(archive.dateArchived).toLocaleDateString()}</p>
+                                        </div>
+                                        <div className="flex gap-1 shrink-0">
+                                            <button 
+                                                onClick={() => setPendingRestoreArchive(archive)}
+                                                className="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded"
+                                                title="Restaurar este ciclo"
+                                            >
+                                                <Icon name="upload-cloud" className="w-4 h-4" />
+                                            </button>
+                                            <button 
+                                                onClick={() => setPendingDeleteArchive(archive)}
+                                                className="p-1.5 text-rose-600 hover:bg-rose-50 rounded"
+                                                title="Eliminar permanentemente"
+                                            >
+                                                <Icon name="trash-2" className="w-4 h-4" />
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </fieldset>
+                    )}
+
                      <fieldset className="border p-4 rounded-lg border-border-color">
                          <legend className="px-2 font-semibold">Preferencias y Notificaciones</legend>
                          <div className="space-y-4">
@@ -366,6 +399,31 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                 confirmText="Importar"
             >
                 ¿Estás seguro? <strong>Todos los datos actuales se reemplazarán permanentemente.</strong>
+            </ConfirmationModal>
+
+            <ConfirmationModal
+                isOpen={!!pendingRestoreArchive}
+                onClose={() => setPendingRestoreArchive(null)}
+                onConfirm={confirmRestoreAction}
+                title="Restaurar Ciclo"
+                variant="danger"
+                confirmText="Restaurar Ahora"
+            >
+                ¿Deseas restaurar los datos de <strong>{pendingRestoreArchive?.name}</strong>?
+                <br/><br/>
+                <span className="text-xs text-rose-600 font-bold">¡ADVERTENCIA! Se borrará todo lo que tengas actualmente en pantalla.</span>
+            </ConfirmationModal>
+
+            <ConfirmationModal
+                isOpen={!!pendingDeleteArchive}
+                onClose={() => setPendingDeleteArchive(null)}
+                onConfirm={confirmDeleteArchiveAction}
+                title="Eliminar Archivo"
+                variant="danger"
+                confirmText="Eliminar"
+            >
+                ¿Estás seguro de eliminar el respaldo de <strong>{pendingDeleteArchive?.name}</strong>? 
+                Esta acción no se puede deshacer.
             </ConfirmationModal>
         </>
     );

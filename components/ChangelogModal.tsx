@@ -15,31 +15,31 @@ const ChangelogModal: React.FC<ChangelogModalProps> = ({ isOpen, onClose }) => {
         <Modal isOpen={isOpen} onClose={onClose} title={`Actualizado a v${APP_VERSION}`} size="md">
             <div className="space-y-6">
                 <div className="flex items-start gap-4">
-                    <div className="bg-amber-100 p-2 rounded-xl text-amber-600 shrink-0">
-                        <Icon name="settings" className="w-6 h-6" />
+                    <div className="bg-emerald-100 p-2 rounded-xl text-emerald-600 shrink-0">
+                        <Icon name="check-circle-2" className="w-6 h-6" />
                     </div>
                     <div>
-                        <h4 className="font-bold text-slate-800">Restauración de Configuración</h4>
+                        <h4 className="font-bold text-slate-800">Compilación Arreglada</h4>
                         <p className="text-sm text-slate-500 mt-1">
-                            ¡Perdón por el susto! Se restauraron los campos de **API (Cloud)**, **Google Calendar** y **Recordatorios** que habían desaparecido de la ventana de configuración.
+                            Se habilitó visualmente la sección de **Historial de Ciclos** en Configuración. Esto corrige el error que impedía generar el instalador de Windows.
                         </p>
                     </div>
                 </div>
 
                 <div className="flex items-start gap-4">
-                    <div className="bg-indigo-100 p-2 rounded-xl text-indigo-600 shrink-0">
-                        <Icon name="upload-cloud" className="w-6 h-6" />
+                    <div className="bg-blue-100 p-2 rounded-xl text-blue-600 shrink-0">
+                        <Icon name="download-cloud" className="w-6 h-6" />
                     </div>
                     <div>
-                        <h4 className="font-bold text-slate-800">Sincronización Corregida</h4>
+                        <h4 className="font-bold text-slate-800">Gestión de Archivos</h4>
                         <p className="text-sm text-slate-500 mt-1">
-                            Al restaurar los campos de la API, el sistema puede volver a subir tus asistencias y fichas de tutoría correctamente.
+                            Ahora puedes restaurar o eliminar respaldos de semestres pasados directamente desde la ventana de Configuración.
                         </p>
                     </div>
                 </div>
 
                 <Button onClick={onClose} className="w-full justify-center">
-                    ¡Todo en orden, gracias!
+                    ¡Excelente, continuar!
                 </Button>
             </div>
         </Modal>

@@ -1,6 +1,6 @@
 
 {
-  "version": "3.1.7",
-  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v3.1.7/app-debug.apk",
-  "notes": "¡Arreglo Crítico! Se restauraron los campos de API y Google Calendar en Configuración que se habían ocultado accidentalmente."
+  "version": "3.1.8",
+  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v3.1.8/app-debug.apk",
+  "notes": "¡Arreglo de Compilación! Se habilitó la gestión del Historial de Ciclos en Configuración para solucionar el error de TypeScript."
 }
