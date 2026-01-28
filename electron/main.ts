@@ -95,6 +95,11 @@ const createWindow = () => {
     mainWindow.webContents.send('update_not_available');
   });
 
+  // NUEVO: Evento de progreso de descarga
+  autoUpdater.on('download-progress', (progressObj) => {
+    mainWindow.webContents.send('download_progress', progressObj.percent);
+  });
+
   autoUpdater.on('update-downloaded', (info) => {
     log.info('Update downloaded', info);
     mainWindow.webContents.send('update_downloaded');

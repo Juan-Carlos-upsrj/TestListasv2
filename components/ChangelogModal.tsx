@@ -15,13 +15,13 @@ const ChangelogModal: React.FC<ChangelogModalProps> = ({ isOpen, onClose }) => {
         <Modal isOpen={isOpen} onClose={onClose} title={`Actualizado a v${APP_VERSION}`} size="md">
             <div className="space-y-6">
                 <div className="flex items-start gap-4">
-                    <div className="bg-emerald-100 p-2 rounded-xl text-emerald-600 shrink-0">
-                        <Icon name="check-circle-2" className="w-6 h-6" />
+                    <div className="bg-indigo-100 p-2 rounded-xl text-indigo-600 shrink-0">
+                        <Icon name="settings" className="w-6 h-6" />
                     </div>
                     <div>
-                        <h4 className="font-bold text-slate-800">Compilación Arreglada</h4>
+                        <h4 className="font-bold text-slate-800">Nueva Configuración</h4>
                         <p className="text-sm text-slate-500 mt-1">
-                            Se habilitó visualmente la sección de **Historial de Ciclos** en Configuración. Esto corrige el error que impedía generar el instalador de Windows.
+                            Se rediseñó la ventana de ajustes con una barra lateral de acceso rápido para que navegues por las secciones sin perderte.
                         </p>
                     </div>
                 </div>
@@ -31,15 +31,21 @@ const ChangelogModal: React.FC<ChangelogModalProps> = ({ isOpen, onClose }) => {
                         <Icon name="download-cloud" className="w-6 h-6" />
                     </div>
                     <div>
-                        <h4 className="font-bold text-slate-800">Gestión de Archivos</h4>
+                        <h4 className="font-bold text-slate-800">Monitor de Descarga</h4>
                         <p className="text-sm text-slate-500 mt-1">
-                            Ahora puedes restaurar o eliminar respaldos de semestres pasados directamente desde la ventana de Configuración.
+                            Ahora podrás ver en tiempo real cuánto falta para que se descargue la nueva versión gracias al nuevo indicador circular de porcentaje.
                         </p>
                     </div>
                 </div>
 
+                <div className="bg-amber-50 p-4 rounded-2xl border border-amber-200">
+                    <p className="text-xs text-amber-800 font-bold text-center italic">
+                        "La organización es la clave del éxito docente"
+                    </p>
+                </div>
+
                 <Button onClick={onClose} className="w-full justify-center">
-                    ¡Excelente, continuar!
+                    ¡Explorar cambios!
                 </Button>
             </div>
         </Modal>

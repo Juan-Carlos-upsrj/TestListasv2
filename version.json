@@ -1,6 +1,6 @@
 
 {
-  "version": "3.1.8",
-  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v3.1.8/app-debug.apk",
-  "notes": "¡Arreglo de Compilación! Se habilitó la gestión del Historial de Ciclos en Configuración para solucionar el error de TypeScript."
+  "version": "3.1.9",
+  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v3.1.9/app-debug.apk",
+  "notes": "¡Rediseño de Configuración! Nueva navegación lateral y sistema circular de progreso para descargas de actualizaciones en PC."
 }

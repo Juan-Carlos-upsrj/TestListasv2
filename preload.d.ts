@@ -1,3 +1,4 @@
+
 import { AppState } from './types';
 
 export {};
@@ -13,6 +14,7 @@ declare global {
       onUpdateDownloaded: (callback: () => void) => void;
       onUpdateNotAvailable: (callback: () => void) => void;
       onUpdateError: (callback: (message: string) => void) => void;
+      onDownloadProgress: (callback: (percent: number) => void) => void;
       
       restartApp: () => void;
       checkForUpdates: () => void;

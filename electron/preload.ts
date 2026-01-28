@@ -1,3 +1,4 @@
+
 import { contextBridge, ipcRenderer } from 'electron';
 import type { AppState } from '../types';
 
@@ -11,6 +12,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onUpdateDownloaded: (callback: () => void) => ipcRenderer.on('update_downloaded', callback),
   onUpdateNotAvailable: (callback: () => void) => ipcRenderer.on('update_not_available', callback),
   onUpdateError: (callback: (message: string) => void) => ipcRenderer.on('update_error', (_, message) => callback(message)),
+  onDownloadProgress: (callback: (percent: number) => void) => ipcRenderer.on('download_progress', (_, percent) => callback(percent)),
   
   // Actions
   restartApp: () => ipcRenderer.send('restart_app'),
