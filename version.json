@@ -1,6 +1,6 @@
 
 {
-  "version": "3.2.4",
-  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v3.2.4/app-debug.apk",
-  "notes": "¡Optimización del panel de Configuración! Rediseño a dos columnas para maximizar el espacio y botón de guardado siempre visible en la cabecera."
+  "version": "3.2.6",
+  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v3.2.6/app-debug.apk",
+  "notes": "Corrección de error de compilación TS6133 en TeamsView y unificación de versiones."
 }
