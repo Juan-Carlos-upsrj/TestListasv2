@@ -1,6 +1,6 @@
 
 {
-  "version": "3.2.6",
-  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v3.2.6/app-debug.apk",
-  "notes": "Corrección de error de compilación TS6133 en TeamsView y unificación de versiones."
+  "version": "3.2.7",
+  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v3.2.7/app-debug.apk",
+  "notes": "Mejoras en la gestión de equipos: Límite de 4 alumnos para equipos Coyote, nuevo placeholder de ejemplo y corrección del botón de generación aleatoria."
 }

@@ -154,7 +154,12 @@ const TeamsView: React.FC = () => {
     };
 
     const toggleStudentInNewTeam = (studentId: string) => {
-        setSelectedStudentsForNewTeam(prev => prev.includes(studentId) ? prev.filter(id => id !== studentId) : [...prev, studentId]);
+        const isSelected = selectedStudentsForNewTeam.includes(studentId);
+        if (!isSelected && createForm.isCoyote && selectedStudentsForNewTeam.length >= 4) {
+            dispatch({ type: 'ADD_TOAST', payload: { message: 'Los equipos Coyote están limitados a 4 alumnos.', type: 'error' } });
+            return;
+        }
+        setSelectedStudentsForNewTeam(prev => isSelected ? prev.filter(id => id !== studentId) : [...prev, studentId]);
     };
 
     const handleOpenEdit = (name: string, note: string) => {
@@ -189,10 +194,15 @@ const TeamsView: React.FC = () => {
     };
 
     const generateTeams = () => {
-        if (!group) return;
-        const size = parseInt(prompt("Tamaño máximo por equipo:", "5") || "0");
+        if (!selectedGroupId) {
+             dispatch({ type: 'ADD_TOAST', payload: { message: 'Selecciona un grupo para generar equipos.', type: 'error' } });
+             return;
+        }
+        const sizeInput = prompt("Tamaño máximo por equipo:", "5");
+        if (sizeInput === null) return;
+        const size = parseInt(sizeInput || "0");
         if (size > 0) {
-            dispatch({ type: 'GENERATE_RANDOM_TEAMS', payload: { groupId: group.id, maxTeamSize: size } });
+            dispatch({ type: 'GENERATE_RANDOM_TEAMS', payload: { groupId: selectedGroupId, maxTeamSize: size } });
             dispatch({ type: 'ADD_TOAST', payload: { message: 'Equipos generados aleatoriamente.', type: 'success' } });
         }
     };
@@ -373,7 +383,7 @@ const TeamsView: React.FC = () => {
                                             type="text" 
                                             value={createForm.name} 
                                             onChange={e => setCreateForm({...createForm, name: e.target.value})}
-                                            placeholder="Ej. Los Lobos Solitarios"
+                                            placeholder="Ej. Selección Coyote"
                                             className="w-full p-2.5 border-2 border-slate-200 rounded-xl bg-slate-50 focus:bg-white focus:ring-2 focus:ring-primary transition-all font-bold"
                                         />
                                     </div>
@@ -381,13 +391,21 @@ const TeamsView: React.FC = () => {
                                         <label className="block text-[10px] font-black uppercase text-slate-500 mb-2 ml-1">Tipo de Asignación</label>
                                         <div className="grid grid-cols-2 gap-2">
                                             <button 
-                                                onClick={() => setCreateForm({...createForm, isCoyote: false})}
+                                                onClick={() => {
+                                                    setCreateForm({...createForm, isCoyote: false});
+                                                }}
                                                 className={`p-2 rounded-xl text-xs font-bold border-2 transition-all ${!createForm.isCoyote ? 'bg-indigo-50 border-indigo-500 text-indigo-700 shadow-sm' : 'bg-white border-slate-200 text-slate-400'}`}
                                             >
                                                 Equipo Base
                                             </button>
                                             <button 
-                                                onClick={() => setCreateForm({...createForm, isCoyote: true})}
+                                                onClick={() => {
+                                                    setCreateForm({...createForm, isCoyote: true});
+                                                    // Limitar selección si ya hay más de 4
+                                                    if (selectedStudentsForNewTeam.length > 4) {
+                                                        setSelectedStudentsForNewTeam(selectedStudentsForNewTeam.slice(0, 4));
+                                                    }
+                                                }}
                                                 className={`p-2 rounded-xl text-xs font-bold border-2 transition-all ${createForm.isCoyote ? 'bg-orange-50 border-orange-500 text-orange-700 shadow-sm' : 'bg-white border-slate-200 text-slate-400'}`}
                                             >
                                                 Equipo Coyote
@@ -408,15 +426,18 @@ const TeamsView: React.FC = () => {
                             </div>
                         </div>
                         <div className="mt-auto pt-6 border-t border-slate-100">
-                             <div className="flex items-center gap-3 p-3 bg-indigo-50 rounded-2xl border border-indigo-100">
-                                <div className="bg-indigo-600 text-white p-2 rounded-lg">
+                             <div className={`flex items-center gap-3 p-3 rounded-2xl border transition-all ${createForm.isCoyote && selectedStudentsForNewTeam.length >= 4 ? 'bg-orange-50 border-orange-200' : 'bg-indigo-50 border-indigo-100'}`}>
+                                <div className={`${createForm.isCoyote && selectedStudentsForNewTeam.length >= 4 ? 'bg-orange-600' : 'bg-indigo-600'} text-white p-2 rounded-lg`}>
                                     <Icon name="users" className="w-5 h-5" />
                                 </div>
                                 <div>
-                                    <p className="text-[10px] font-black text-indigo-400 uppercase leading-none">Seleccionados</p>
-                                    <p className="text-sm font-black text-indigo-700">{selectedStudentsForNewTeam.length} Alumnos</p>
+                                    <p className={`text-[10px] font-black uppercase leading-none ${createForm.isCoyote && selectedStudentsForNewTeam.length >= 4 ? 'text-orange-400' : 'text-indigo-400'}`}>Seleccionados</p>
+                                    <p className={`text-sm font-black ${createForm.isCoyote && selectedStudentsForNewTeam.length >= 4 ? 'text-orange-700' : 'text-indigo-700'}`}>{selectedStudentsForNewTeam.length} / {createForm.isCoyote ? '4' : '∞'} Alumnos</p>
                                 </div>
                              </div>
+                             {createForm.isCoyote && (
+                                 <p className="text-[9px] text-orange-600 font-bold mt-2 italic px-1">Límite de 4 alumnos para equipos Coyote.</p>
+                             )}
                         </div>
                     </div>
 
@@ -441,12 +462,13 @@ const TeamsView: React.FC = () => {
                                 availableStudentsForCreation.map(p => {
                                     const isSelected = selectedStudentsForNewTeam.includes(p.student.id);
                                     const currentTeam = createForm.isCoyote ? p.student.teamCoyote : p.student.team;
+                                    const isDisabled = !isSelected && createForm.isCoyote && selectedStudentsForNewTeam.length >= 4;
 
                                     return (
                                         <div 
                                             key={p.student.id} 
-                                            onClick={() => toggleStudentInNewTeam(p.student.id)}
-                                            className={`p-3 rounded-2xl border-2 transition-all cursor-pointer flex items-center justify-between group ${isSelected ? 'bg-primary/5 border-primary shadow-sm' : 'bg-white border-slate-100 hover:border-slate-200'}`}
+                                            onClick={() => !isDisabled && toggleStudentInNewTeam(p.student.id)}
+                                            className={`p-3 rounded-2xl border-2 transition-all flex items-center justify-between group ${isSelected ? 'bg-primary/5 border-primary shadow-sm cursor-pointer' : isDisabled ? 'opacity-40 grayscale bg-slate-50 border-slate-100 cursor-not-allowed' : 'bg-white border-slate-100 hover:border-slate-200 cursor-pointer'}`}
                                         >
                                             <div className="min-w-0">
                                                 <div className="flex items-center gap-2">
@@ -460,8 +482,8 @@ const TeamsView: React.FC = () => {
                                                     )}
                                                 </div>
                                             </div>
-                                            <div className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${isSelected ? 'bg-primary text-white scale-110' : 'bg-slate-100 text-slate-300 group-hover:text-slate-400 group-hover:bg-slate-200'}`}>
-                                                <Icon name={isSelected ? "check-circle-2" : "plus"} className="w-5 h-5" />
+                                            <div className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${isSelected ? 'bg-primary text-white scale-110' : isDisabled ? 'bg-slate-200 text-slate-400' : 'bg-slate-100 text-slate-300 group-hover:text-slate-400 group-hover:bg-slate-200'}`}>
+                                                <Icon name={isSelected ? "check-circle-2" : isDisabled ? "x-circle" : "plus"} className="w-5 h-5" />
                                             </div>
                                         </div>
                                     );
