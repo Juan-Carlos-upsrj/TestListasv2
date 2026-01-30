@@ -1,7 +1,7 @@
 
 import React, { useContext, useMemo, useState, useEffect } from 'react';
 import { AppContext } from '../context/AppContext';
-import { Student } from '../types';
+import { Student, Group } from '../types';
 import Icon from './icons/Icon';
 import Button from './common/Button';
 import Modal from './common/Modal';
@@ -14,13 +14,19 @@ const TeamsView: React.FC = () => {
     const { state, dispatch } = useContext(AppContext);
     const { groups, selectedGroupId, teamNotes = {}, coyoteTeamNotes = {} } = state;
     
-    const [teamType, setTeamType] = useState<'base' | 'coyote'>('base');
+    const [teamType, setTeamType] = useState<'base' | 'coyote'>('coyote');
     const [editingTeam, setEditingTeam] = useState<{ name: string; isCoyote: boolean } | null>(null);
     const [teamNote, setTeamNote] = useState('');
     const [newTeamName, setNewTeamName] = useState('');
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [confirmDelete, setConfirmDelete] = useState<{ name: string; isCoyote: boolean } | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
+
+    // Estados para el nuevo modal de creación
+    const [createForm, setCreateForm] = useState({ name: '', note: '', isCoyote: true });
+    const [createSearch, setCreateSearch] = useState('');
+    const [selectedStudentsForNewTeam, setSelectedStudentsForNewTeam] = useState<string[]>([]);
 
     const group = useMemo(() => groups.find(g => g.id === selectedGroupId), [groups, selectedGroupId]);
 
@@ -36,11 +42,9 @@ const TeamsView: React.FC = () => {
         const teamMap = new Map<string, { student: Student; groupName: string }[]>();
         const unassignedList: { student: Student; groupName: string }[] = [];
         
-        // --- REGISTRO DE DEDUPLICACIÓN ---
         const processedStudentNames = new Set<string>();
 
         const processStudent = (s: Student, gName: string) => {
-            // Si es vista Coyote, no procesamos si el nombre ya fue visto en otro grupo del mismo ciclo
             if (isCoyote) {
                 if (processedStudentNames.has(s.name)) return;
                 processedStudentNames.add(s.name);
@@ -58,11 +62,7 @@ const TeamsView: React.FC = () => {
         if (isCoyote) {
             const targetQuarter = group.quarter;
             const groupsInSameQuarter = groups.filter(g => g.quarter === targetQuarter);
-            
-            // Procesamos primero el grupo seleccionado para darle prioridad visual
             group.students.forEach(s => processStudent(s, group.name));
-            
-            // Luego el resto de los grupos del mismo cuatrimestre
             groupsInSameQuarter.forEach(g => {
                 if (g.id !== group.id) {
                     g.students.forEach(s => processStudent(s, g.name));
@@ -78,7 +78,6 @@ const TeamsView: React.FC = () => {
             note: (isCoyote ? coyoteTeamNotes[name] : teamNotes[name]) || ''
         }));
 
-        // Filtro de búsqueda
         if (searchTerm.trim()) {
             const term = searchTerm.toLowerCase();
             teamsList = teamsList.filter(t => 
@@ -95,6 +94,68 @@ const TeamsView: React.FC = () => {
             unassigned: unassignedList
         };
     }, [group, teamType, teamNotes, coyoteTeamNotes, groups, searchTerm]);
+
+    // Lógica para el buscador de creación
+    const availableStudentsForCreation = useMemo(() => {
+        if (!group) return [];
+        let pool: { student: Student; groupName: string }[] = [];
+        const isCoyote = createForm.isCoyote;
+
+        if (isCoyote) {
+            const groupsInSameQuarter = groups.filter(g => g.quarter === group.quarter);
+            const seen = new Set<string>();
+            groupsInSameQuarter.forEach(g => {
+                g.students.forEach(s => {
+                    if (!seen.has(s.name)) {
+                        pool.push({ student: s, groupName: g.name });
+                        seen.add(s.name);
+                    }
+                });
+            });
+        } else {
+            group.students.forEach(s => pool.push({ student: s, groupName: group.name }));
+        }
+
+        if (!createSearch.trim()) return pool;
+        const term = createSearch.toLowerCase();
+        return pool.filter(p => p.student.name.toLowerCase().includes(term) || (p.student.nickname && p.student.nickname.toLowerCase().includes(term)));
+    }, [group, groups, createForm.isCoyote, createSearch]);
+
+    const handleOpenCreate = () => {
+        setCreateForm({ name: '', note: '', isCoyote: teamType === 'coyote' });
+        setSelectedStudentsForNewTeam([]);
+        setCreateSearch('');
+        setIsCreateModalOpen(true);
+    };
+
+    const handleSaveCreate = () => {
+        if (!createForm.name.trim()) {
+            dispatch({ type: 'ADD_TOAST', payload: { message: 'El equipo debe tener un nombre.', type: 'error' } });
+            return;
+        }
+        if (selectedStudentsForNewTeam.length === 0) {
+            dispatch({ type: 'ADD_TOAST', payload: { message: 'Selecciona al menos un alumno.', type: 'error' } });
+            return;
+        }
+
+        const tName = createForm.name.trim();
+        const isC = createForm.isCoyote;
+
+        // 1. Guardar nota
+        dispatch({ type: 'UPDATE_TEAM_NOTE', payload: { teamName: tName, note: createForm.note, isCoyote: isC } });
+        
+        // 2. Asignar alumnos
+        selectedStudentsForNewTeam.forEach(sid => {
+            dispatch({ type: 'ASSIGN_STUDENT_TEAM', payload: { studentId: sid, teamName: tName, isCoyote: isC } });
+        });
+
+        setIsCreateModalOpen(false);
+        dispatch({ type: 'ADD_TOAST', payload: { message: `Equipo "${tName}" creado con éxito.`, type: 'success' } });
+    };
+
+    const toggleStudentInNewTeam = (studentId: string) => {
+        setSelectedStudentsForNewTeam(prev => prev.includes(studentId) ? prev.filter(id => id !== studentId) : [...prev, studentId]);
+    };
 
     const handleOpenEdit = (name: string, note: string) => {
         setEditingTeam({ name, isCoyote: teamType === 'coyote' });
@@ -167,7 +228,7 @@ const TeamsView: React.FC = () => {
                     </div>
 
                     <div className="flex gap-2 w-full md:w-auto items-center">
-                        <div className="relative flex-1 md:w-64">
+                        <div className="relative flex-1 md:w-48 lg:w-64">
                             <Icon name="search" className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                             <input 
                                 type="text" 
@@ -177,8 +238,11 @@ const TeamsView: React.FC = () => {
                                 className="w-full pl-9 pr-3 py-2 border-2 border-border-color rounded-xl bg-white text-xs focus:ring-2 focus:ring-primary"
                             />
                         </div>
-                        <Button variant="secondary" size="sm" onClick={generateTeams} className="shrink-0">
+                        <Button variant="secondary" size="sm" onClick={generateTeams} className="shrink-0" title="Generación Aleatoria">
                             <Icon name="grid" className="w-4 h-4" /> Aleatorio
+                        </Button>
+                        <Button size="sm" onClick={handleOpenCreate} className="shrink-0">
+                            <Icon name="plus" className="w-4 h-4" /> Nuevo Equipo
                         </Button>
                     </div>
                 </div>
@@ -293,6 +357,132 @@ const TeamsView: React.FC = () => {
                     <p className="font-black uppercase tracking-widest text-sm">Selecciona un grupo para gestionar sus equipos</p>
                 </div>
             )}
+
+            {/* MODAL DE CREACIÓN (DOBLE COLUMNA) */}
+            <Modal isOpen={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)} title="Crear Nuevo Equipo" size="5xl">
+                <div className="flex flex-col lg:flex-row h-[70vh] -m-6 bg-slate-50 overflow-hidden">
+                    {/* COLUMNA IZQUIERDA: CONFIG */}
+                    <div className="lg:w-2/5 p-6 border-r border-slate-200 bg-white flex flex-col">
+                        <div className="space-y-6">
+                            <div>
+                                <h4 className="text-xs font-black uppercase text-slate-400 mb-4 tracking-widest">Información del Equipo</h4>
+                                <div className="space-y-4">
+                                    <div>
+                                        <label className="block text-[10px] font-black uppercase text-slate-500 mb-1 ml-1">Nombre del Equipo</label>
+                                        <input 
+                                            type="text" 
+                                            value={createForm.name} 
+                                            onChange={e => setCreateForm({...createForm, name: e.target.value})}
+                                            placeholder="Ej. Los Lobos Solitarios"
+                                            className="w-full p-2.5 border-2 border-slate-200 rounded-xl bg-slate-50 focus:bg-white focus:ring-2 focus:ring-primary transition-all font-bold"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-[10px] font-black uppercase text-slate-500 mb-2 ml-1">Tipo de Asignación</label>
+                                        <div className="grid grid-cols-2 gap-2">
+                                            <button 
+                                                onClick={() => setCreateForm({...createForm, isCoyote: false})}
+                                                className={`p-2 rounded-xl text-xs font-bold border-2 transition-all ${!createForm.isCoyote ? 'bg-indigo-50 border-indigo-500 text-indigo-700 shadow-sm' : 'bg-white border-slate-200 text-slate-400'}`}
+                                            >
+                                                Equipo Base
+                                            </button>
+                                            <button 
+                                                onClick={() => setCreateForm({...createForm, isCoyote: true})}
+                                                className={`p-2 rounded-xl text-xs font-bold border-2 transition-all ${createForm.isCoyote ? 'bg-orange-50 border-orange-500 text-orange-700 shadow-sm' : 'bg-white border-slate-200 text-slate-400'}`}
+                                            >
+                                                Equipo Coyote
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className="block text-[10px] font-black uppercase text-slate-500 mb-1 ml-1">Observaciones</label>
+                                        <textarea 
+                                            value={createForm.note} 
+                                            onChange={e => setCreateForm({...createForm, note: e.target.value})}
+                                            rows={5}
+                                            placeholder="Notas internas del equipo..."
+                                            className="w-full p-2.5 border-2 border-slate-200 rounded-xl bg-slate-50 focus:bg-white focus:ring-2 focus:ring-primary transition-all text-sm"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="mt-auto pt-6 border-t border-slate-100">
+                             <div className="flex items-center gap-3 p-3 bg-indigo-50 rounded-2xl border border-indigo-100">
+                                <div className="bg-indigo-600 text-white p-2 rounded-lg">
+                                    <Icon name="users" className="w-5 h-5" />
+                                </div>
+                                <div>
+                                    <p className="text-[10px] font-black text-indigo-400 uppercase leading-none">Seleccionados</p>
+                                    <p className="text-sm font-black text-indigo-700">{selectedStudentsForNewTeam.length} Alumnos</p>
+                                </div>
+                             </div>
+                        </div>
+                    </div>
+
+                    {/* COLUMNA DERECHA: SELECCIÓN */}
+                    <div className="flex-1 p-6 flex flex-col overflow-hidden">
+                        <div className="flex justify-between items-center mb-4">
+                            <h4 className="text-xs font-black uppercase text-slate-400 tracking-widest">Asignar Integrantes</h4>
+                            <div className="relative w-64">
+                                <Icon name="search" className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                                <input 
+                                    type="text" 
+                                    value={createSearch} 
+                                    onChange={e => setCreateSearch(e.target.value)}
+                                    placeholder="Buscar alumno..."
+                                    className="w-full pl-9 pr-3 py-1.5 border border-slate-300 rounded-xl bg-white text-xs focus:ring-2 focus:ring-primary"
+                                />
+                            </div>
+                        </div>
+                        
+                        <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 space-y-2">
+                            {availableStudentsForCreation.length > 0 ? (
+                                availableStudentsForCreation.map(p => {
+                                    const isSelected = selectedStudentsForNewTeam.includes(p.student.id);
+                                    const currentTeam = createForm.isCoyote ? p.student.teamCoyote : p.student.team;
+
+                                    return (
+                                        <div 
+                                            key={p.student.id} 
+                                            onClick={() => toggleStudentInNewTeam(p.student.id)}
+                                            className={`p-3 rounded-2xl border-2 transition-all cursor-pointer flex items-center justify-between group ${isSelected ? 'bg-primary/5 border-primary shadow-sm' : 'bg-white border-slate-100 hover:border-slate-200'}`}
+                                        >
+                                            <div className="min-w-0">
+                                                <div className="flex items-center gap-2">
+                                                    <span className={`font-black text-xs uppercase ${isSelected ? 'text-primary' : 'text-slate-700'}`}>{p.student.name}</span>
+                                                    {p.student.nickname && <span className="text-[10px] text-primary italic font-bold">"{p.student.nickname}"</span>}
+                                                </div>
+                                                <div className="flex items-center gap-2 mt-0.5">
+                                                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter bg-slate-100 px-1.5 py-0.5 rounded">{p.groupName}</span>
+                                                    {currentTeam && (
+                                                        <span className="text-[9px] font-black text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-100">Actualmente en: {currentTeam}</span>
+                                                    )}
+                                                </div>
+                                            </div>
+                                            <div className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${isSelected ? 'bg-primary text-white scale-110' : 'bg-slate-100 text-slate-300 group-hover:text-slate-400 group-hover:bg-slate-200'}`}>
+                                                <Icon name={isSelected ? "check-circle-2" : "plus"} className="w-5 h-5" />
+                                            </div>
+                                        </div>
+                                    );
+                                })
+                            ) : (
+                                <div className="text-center py-10 opacity-40">
+                                    <Icon name="search" className="w-12 h-12 mx-auto mb-2" />
+                                    <p className="text-xs font-bold uppercase">No se encontraron alumnos</p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+                
+                <div className="flex justify-end gap-3 mt-4 pt-4 border-t border-slate-200">
+                    <Button variant="secondary" onClick={() => setIsCreateModalOpen(false)}>Cancelar</Button>
+                    <Button onClick={handleSaveCreate} className="px-8 shadow-lg shadow-primary/20">
+                        Crear Equipo <Icon name="check-circle-2" className="w-4 h-4 ml-1" />
+                    </Button>
+                </div>
+            </Modal>
 
             {/* MODAL DE EDICIÓN */}
             <Modal isOpen={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} title="Editar Equipo">
