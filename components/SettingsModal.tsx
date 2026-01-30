@@ -174,9 +174,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
     ];
 
     const HeaderActions = (
-        <Button onClick={handleSave} size="sm" className="shadow-lg shadow-indigo-100">
+        <Button onClick={handleSave} size="sm" className="shadow-lg shadow-indigo-100 bg-emerald-600 hover:bg-emerald-700 text-white">
             <Icon name="check-circle-2" className="w-4 h-4" />
-            Guardar Cambios
+            <span className="hidden sm:inline">Guardar Configuración</span>
+            <span className="sm:hidden">Guardar</span>
         </Button>
     );
 
@@ -189,7 +190,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                 size="7xl"
                 headerActions={HeaderActions}
             >
-                <div className="flex h-[82vh] -m-6 overflow-hidden">
+                <div className="flex h-[82vh] -m-6 overflow-hidden bg-background">
                     {/* MINI VENTANA IZQUIERDA (Acciones Rápidas ARRIBA + Navegación) */}
                     <div className="w-64 bg-slate-50 dark:bg-slate-900 border-r border-border-color flex flex-col shrink-0">
                         <div className="p-6 text-center border-b border-border-color">
@@ -264,17 +265,17 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
 
                     {/* CONTENIDO DERECHA (Formularios en Rejilla de 2 Columnas) */}
                     <div ref={scrollContainerRef} className="flex-1 overflow-y-auto p-8 custom-scrollbar bg-white dark:bg-slate-900/20">
-                        <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 content-start">
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-8 gap-y-12 content-start">
                             
                             {/* SECCIÓN: PERIODO Y DOCENCIA */}
-                            <section id="settings-sec-periodo" className="space-y-6 xl:col-span-2">
+                            <section id="settings-sec-periodo" className="space-y-6 lg:col-span-2">
                                 <div className="flex items-center gap-2 border-b border-slate-100 pb-2">
                                     <Icon name="graduation-cap" className="w-5 h-5 text-indigo-600" />
                                     <h4 className="text-sm font-black uppercase text-slate-400 tracking-widest">Periodo y Docencia</h4>
                                 </div>
                                 
-                                <div className="bg-slate-50 p-6 rounded-3xl border border-slate-200 space-y-4">
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="bg-slate-50 p-6 rounded-3xl border border-slate-200 space-y-4 shadow-sm">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                         <div>
                                             <label className="block text-[11px] font-black uppercase text-slate-400 ml-1 mb-1.5">Nombre del docente:</label>
                                             <input type="text" name="professorName" value={settings.professorName} onChange={handleChange} className="w-full p-2.5 border-2 border-slate-200 rounded-xl bg-white text-sm font-black text-indigo-700" />
@@ -285,8 +286,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                                         </div>
                                     </div>
 
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <div className="p-4 bg-white rounded-2xl border-2 border-slate-100">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div className="p-4 bg-white rounded-2xl border-2 border-slate-100 shadow-sm">
                                             <label className="block text-[11px] font-black uppercase text-indigo-600 ml-1 mb-2">Evaluación De primer parcial:</label>
                                             <div className="flex items-center gap-2">
                                                 <input type="date" name="p1EvalStart" value={settings.p1EvalStart} onChange={handleChange} className="w-full p-2 border-2 border-slate-100 rounded-lg bg-slate-50 text-xs font-bold" />
@@ -294,7 +295,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                                                 <input type="date" name="p1EvalEnd" value={settings.p1EvalEnd} onChange={handleChange} className="w-full p-2 border-2 border-indigo-200 rounded-lg bg-indigo-50 text-xs font-black text-indigo-700" />
                                             </div>
                                         </div>
-                                        <div className="p-4 bg-white rounded-2xl border-2 border-slate-100">
+                                        <div className="p-4 bg-white rounded-2xl border-2 border-slate-100 shadow-sm">
                                             <label className="block text-[11px] font-black uppercase text-blue-600 ml-1 mb-2">Evaluación De Segundo Parcial:</label>
                                             <div className="flex items-center gap-2">
                                                 <input type="date" name="p2EvalStart" value={settings.p2EvalStart} onChange={handleChange} className="w-full p-2 border-2 border-slate-100 rounded-lg bg-slate-50 text-xs font-bold" />
@@ -312,12 +313,12 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                             </section>
 
                             {/* SECCIÓN: NUBE */}
-                            <section id="settings-sec-nube" className="space-y-6">
+                            <section id="settings-sec-nube" className="space-y-4">
                                 <div className="flex items-center gap-2 border-b border-slate-100 pb-2">
                                     <Icon name="upload-cloud" className="w-5 h-5 text-indigo-600" />
                                     <h4 className="text-sm font-black uppercase text-slate-400 tracking-widest">Conexión a la Nube</h4>
                                 </div>
-                                <div className="bg-slate-50 p-6 rounded-3xl border border-slate-200 space-y-4">
+                                <div className="bg-slate-50 p-6 rounded-3xl border border-slate-200 space-y-4 shadow-sm">
                                     <label className="block">
                                         <span className="text-[10px] font-black uppercase text-slate-400 ml-1">URL api.php</span>
                                         <input type="url" name="apiUrl" value={settings.apiUrl} onChange={handleChange} className="mt-1 w-full p-2.5 border-2 border-slate-100 rounded-xl bg-white text-sm font-bold" />
@@ -330,7 +331,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                             </section>
 
                             {/* SECCIÓN: SISTEMA */}
-                            <section id="settings-sec-sistema" className="space-y-6">
+                            <section id="settings-sec-sistema" className="space-y-4">
                                 <div className="flex items-center gap-2 border-b border-slate-100 pb-2">
                                     <Icon name="download-cloud" className="w-5 h-5 text-indigo-600" />
                                     <h4 className="text-sm font-black uppercase text-slate-400 tracking-widest">Sistema</h4>
@@ -353,7 +354,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                                     </div>
                                 </div>
                                 {!window.electronAPI && (
-                                    <div className="bg-slate-50 p-4 rounded-3xl border border-slate-200">
+                                    <div className="bg-slate-50 p-4 rounded-3xl border border-slate-200 mt-2 shadow-sm">
                                         <label className="block">
                                             <span className="text-[10px] font-black uppercase text-slate-400 ml-1">Repositorio GitHub</span>
                                             <input type="url" name="mobileUpdateUrl" value={settings.mobileUpdateUrl} onChange={handleChange} className="mt-1 w-full p-2.5 border-2 border-slate-100 rounded-xl bg-white text-xs font-bold" />
@@ -363,12 +364,12 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                             </section>
 
                             {/* SECCIÓN: CALENDARIO */}
-                            <section id="settings-sec-calendario" className="space-y-6">
+                            <section id="settings-sec-calendario" className="space-y-4">
                                 <div className="flex items-center gap-2 border-b border-slate-100 pb-2">
                                     <Icon name="calendar" className="w-5 h-5 text-indigo-600" />
                                     <h4 className="text-sm font-black uppercase text-slate-400 tracking-widest">Google Calendar</h4>
                                 </div>
-                                <div className="bg-slate-50 p-6 rounded-3xl border border-slate-200 space-y-4">
+                                <div className="bg-slate-50 p-6 rounded-3xl border border-slate-200 space-y-4 shadow-sm">
                                     <input type="url" name="googleCalendarUrl" value={settings.googleCalendarUrl} onChange={handleChange} placeholder="https://calendar.google.com/..." className="w-full p-2.5 border-2 border-slate-100 rounded-xl bg-white text-xs font-bold" />
                                     <div className="flex flex-wrap gap-2 justify-center">
                                         {GROUP_COLORS.slice(0, 12).map(c => (
@@ -379,12 +380,12 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                             </section>
 
                             {/* SECCIÓN: PREFERENCIAS */}
-                            <section id="settings-sec-preferencias" className="space-y-6">
+                            <section id="settings-sec-preferencias" className="space-y-4">
                                 <div className="flex items-center gap-2 border-b border-slate-100 pb-2">
                                     <Icon name="settings" className="w-5 h-5 text-indigo-600" />
                                     <h4 className="text-sm font-black uppercase text-slate-400 tracking-widest">Preferencias</h4>
                                 </div>
-                                <div className="space-y-4 bg-slate-50 p-6 rounded-3xl border border-slate-200">
+                                <div className="space-y-4 bg-slate-50 p-6 rounded-3xl border border-slate-200 shadow-sm">
                                     <div className="flex items-center justify-between">
                                         <span className="text-xs font-bold text-slate-700">Matrícula en Tablas</span>
                                         <input type="checkbox" name="showMatricula" checked={settings.showMatricula} onChange={handleChange} className="h-5 w-10 rounded-full text-indigo-600 border-2" />
@@ -402,7 +403,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
 
                             {/* SECCIÓN: HISTORIAL */}
                             {state.archives.length > 0 && (
-                                <section id="settings-sec-historial" className="space-y-4 xl:col-span-2">
+                                <section id="settings-sec-historial" className="space-y-4 lg:col-span-2">
                                     <div className="flex items-center gap-2 border-b border-slate-100 pb-2">
                                         <Icon name="list-checks" className="w-5 h-5 text-indigo-600" />
                                         <h4 className="text-sm font-black uppercase text-slate-400 tracking-widest">Historial de Ciclos</h4>
@@ -425,12 +426,12 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                             )}
 
                             {/* SECCIÓN: RESPALDO */}
-                            <section id="settings-sec-respaldo" className="space-y-6 xl:col-span-2 mb-10">
+                            <section id="settings-sec-respaldo" className="space-y-4 lg:col-span-2 mb-10">
                                 <div className="flex items-center gap-2 border-b border-slate-100 pb-2">
                                     <Icon name="layout" className="w-5 h-5 text-indigo-600" />
                                     <h4 className="text-sm font-black uppercase text-slate-400 tracking-widest">Seguridad de Datos</h4>
                                 </div>
-                                <div className="bg-rose-50 p-6 rounded-3xl border border-rose-100">
+                                <div className="bg-rose-50 p-6 rounded-3xl border border-rose-100 shadow-sm">
                                     <div className="flex flex-col sm:flex-row items-center gap-4">
                                         <div className="flex-1">
                                             <p className="text-xs text-rose-800 font-bold mb-1">Manejo manual de datos</p>

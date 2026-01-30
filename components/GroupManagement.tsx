@@ -310,6 +310,17 @@ const GroupManagement: React.FC = () => {
         );
     }, [group, searchTerm]);
 
+    const handleDuplicateGroup = (source: Group) => {
+        const newGroup: Group = {
+            ...source,
+            id: uuidv4(),
+            name: `Copia de ${source.name}`,
+            students: source.students.map(s => ({ ...s, id: uuidv4() }))
+        };
+        dispatch({ type: 'SAVE_GROUP', payload: newGroup });
+        dispatch({ type: 'ADD_TOAST', payload: { message: 'Grupo duplicado con éxito.', type: 'success' } });
+    };
+
     const handleSaveStudentAction = (data: Partial<Student>) => {
         if (!group) return;
         const studentToSave: Student = editingStudent 
@@ -355,8 +366,9 @@ const GroupManagement: React.FC = () => {
                             <div className="flex justify-between items-start mb-2">
                                 <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${colorObj.bg} ${colorObj.text} shadow-sm`}><Icon name="users" className="w-4 h-4" /></div>
                                 <div className="flex gap-1">
-                                    <button onClick={(e) => { e.stopPropagation(); setEditingGroup(g); setGroupModalOpen(true); }} className="p-1 hover:bg-white rounded-lg text-slate-400 hover:text-primary transition-all"><Icon name="edit-3" className="w-3.5 h-3.5" /></button>
-                                    <button onClick={(e) => { e.stopPropagation(); setConfirmDeleteGroup(g); }} className="p-1 hover:bg-rose-50 rounded-lg text-slate-400 hover:text-rose-500 transition-all"><Icon name="trash-2" className="w-3.5 h-3.5" /></button>
+                                    <button onClick={(e) => { e.stopPropagation(); handleDuplicateGroup(g); }} className="p-1 hover:bg-white rounded-lg text-slate-400 hover:text-indigo-600 transition-all" title="Duplicar Grupo"><Icon name="copy" className="w-3.5 h-3.5" /></button>
+                                    <button onClick={(e) => { e.stopPropagation(); setEditingGroup(g); setGroupModalOpen(true); }} className="p-1 hover:bg-white rounded-lg text-slate-400 hover:text-primary transition-all" title="Editar"><Icon name="edit-3" className="w-3.5 h-3.5" /></button>
+                                    <button onClick={(e) => { e.stopPropagation(); setConfirmDeleteGroup(g); }} className="p-1 hover:bg-rose-50 rounded-lg text-slate-400 hover:text-rose-500 transition-all" title="Eliminar"><Icon name="trash-2" className="w-3.5 h-3.5" /></button>
                                 </div>
                             </div>
                             <h3 className="font-black text-sm truncate uppercase text-slate-800 leading-tight">{g.name}</h3>

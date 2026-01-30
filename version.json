@@ -1,6 +1,6 @@
 
 {
-  "version": "3.2.7",
-  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v3.2.7/app-debug.apk",
-  "notes": "Mejoras en la gestión de equipos: Límite de 4 alumnos para equipos Coyote, nuevo placeholder de ejemplo y corrección del botón de generación aleatoria."
+  "version": "3.2.8",
+  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v3.2.8/app-debug.apk",
+  "notes": "Optimización de Configuración (doble columna y botón persistente) y nueva función para Duplicar Grupos."
 }
