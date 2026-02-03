@@ -1,6 +1,6 @@
 
 {
-  "version": "3.2.8",
-  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v3.2.8/app-debug.apk",
-  "notes": "Optimización de Configuración (doble columna y botón persistente) y nueva función para Duplicar Grupos."
+  "version": "3.2.9",
+  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v3.2.9/app-debug.apk",
+  "notes": "Potente actualización en Gestión de Equipos: Ahora puedes gestionar integrantes (agregar/eliminar) y ver calificaciones grupales directamente desde el modal de edición."
 }

@@ -7,12 +7,13 @@ import Button from './common/Button';
 import Modal from './common/Modal';
 import ConfirmationModal from './common/ConfirmationModal';
 import { motion, AnimatePresence } from 'framer-motion';
+import { calculatePartialAverage } from '../services/gradeCalculation';
 
 const INDIVIDUAL_WORK = "TRABAJO INDIVIDUAL";
 
 const TeamsView: React.FC = () => {
     const { state, dispatch } = useContext(AppContext);
-    const { groups, selectedGroupId, teamNotes = {}, coyoteTeamNotes = {} } = state;
+    const { groups, selectedGroupId, teamNotes = {}, coyoteTeamNotes = {}, grades, evaluations, settings, attendance } = state;
     
     const [teamType, setTeamType] = useState<'base' | 'coyote'>('coyote');
     const [editingTeam, setEditingTeam] = useState<{ name: string; isCoyote: boolean } | null>(null);
@@ -22,6 +23,9 @@ const TeamsView: React.FC = () => {
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [confirmDelete, setConfirmDelete] = useState<{ name: string; isCoyote: boolean } | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
+
+    // Estados para gestión de integrantes en edición
+    const [editSearch, setEditSearch] = useState('');
 
     // Estados para el nuevo modal de creación
     const [createForm, setCreateForm] = useState({ name: '', note: '', isCoyote: true });
@@ -121,6 +125,37 @@ const TeamsView: React.FC = () => {
         return pool.filter(p => p.student.name.toLowerCase().includes(term) || (p.student.nickname && p.student.nickname.toLowerCase().includes(term)));
     }, [group, groups, createForm.isCoyote, createSearch]);
 
+    // Lógica para buscador en edición (alumnos disponibles para este equipo)
+    const availableStudentsForEdit = useMemo(() => {
+        if (!group || !editingTeam) return [];
+        let pool: { student: Student; groupName: string }[] = [];
+        const isCoyote = editingTeam.isCoyote;
+
+        if (isCoyote) {
+            const targetQuarter = group.quarter;
+            const groupsInSameQuarter = groups.filter(g => g.quarter === targetQuarter);
+            const seen = new Set<string>();
+            groupsInSameQuarter.forEach(g => {
+                g.students.forEach(s => {
+                    if (!seen.has(s.name) && s.teamCoyote !== editingTeam.name) {
+                        pool.push({ student: s, groupName: g.name });
+                        seen.add(s.name);
+                    }
+                });
+            });
+        } else {
+            group.students.forEach(s => {
+                if (s.team !== editingTeam.name) {
+                    pool.push({ student: s, groupName: group.name });
+                }
+            });
+        }
+
+        if (!editSearch.trim()) return pool;
+        const term = editSearch.toLowerCase();
+        return pool.filter(p => p.student.name.toLowerCase().includes(term) || (p.student.nickname && p.student.nickname.toLowerCase().includes(term)));
+    }, [group, groups, editingTeam, editSearch]);
+
     const handleOpenCreate = () => {
         setCreateForm({ name: '', note: '', isCoyote: teamType === 'coyote' });
         setSelectedStudentsForNewTeam([]);
@@ -163,9 +198,11 @@ const TeamsView: React.FC = () => {
     };
 
     const handleOpenEdit = (name: string, note: string) => {
-        setEditingTeam({ name, isCoyote: teamType === 'coyote' });
+        const isCoyote = teamType === 'coyote';
+        setEditingTeam({ name, isCoyote });
         setNewTeamName(name);
         setTeamNote(note);
+        setEditSearch('');
         setIsEditModalOpen(true);
     };
 
@@ -178,6 +215,28 @@ const TeamsView: React.FC = () => {
         setIsEditModalOpen(false);
         setEditingTeam(null);
         dispatch({ type: 'ADD_TOAST', payload: { message: 'Equipo actualizado.', type: 'success' } });
+    };
+
+    const handleRemoveMember = (studentId: string) => {
+        if (!editingTeam) return;
+        dispatch({ type: 'ASSIGN_STUDENT_TEAM', payload: { studentId, teamName: undefined, isCoyote: editingTeam.isCoyote } });
+        dispatch({ type: 'ADD_TOAST', payload: { message: 'Integrante removido.', type: 'info' } });
+    };
+
+    const handleAddMember = (studentId: string) => {
+        if (!editingTeam) return;
+        
+        // Validar límite Coyote
+        if (editingTeam.isCoyote) {
+            const currentCount = teams.find(t => t.name === editingTeam.name)?.members.length || 0;
+            if (currentCount >= 4) {
+                dispatch({ type: 'ADD_TOAST', payload: { message: 'Los equipos Coyote no pueden exceder 4 alumnos.', type: 'error' } });
+                return;
+            }
+        }
+
+        dispatch({ type: 'ASSIGN_STUDENT_TEAM', payload: { studentId, teamName: editingTeam.name, isCoyote: editingTeam.isCoyote } });
+        dispatch({ type: 'ADD_TOAST', payload: { message: 'Integrante añadido.', type: 'success' } });
     };
 
     const handleDeleteTeam = () => {
@@ -206,6 +265,39 @@ const TeamsView: React.FC = () => {
             dispatch({ type: 'ADD_TOAST', payload: { message: 'Equipos generados aleatoriamente.', type: 'success' } });
         }
     };
+
+    // Cálculo de estadísticas para el equipo en edición
+    const teamStats = useMemo(() => {
+        if (!editingTeam || !group) return null;
+        const currentTeamData = teams.find(t => t.name === editingTeam.name);
+        if (!currentTeamData) return null;
+
+        const members = currentTeamData.members;
+        if (members.length === 0) return null;
+
+        let p1Sum = 0, p1Count = 0;
+        let p2Sum = 0, p2Count = 0;
+
+        members.forEach(m => {
+            const sid = m.student.id;
+            const gid = group.id; // Asumimos grupo actual para simplificar
+            const studentGrades = grades[gid]?.[sid] || {};
+            const groupEvals = evaluations[gid] || [];
+            const studentAtt = attendance[gid]?.[sid] || {};
+
+            const p1 = calculatePartialAverage(group, 1, groupEvals, studentGrades, settings, studentAtt);
+            const p2 = calculatePartialAverage(group, 2, groupEvals, studentGrades, settings, studentAtt);
+
+            if (p1 !== null) { p1Sum += p1; p1Count++; }
+            if (p2 !== null) { p2Sum += p2; p2Count++; }
+        });
+
+        const p1Avg = p1Count > 0 ? p1Sum / p1Count : null;
+        const p2Avg = p2Count > 0 ? p2Sum / p2Count : null;
+        const finalAvg = (p1Avg !== null && p2Avg !== null) ? (p1Avg + p2Avg) / 2 : (p1Avg || p2Avg || null);
+
+        return { p1: p1Avg, p2: p2Avg, final: finalAvg };
+    }, [editingTeam, teams, group, grades, evaluations, settings, attendance]);
 
     return (
         <div className="flex flex-col h-full overflow-hidden">
@@ -391,9 +483,7 @@ const TeamsView: React.FC = () => {
                                         <label className="block text-[10px] font-black uppercase text-slate-500 mb-2 ml-1">Tipo de Asignación</label>
                                         <div className="grid grid-cols-2 gap-2">
                                             <button 
-                                                onClick={() => {
-                                                    setCreateForm({...createForm, isCoyote: false});
-                                                }}
+                                                onClick={() => setCreateForm({...createForm, isCoyote: false})}
                                                 className={`p-2 rounded-xl text-xs font-bold border-2 transition-all ${!createForm.isCoyote ? 'bg-indigo-50 border-indigo-500 text-indigo-700 shadow-sm' : 'bg-white border-slate-200 text-slate-400'}`}
                                             >
                                                 Equipo Base
@@ -401,7 +491,6 @@ const TeamsView: React.FC = () => {
                                             <button 
                                                 onClick={() => {
                                                     setCreateForm({...createForm, isCoyote: true});
-                                                    // Limitar selección si ya hay más de 4
                                                     if (selectedStudentsForNewTeam.length > 4) {
                                                         setSelectedStudentsForNewTeam(selectedStudentsForNewTeam.slice(0, 4));
                                                     }
@@ -506,33 +595,162 @@ const TeamsView: React.FC = () => {
                 </div>
             </Modal>
 
-            {/* MODAL DE EDICIÓN */}
-            <Modal isOpen={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} title="Editar Equipo">
-                <div className="space-y-4">
-                    <div>
-                        <label className="block text-xs font-black uppercase text-slate-500 mb-1">Nombre del Equipo</label>
-                        <input 
-                            type="text" 
-                            value={newTeamName} 
-                            onChange={e => setNewTeamName(e.target.value)}
-                            disabled={editingTeam?.name === INDIVIDUAL_WORK}
-                            className="w-full p-2 border-2 border-slate-200 rounded-xl bg-slate-50 focus:ring-2 focus:ring-primary font-bold disabled:opacity-50"
-                        />
+            {/* MODAL DE EDICIÓN (MEJORADO CON GESTIÓN DE INTEGRANTES Y CALIFICACIONES) */}
+            <Modal isOpen={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} title={`Editar Equipo: ${editingTeam?.name}`} size="5xl">
+                <div className="flex flex-col lg:flex-row h-[75vh] -m-6 bg-slate-50 overflow-hidden">
+                    {/* COLUMNA IZQUIERDA: CONFIG + INTEGRANTES ACTUALES + STATS */}
+                    <div className="lg:w-2/5 p-6 border-r border-slate-200 bg-white flex flex-col overflow-y-auto custom-scrollbar">
+                        <div className="space-y-6">
+                            {/* Rendimiento del Equipo */}
+                            {teamStats && (
+                                <div className="bg-indigo-50 border border-indigo-100 p-4 rounded-2xl shadow-sm">
+                                    <h4 className="text-[10px] font-black uppercase text-indigo-400 mb-3 tracking-widest flex items-center gap-2">
+                                        <Icon name="bar-chart-3" className="w-3 h-3" /> Rendimiento Promedio del Equipo
+                                    </h4>
+                                    <div className="grid grid-cols-3 gap-2">
+                                        <div className="bg-white p-2 rounded-xl text-center shadow-sm">
+                                            <span className="text-[8px] font-black text-slate-400 uppercase block">Parcial 1</span>
+                                            <span className={`text-sm font-black ${teamStats.p1 !== null && teamStats.p1 >= 7 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                                                {teamStats.p1 !== null ? teamStats.p1.toFixed(1) : '-'}
+                                            </span>
+                                        </div>
+                                        <div className="bg-white p-2 rounded-xl text-center shadow-sm">
+                                            <span className="text-[8px] font-black text-slate-400 uppercase block">Parcial 2</span>
+                                            <span className={`text-sm font-black ${teamStats.p2 !== null && teamStats.p2 >= 7 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                                                {teamStats.p2 !== null ? teamStats.p2.toFixed(1) : '-'}
+                                            </span>
+                                        </div>
+                                        <div className="bg-indigo-600 p-2 rounded-xl text-center shadow-md">
+                                            <span className="text-[8px] font-black text-white/70 uppercase block">Global</span>
+                                            <span className="text-sm font-black text-white">
+                                                {teamStats.final !== null ? teamStats.final.toFixed(1) : '-'}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            <div>
+                                <h4 className="text-[10px] font-black uppercase text-slate-400 mb-4 tracking-widest">Ajustes del Equipo</h4>
+                                <div className="space-y-4">
+                                    <div>
+                                        <label className="block text-[10px] font-black uppercase text-slate-500 mb-1 ml-1">Nombre</label>
+                                        <input 
+                                            type="text" 
+                                            value={newTeamName} 
+                                            onChange={e => setNewTeamName(e.target.value)}
+                                            disabled={editingTeam?.name === INDIVIDUAL_WORK}
+                                            className="w-full p-2 border-2 border-slate-100 rounded-xl bg-slate-50 focus:bg-white focus:ring-2 focus:ring-primary font-bold transition-all disabled:opacity-50"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-[10px] font-black uppercase text-slate-500 mb-1 ml-1">Notas de Seguimiento</label>
+                                        <textarea 
+                                            value={teamNote} 
+                                            onChange={e => setTeamNote(e.target.value)}
+                                            rows={3}
+                                            className="w-full p-2 border-2 border-slate-100 rounded-xl bg-slate-50 focus:bg-white focus:ring-2 focus:ring-primary text-sm transition-all"
+                                            placeholder="Observaciones grupales..."
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Lista de Integrantes Actuales */}
+                            <div className="pt-2">
+                                <h4 className="text-[10px] font-black uppercase text-slate-400 mb-3 tracking-widest">Integrantes Actuales</h4>
+                                <div className="space-y-2">
+                                    {teams.find(t => t.name === editingTeam?.name)?.members.map(m => (
+                                        <div key={m.student.id} className="flex items-center justify-between bg-slate-50 p-2.5 rounded-xl border border-slate-100 group">
+                                            <div className="min-w-0">
+                                                <p className="text-xs font-bold text-slate-700 truncate uppercase">{m.student.name}</p>
+                                                {m.student.nickname && <p className="text-[9px] text-primary italic font-bold leading-none">"{m.student.nickname}"</p>}
+                                            </div>
+                                            <button 
+                                                onClick={() => handleRemoveMember(m.student.id)}
+                                                className="p-1.5 text-slate-300 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all"
+                                                title="Remover del equipo"
+                                            >
+                                                <Icon name="trash-2" className="w-4 h-4" />
+                                            </button>
+                                        </div>
+                                    ))}
+                                    {(teams.find(t => t.name === editingTeam?.name)?.members.length || 0) === 0 && (
+                                        <p className="text-[10px] text-slate-400 italic text-center py-4 bg-slate-50 rounded-xl border border-dashed border-slate-200">El equipo no tiene integrantes.</p>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                    <div>
-                        <label className="block text-xs font-black uppercase text-slate-500 mb-1">Notas de Seguimiento</label>
-                        <textarea 
-                            value={teamNote} 
-                            onChange={e => setTeamNote(e.target.value)}
-                            rows={4}
-                            className="w-full p-2 border-2 border-slate-200 rounded-xl bg-slate-50 focus:ring-2 focus:ring-primary text-sm"
-                            placeholder="Añade observaciones sobre el desempeño..."
-                        />
+
+                    {/* COLUMNA DERECHA: SELECCIÓN PARA AGREGAR */}
+                    <div className="flex-1 p-6 flex flex-col overflow-hidden">
+                        <div className="flex justify-between items-center mb-4">
+                            <h4 className="text-xs font-black uppercase text-slate-400 tracking-widest">Agregar Alumnos</h4>
+                            <div className="relative w-64">
+                                <Icon name="search" className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                                <input 
+                                    type="text" 
+                                    value={editSearch} 
+                                    onChange={e => setEditSearch(e.target.value)}
+                                    placeholder="Buscar disponible..."
+                                    className="w-full pl-9 pr-3 py-1.5 border border-slate-200 rounded-xl bg-white text-xs focus:ring-2 focus:ring-primary transition-all"
+                                />
+                            </div>
+                        </div>
+                        
+                        <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 space-y-2">
+                            {availableStudentsForEdit.length > 0 ? (
+                                availableStudentsForEdit.map(p => {
+                                    const currentTeam = editingTeam?.isCoyote ? p.student.teamCoyote : p.student.team;
+                                    const isCoyote = editingTeam?.isCoyote;
+                                    const currentCount = teams.find(t => t.name === editingTeam?.name)?.members.length || 0;
+                                    const isDisabled = isCoyote && currentCount >= 4;
+
+                                    return (
+                                        <div 
+                                            key={p.student.id} 
+                                            className={`p-3 rounded-2xl border-2 transition-all flex items-center justify-between group ${isDisabled ? 'opacity-40 grayscale bg-slate-50 border-slate-100 cursor-not-allowed' : 'bg-white border-slate-50 hover:border-slate-100'}`}
+                                        >
+                                            <div className="min-w-0">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="font-black text-xs uppercase text-slate-700">{p.student.name}</span>
+                                                    {p.student.nickname && <span className="text-[10px] text-primary italic font-bold">"{p.student.nickname}"</span>}
+                                                </div>
+                                                <div className="flex items-center gap-2 mt-0.5">
+                                                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter bg-slate-100 px-1.5 py-0.5 rounded">{p.groupName}</span>
+                                                    {currentTeam && (
+                                                        <span className="text-[9px] font-black text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-100">En: {currentTeam}</span>
+                                                    )}
+                                                </div>
+                                            </div>
+                                            {!isDisabled && (
+                                                <button 
+                                                    onClick={() => handleAddMember(p.student.id)}
+                                                    className="w-8 h-8 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center hover:bg-primary hover:text-white transition-all shadow-sm group-hover:scale-110"
+                                                    title="Añadir al equipo"
+                                                >
+                                                    <Icon name="plus" className="w-5 h-5" />
+                                                </button>
+                                            )}
+                                        </div>
+                                    );
+                                })
+                            ) : (
+                                <div className="text-center py-10 opacity-40">
+                                    <Icon name="search" className="w-12 h-12 mx-auto mb-2" />
+                                    <p className="text-[10px] font-black uppercase">No se encontraron alumnos disponibles</p>
+                                </div>
+                            )}
+                        </div>
                     </div>
-                    <div className="flex justify-end gap-3 pt-2">
-                        <Button variant="secondary" onClick={() => setIsEditModalOpen(false)}>Cancelar</Button>
-                        <Button onClick={handleSaveEdit}>Guardar Cambios</Button>
-                    </div>
+                </div>
+                
+                <div className="flex justify-end gap-3 mt-4 pt-4 border-t border-slate-200">
+                    <Button variant="secondary" onClick={() => setIsEditModalOpen(false)}>Cancelar</Button>
+                    <Button onClick={handleSaveEdit} className="px-8 shadow-lg shadow-primary/20">
+                        Guardar Cambios <Icon name="check-circle-2" className="w-4 h-4 ml-1" />
+                    </Button>
                 </div>
             </Modal>
 
