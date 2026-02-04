@@ -1,7 +1,7 @@
 
 {
   "name": "gestion-academica-iaev",
-  "version": "3.3.1",
+  "version": "3.3.2",
   "description": "Aplicacion de escritorio para gestion academica.",
   "author": "Kakit",
   "main": "dist-electron/main.js",
@@ -13,7 +13,7 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "dist": "npm run build && electron-builder",
-    "mobile:init": "npm install @capacitor/core @capacitor/android @capacitor/app && npm install -D @capacitor/cli && npx cap add android",
+    "mobile:init": "npm install @capacitor/core @capacitor/android @capacitor/app @capacitor/filesystem @capacitor/share && npm install -D @capacitor/cli && npx cap add android",
     "mobile:sync": "npm run build && npx cap sync",
     "mobile:open": "npx cap open android",
     "android:sync": "npm run build && npx cap sync",
@@ -24,6 +24,8 @@
     "@capacitor/android": "^6.0.0",
     "@capacitor/app": "^6.0.0",
     "@capacitor/core": "^6.0.0",
+    "@capacitor/filesystem": "^6.0.0",
+    "@capacitor/share": "^6.0.0",
     "chart.js": "^4.5.1",
     "chartjs-plugin-datalabels": "^2.2.0",
     "driver.js": "^1.3.1",

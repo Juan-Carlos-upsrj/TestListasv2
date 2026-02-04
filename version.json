@@ -1,6 +1,6 @@
 
 {
-  "version": "3.3.1",
-  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v3.3.1/app-debug.apk",
-  "notes": "Corrección de error de compilación en el módulo de guardado de archivos para Android."
+  "version": "3.3.2",
+  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v3.3.2/app-debug.apk",
+  "notes": "Solución crítica para Android: Ahora los reportes se guardan usando el sistema nativo de archivos para asegurar su disponibilidad en la carpeta de Descargas."
 }
