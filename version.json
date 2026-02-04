@@ -1,6 +1,6 @@
 
 {
-  "version": "3.3.2",
-  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v3.3.2/app-debug.apk",
-  "notes": "Solución crítica para Android: Ahora los reportes se guardan usando el sistema nativo de archivos para asegurar su disponibilidad en la carpeta de Descargas."
+  "version": "3.3.3",
+  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v3.3.3/app-debug.apk",
+  "notes": "Corrección de error crítico en package.json que impedía la instalación de dependencias nativas."
 }
