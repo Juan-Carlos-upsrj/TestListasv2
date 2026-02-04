@@ -6,11 +6,22 @@
  */
 export const saveOrShareFile = async (blob: Blob, filename: string) => {
     // Detect if we can share files (Native Share API)
-    const canShare = navigator.share && navigator.canShare && navigator.canShare({ 
-        files: [new File([blob], filename, { type: blob.type })] 
-    });
+    // Using typeof check to avoid TS2774 "always defined" warning
+    const hasShareApi = typeof navigator.share === 'function';
+    const hasCanShareApi = typeof navigator.canShare === 'function';
 
-    if (canShare) {
+    let canShare = false;
+    if (hasShareApi && hasCanShareApi) {
+        try {
+            canShare = navigator.canShare({ 
+                files: [new File([blob], filename, { type: blob.type })] 
+            });
+        } catch (e) {
+            canShare = false;
+        }
+    }
+
+    if (canShare && hasShareApi) {
         try {
             const file = new File([blob], filename, { type: blob.type });
             await navigator.share({

@@ -1,6 +1,6 @@
 
 {
-  "version": "3.2.9",
-  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v3.2.9/app-debug.apk",
-  "notes": "Potente actualización en Gestión de Equipos: Ahora puedes gestionar integrantes (agregar/eliminar) y ver calificaciones grupales directamente desde el modal de edición."
+  "version": "3.3.1",
+  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v3.3.1/app-debug.apk",
+  "notes": "Corrección de error de compilación en el módulo de guardado de archivos para Android."
 }
