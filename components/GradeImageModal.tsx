@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useContext } from 'react';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
@@ -7,6 +8,7 @@ import Icon from './icons/Icon';
 import { Group, Evaluation, Settings, AttendanceStatus } from '../types';
 import { calculatePartialAverage, getGradeColor } from '../services/gradeCalculation';
 import { AppContext } from '../context/AppContext';
+import { saveOrShareFile } from '../services/fileUtils';
 
 interface GradeImageModalProps {
     isOpen: boolean;
@@ -47,13 +49,15 @@ const GradeImageModal: React.FC<GradeImageModalProps> = ({
         if (!tableRef.current) return;
         try {
             const canvas = await html2canvas(tableRef.current, { scale: 2, backgroundColor: '#ffffff' });
-            const link = document.createElement('a');
-            link.download = `calificaciones_${group.name}_${viewMode}.png`;
-            link.href = canvas.toDataURL('image/png');
-            link.click();
+            const filename = `calificaciones_${group.name}_${viewMode}.png`;
+            canvas.toBlob(async (blob) => {
+                if (blob) {
+                    await saveOrShareFile(blob, filename);
+                }
+            }, 'image/png');
         } catch (err) {
             console.error(err);
-            dispatch({ type: 'ADD_TOAST', payload: { message: 'Error al descargar imagen', type: 'error' } });
+            dispatch({ type: 'ADD_TOAST', payload: { message: 'Error al procesar imagen', type: 'error' } });
         }
     };
 
@@ -105,8 +109,11 @@ const GradeImageModal: React.FC<GradeImageModalProps> = ({
                 pageCount++;
             }
             
-            pdf.save(`calificaciones_${group.name}_${viewMode}.pdf`);
-            dispatch({ type: 'ADD_TOAST', payload: { message: 'PDF descargado con éxito.', type: 'success' } });
+            const blob = pdf.output('blob');
+            const filename = `calificaciones_${group.name}_${viewMode}.pdf`;
+            await saveOrShareFile(blob, filename);
+            
+            dispatch({ type: 'ADD_TOAST', payload: { message: 'PDF generado con éxito.', type: 'success' } });
     
         } catch (err) {
             console.error(err);
@@ -147,10 +154,10 @@ const GradeImageModal: React.FC<GradeImageModalProps> = ({
                             <Icon name="copy" className="w-4 h-4"/> Copiar Imagen
                         </Button>
                         <Button size="sm" variant="secondary" onClick={handleDownload}>
-                            <Icon name="download-cloud" className="w-4 h-4"/> Descargar PNG
+                            <Icon name="download-cloud" className="w-4 h-4"/> Guardar/Compartir PNG
                         </Button>
                         <Button size="sm" onClick={handleDownloadPDF}>
-                            <Icon name="download-cloud" className="w-4 h-4"/> Descargar PDF
+                            <Icon name="download-cloud" className="w-4 h-4"/> Guardar/Compartir PDF
                         </Button>
                     </div>
                 </div>

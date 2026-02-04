@@ -4,7 +4,8 @@ import { AppContext } from '../context/AppContext';
 import { AttendanceStatus, GroupReportSummary, Group } from '../types';
 import { getClassDates } from '../services/dateUtils';
 import { exportAttendanceToCSV, exportGradesToCSV } from '../services/exportService';
-import { exportReportToPDF, generateReportPDFBlob } from '../services/pdfService';
+import { generateReportPDFBlob } from '../services/pdfService';
+import { saveOrShareFile } from '../services/fileUtils';
 import Icon from './icons/Icon';
 import Button from './common/Button';
 import ReportChart from './ReportChart';
@@ -130,7 +131,8 @@ const ReportsView: React.FC = () => {
         try {
             const JSZipConstructor = await getJSZip();
             const zip = new JSZipConstructor();
-            const rootFolder = zip.folder(`Reportes_IAEV_PDF_${new Date().toISOString().split('T')[0]}`);
+            const rootFolderName = `Reportes_IAEV_PDF_${new Date().toISOString().split('T')[0]}`;
+            const rootFolder = zip.folder(rootFolderName);
 
             for (let i = 0; i < groups.length; i++) {
                 const g = groups[i];
@@ -160,10 +162,8 @@ const ReportsView: React.FC = () => {
             }
 
             const content = await zip.generateAsync({ type: 'blob' });
-            const link = document.createElement('a');
-            link.href = URL.createObjectURL(content);
-            link.download = `Reportes_IAEV_Masivo_PDF_${new Date().toISOString().split('T')[0]}.zip`;
-            link.click();
+            const finalName = `${rootFolderName}.zip`;
+            await saveOrShareFile(content, finalName);
             
             dispatch({ type: 'ADD_TOAST', payload: { message: '¡Exportación masiva completa!', type: 'success' } });
         } catch (err) {
@@ -172,6 +172,20 @@ const ReportsView: React.FC = () => {
         } finally {
             setIsExportingMassive(false);
             setMassiveProgress({ current: 0, total: 0, name: '' });
+        }
+    };
+
+    const handleSinglePDFExport = async () => {
+        if (!group || !groupSummaryData) return;
+        dispatch({ type: 'ADD_TOAST', payload: { message: 'Generando PDF...', type: 'info' } });
+        try {
+            const pdfBlob = await generateReportPDFBlob(group, groupSummaryData, classDates, attendance[group.id] || {}, attendanceHeaders, groupEvaluations, settings);
+            const fileName = `reporte_${group.name.replace(/\s/g, '_')}.pdf`;
+            await saveOrShareFile(pdfBlob, fileName);
+            dispatch({ type: 'ADD_TOAST', payload: { message: 'PDF generado con éxito.', type: 'success' } });
+        } catch (err) {
+            console.error(err);
+            dispatch({ type: 'ADD_TOAST', payload: { message: 'Error al generar PDF.', type: 'error' } });
         }
     };
 
@@ -213,7 +227,7 @@ const ReportsView: React.FC = () => {
                             <Icon name="download-cloud" className="w-4 h-4" /> 
                             {isExportingMassive ? 'Exportando...' : 'Exportación Masiva (ZIP-PDF)'}
                         </Button>
-                        <Button variant="secondary" onClick={() => exportReportToPDF(group, groupSummaryData!, classDates, attendance[group.id] || {}, attendanceHeaders, groupEvaluations, settings)} className="w-full sm:w-auto">
+                        <Button variant="secondary" onClick={handleSinglePDFExport} className="w-full sm:w-auto">
                             <Icon name="file-spreadsheet" className="w-4 h-4" /> PDF Individual
                         </Button>
                          <Button variant="secondary" onClick={() => exportAttendanceToCSV(group, classDates, attendance[group.id] || {})} className="w-full sm:w-auto">

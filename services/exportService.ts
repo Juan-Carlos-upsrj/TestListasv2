@@ -1,19 +1,6 @@
 
 import { Group, Evaluation, AttendanceStatus } from '../types';
-
-function downloadCSV(csvContent: string, filename: string) {
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement("a");
-    if (link.download !== undefined) {
-        const url = URL.createObjectURL(blob);
-        link.setAttribute("href", url);
-        link.setAttribute("download", filename);
-        link.style.visibility = 'hidden';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    }
-}
+import { saveOrShareFile } from './fileUtils';
 
 export const generateAttendanceCSVContent = (
     group: Group,
@@ -72,7 +59,7 @@ export const generateGradesCSVContent = (
     return csvRows.join('\r\n');
 };
 
-export const exportAttendanceToCSV = (
+export const exportAttendanceToCSV = async (
     group: Group,
     classDates: string[],
     attendance: { [studentId: string]: { [date: string]: AttendanceStatus } },
@@ -80,10 +67,11 @@ export const exportAttendanceToCSV = (
 ) => {
     const content = generateAttendanceCSVContent(group, classDates, attendance);
     const finalName = fileName ? `${fileName}.csv` : `asistencia_${group.name.replace(/\s/g, '_')}.csv`;
-    downloadCSV(content, finalName);
+    const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
+    await saveOrShareFile(blob, finalName);
 };
 
-export const exportGradesToCSV = (
+export const exportGradesToCSV = async (
     group: Group,
     evaluations: Evaluation[],
     grades: { [studentId: string]: { [evaluationId: string]: number | null } },
@@ -91,5 +79,6 @@ export const exportGradesToCSV = (
 ) => {
     const content = generateGradesCSVContent(group, evaluations, grades);
     const finalName = fileName ? `${fileName}.csv` : `calificaciones_${group.name.replace(/\s/g, '_')}.csv`;
-    downloadCSV(content, finalName);
+    const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
+    await saveOrShareFile(blob, finalName);
 };
