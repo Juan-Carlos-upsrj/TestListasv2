@@ -1,4 +1,3 @@
-
 import { AppState, AppAction, DayOfWeek, AttendanceStatus, TutorshipEntry, Group } from '../types';
 import { Dispatch } from 'react';
 import { v4 as uuidv4 } from 'uuid';
@@ -308,22 +307,59 @@ export const syncScheduleData = async (state: AppState, dispatch: Dispatch<AppAc
     try {
         const horario = await fetchHorarioCompleto(settings.professorName.trim());
         if (horario.length === 0) return;
+        
         dispatch({ type: 'SET_TEACHER_SCHEDULE', payload: horario });
-        const clasesPorGrupoUnico: { [name: string]: { sub: string; days: string[] } } = {};
+        
+        // Modificamos la estructura para guardar también los alumnos y nombre limpio
+        const clasesPorGrupoUnico: { [key: string]: { sub: string; name: string; days: string[]; students: any[] } } = {};
+        
         horario.forEach(c => {
-            const key = `${c.groupName} - ${c.subjectName}`;
-            if (!clasesPorGrupoUnico[key]) clasesPorGrupoUnico[key] = { sub: c.subjectName, days: [] };
-            if (!clasesPorGrupoUnico[key].days.includes(c.day)) clasesPorGrupoUnico[key].days.push(c.day);
+            // Usamos ID único combinando nombre y materia para diferenciar listas
+            const uniqueKey = `${c.groupName} - ${c.subjectName}`;
+            
+            if (!clasesPorGrupoUnico[uniqueKey]) {
+                clasesPorGrupoUnico[uniqueKey] = { 
+                    sub: c.subjectName, 
+                    name: c.groupName, // NOMBRE LIMPIO (Solo identificador de grupo)
+                    days: [],
+                    students: c.students || [] // ASIGNAMOS ALUMNOS DESDE FIREBASE
+                };
+            }
+            if (!clasesPorGrupoUnico[uniqueKey].days.includes(c.day)) {
+                clasesPorGrupoUnico[uniqueKey].days.push(c.day);
+            }
         });
-        for (const [name, info] of Object.entries(clasesPorGrupoUnico)) {
-            const exist = groups.find(g => normalizeForMatch(g.name) === normalizeForMatch(name));
+
+        for (const [key, info] of Object.entries(clasesPorGrupoUnico)) {
+            // Buscamos coincidencia exacta de Materia y Grupo para actualizar el correcto
+            const exist = groups.find(g => 
+                normalizeForMatch(g.name) === normalizeForMatch(info.name) && 
+                normalizeForMatch(g.subject) === normalizeForMatch(info.sub)
+            );
+
             if (exist) {
-                dispatch({ type: 'SAVE_GROUP', payload: { ...exist, classDays: info.days as DayOfWeek[] } });
+                dispatch({ type: 'SAVE_GROUP', payload: { 
+                    ...exist, 
+                    classDays: info.days as DayOfWeek[],
+                    // Solo inyectar alumnos si el grupo local está vacío o se desea actualizar
+                    students: (exist.students.length === 0 && info.students.length > 0) ? info.students : exist.students 
+                }});
             } else {
-                dispatch({ type: 'SAVE_GROUP', payload: { id: uuidv4(), name, subject: info.sub, classDays: info.days as DayOfWeek[], students: [], color: GROUP_COLORS[groups.length % GROUP_COLORS.length].name, evaluationTypes: { partial1: [{ id: uuidv4(), name: 'General', weight: 100 }], partial2: [{ id: uuidv4(), name: 'General', weight: 100 }] } } as Group });
+                dispatch({ type: 'SAVE_GROUP', payload: { 
+                    id: uuidv4(), 
+                    name: info.name, 
+                    subject: info.sub, 
+                    classDays: info.days as DayOfWeek[], 
+                    students: info.students, // ALUMNOS INICIALES DESDE FIREBASE
+                    color: GROUP_COLORS[groups.length % GROUP_COLORS.length].name, 
+                    evaluationTypes: { 
+                        partial1: [{ id: uuidv4(), name: 'General', weight: 100 }], 
+                        partial2: [{ id: uuidv4(), name: 'General', weight: 100 }] 
+                    } 
+                } as Group });
             }
         }
-        dispatch({ type: 'ADD_TOAST', payload: { message: 'Horario actualizado.', type: 'success' } });
+        dispatch({ type: 'ADD_TOAST', payload: { message: 'Horario y Alumnos actualizados.', type: 'success' } });
     } catch (e) {
         dispatch({ type: 'ADD_TOAST', payload: { message: 'Error al cargar horario.', type: 'error' } });
     }

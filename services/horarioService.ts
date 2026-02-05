@@ -29,7 +29,7 @@ const groupsCol = collection(db, `${basePath}/groups`);
 
 /**
  * Esta es la función principal que usaremos.
- * Busca el horario completo de un profesor en Firebase.
+ * Busca el horario completo de un profesor en Firebase e incluye los alumnos.
  */
 export const fetchHorarioCompleto = async (profesorNombre: string): Promise<any[]> => {
     
@@ -57,7 +57,7 @@ export const fetchHorarioCompleto = async (profesorNombre: string): Promise<any[
         return []; // No hay clases, retornamos un arreglo vacío
     }
 
-    // 3. Obtener todos los subjects y groups (para tener los nombres)
+    // 3. Obtener todos los subjects y groups (AQUÍ CARGAMOS TODO EL OBJETO QUE INCLUYE STUDENTS)
     const subjectsSnap = await getDocs(subjectsCol);
     const groupsSnap = await getDocs(groupsCol);
     
@@ -75,10 +75,10 @@ export const fetchHorarioCompleto = async (profesorNombre: string): Promise<any[
             day: clase.day, // "Lunes", "Martes", etc.
             startTime: clase.startTime, // 7, 8, 9...
             duration: clase.duration, // 1, 2...
-            // FIX: Cast subject to `any` to resolve 'unknown' type error.
             subjectName: subject ? (subject as any).name : "Materia Desconocida",
-            // FIX: Cast group to `any` to resolve 'unknown' type error.
-            groupName: group ? (group as any).name : "Grupo Desconocido"
+            groupName: group ? (group as any).name : "Grupo Desconocido",
+            // AGREGAMOS LOS ALUMNOS QUE VIENEN DEL NODO GROUP EN FIREBASE
+            students: group ? (group as any).students || [] : []
         };
     });
 

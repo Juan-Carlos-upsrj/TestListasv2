@@ -1,6 +1,5 @@
-
 {
-  "version": "3.3.4",
-  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v3.3.4/app-debug.apk",
-  "notes": "Corrección de tipos de dependencias (@types/uuid) para permitir la instalación nativa de Capacitor."
+  "version": "3.3.6",
+  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v3.3.6/app-debug.apk",
+  "notes": "Sincronización automática de alumnos desde Firebase y limpieza de identificadores de grupo."
 }
