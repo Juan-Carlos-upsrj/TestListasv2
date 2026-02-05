@@ -294,7 +294,7 @@ export const syncTutorshipData = async (state: AppState, dispatch: Dispatch<AppA
         
     } catch (error) {
         console.error('[SYNC ERROR]', error);
-        if (!silent) dispatch({ type: 'ADD_TOAST', payload: { message: 'Error al sincronizar tutorías.', type: 'error' } });
+        if (!silent) dispatch({ type: 'ADD_TOAST', payload: { message: 'Error al sincronizar con la nube.', type: 'error' } });
     }
 };
 
@@ -330,7 +330,7 @@ export const syncScheduleData = async (state: AppState, dispatch: Dispatch<AppAc
             }
         });
 
-        for (const [key, info] of Object.entries(clasesPorGrupoUnico)) {
+        for (const [, info] of Object.entries(clasesPorGrupoUnico)) {
             // Buscamos coincidencia exacta de Materia y Grupo para actualizar el correcto
             const exist = groups.find(g => 
                 normalizeForMatch(g.name) === normalizeForMatch(info.name) && 

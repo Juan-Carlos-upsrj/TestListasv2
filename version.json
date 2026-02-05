@@ -1,5 +1,5 @@
 {
-  "version": "3.3.6",
-  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v3.3.6/app-debug.apk",
-  "notes": "Sincronización automática de alumnos desde Firebase y limpieza de identificadores de grupo."
+  "version": "3.3.7",
+  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v3.3.7/app-debug.apk",
+  "notes": "Corrección de errores de compilación TypeScript relacionados con Capacitor y variables no utilizadas."
 }

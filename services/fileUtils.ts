@@ -11,7 +11,9 @@ export const saveOrShareFile = async (blob: Blob, filename: string) => {
     if (isCapacitor) {
         try {
             // Import Capacitor plugins dynamically
+            // @ts-ignore
             const { Filesystem, Directory } = await import('@capacitor/filesystem');
+            // @ts-ignore
             const { Share } = await import('@capacitor/share');
 
             // 1. Convert Blob to Base64 (needed for Filesystem API)
