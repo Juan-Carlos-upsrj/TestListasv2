@@ -33,5 +33,12 @@ export default defineConfig(async () => {
       ]),
       renderer(),
     ],
+    build: {
+      rollupOptions: {
+        // Marcamos los módulos de Capacitor como externos para que Vite no intente
+        // resolverlos durante la compilación de la aplicación de escritorio.
+        external: ['@capacitor/filesystem', '@capacitor/share'],
+      },
+    },
   };
 });

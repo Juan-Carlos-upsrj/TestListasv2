@@ -1,5 +1,5 @@
 {
-  "version": "3.3.7",
-  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v3.3.7/app-debug.apk",
-  "notes": "Corrección de errores de compilación TypeScript relacionados con Capacitor y variables no utilizadas."
+  "version": "3.3.8",
+  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v3.3.8/app-debug.apk",
+  "notes": "Corrección de error crítico en el proceso de empaquetado (build) de la versión de escritorio mediante la externalización de módulos de Capacitor."
 }
