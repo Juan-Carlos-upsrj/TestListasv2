@@ -1,5 +1,5 @@
 {
-  "version": "3.3.4",
-  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v3.3.4/app-debug.apk",
-  "notes": "Corrección de UI: El footer legal ahora es dinámico y no bloquea la visión en Reportes, Calendario ni Grupos. Se integra al flujo de scroll natural."
+  "version": "3.3.5",
+  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v3.3.5/app-debug.apk",
+  "notes": "Corrección crítica de sintaxis en el archivo de configuración para permitir el empaquetado de escritorio y actualización de versión estable."
 }
