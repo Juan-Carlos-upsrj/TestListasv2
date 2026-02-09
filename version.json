@@ -1,5 +1,5 @@
 {
-  "version": "3.3.7",
-  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v3.3.7/app-debug.apk",
-  "notes": "Funcionalidad Excel Avanzada: Ahora puedes seleccionar múltiples celdas de calificación arrastrando el mouse y llenarlas todas al mismo tiempo con un solo valor a través de una barra de acción rápida."
+  "version": "3.3.8",
+  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v3.3.8/app-debug.apk",
+  "notes": "Corrección de compilación y validación de calificaciones. Se prohíben valores negativos y se habilita el llenado masivo por arrastre en la tabla de calificaciones."
 }

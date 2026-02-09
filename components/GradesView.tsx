@@ -1,4 +1,4 @@
-import React, { useContext, useState, useMemo, useEffect, useCallback, useRef } from 'react';
+import React, { useContext, useState, useMemo, useEffect, useCallback } from 'react';
 import { AppContext } from '../context/AppContext';
 import { Evaluation, Group } from '../types';
 import { v4 as uuidv4 } from 'uuid';
@@ -199,14 +199,14 @@ const GradesView: React.FC = () => {
 
     const handleGradeChange = (studentId: string, evaluationId: string, score: string) => {
         if (selectedGroupId) {
-            const scoreValue = score === '' ? null : Math.max(0, parseFloat(score));
+            const val = parseFloat(score);
+            const scoreValue = score === '' ? null : Math.max(0, isNaN(val) ? 0 : val);
             dispatch({ type: 'UPDATE_GRADE', payload: { groupId: selectedGroupId, studentId, evaluationId, score: scoreValue } });
         }
     };
 
     // LÓGICA DE SELECCIÓN POR ARRASTRE
     const onMouseDown = (r: number, c: string, e: React.MouseEvent) => {
-        // Solo iniciar si es click izquierdo
         if (e.button !== 0) return;
         setSelection({ start: { r, c }, end: { r, c }, isDragging: true });
     };
@@ -251,7 +251,8 @@ const GradesView: React.FC = () => {
         const maxC = Math.max(startCIdx, endCIdx);
 
         const targetList = viewMode === 'recovery' ? studentsForRecovery : filteredStudents;
-        const numericValue = bulkGradeValue === '' ? null : Math.max(0, parseFloat(bulkGradeValue));
+        const val = parseFloat(bulkGradeValue);
+        const numericValue = bulkGradeValue === '' ? null : Math.max(0, isNaN(val) ? 0 : val);
         
         let count = 0;
         for (let r = minR; r <= maxR; r++) {
@@ -273,7 +274,6 @@ const GradesView: React.FC = () => {
     useEffect(() => {
         const handleClickOutside = () => {
             if (!selection.isDragging && selection.start) {
-                // Pequeño delay para permitir que el botón de Llenar funcione antes de limpiar
                 setTimeout(() => {
                     const activeElement = document.activeElement;
                     if (activeElement?.id !== 'bulk-fill-input' && activeElement?.id !== 'bulk-fill-btn') {
