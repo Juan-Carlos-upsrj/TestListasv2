@@ -1,5 +1,5 @@
 {
-  "version": "3.3.10",
-  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v3.3.10/app-debug.apk",
-  "notes": "Dashboard Simplificado: Se eliminó el botón 'Cargar Horario' de las acciones rápidas para una interfaz más limpia. La sincronización de horario ahora reside exclusivamente en la sección de Configuración para mayor seguridad."
+  "version": "3.3.11",
+  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v3.3.11/app-debug.apk",
+  "notes": "Corrección de errores de compilación (TS6133). Se optimizó el Dashboard eliminando dependencias no utilizadas y se incrementó la versión para la distribución oficial."
 }

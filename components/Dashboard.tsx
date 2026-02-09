@@ -8,7 +8,7 @@ import { PROFESSOR_BIRTHDAYS, GROUP_COLORS, DAYS_OF_WEEK } from '../constants';
 import Modal from './common/Modal';
 import AttendanceTaker from './AttendanceTaker';
 import { motion, AnimatePresence } from 'framer-motion';
-import { syncAttendanceData, syncScheduleData } from '../services/syncService';
+import { syncAttendanceData } from '../services/syncService';
 import Button from './common/Button';
 import SemesterTransitionModal from './SemesterTransitionModal';
 import { v4 as uuidv4 } from 'uuid';
