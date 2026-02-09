@@ -1,4 +1,3 @@
-
 import React, { useContext, useEffect, useState, useRef, useCallback } from 'react';
 import { AppContext } from './context/AppContext';
 import Sidebar from './components/Sidebar';
@@ -283,6 +282,18 @@ const App: React.FC = () => {
                     {renderView()}
                 </motion.div>
             </AnimatePresence>
+
+            {/* GLOBAL FOOTER WITH LEGAL NOTICE */}
+            <footer className={`shrink-0 p-3 sm:p-4 text-center border-t border-border-color bg-surface/40 backdrop-blur-md ${isFullScreenView ? 'py-1 sm:py-1.5' : ''}`}>
+               <div className="max-w-4xl mx-auto space-y-1 sm:space-y-1.5">
+                  <p className="text-[8px] sm:text-[10px] font-black text-slate-400 uppercase tracking-[0.15em]">
+                     © 2026 Juan Carlos Salgado Robles. Todos los derechos reservados.
+                  </p>
+                  <p className="text-[7px] sm:text-[9px] text-slate-400/80 leading-tight italic">
+                     Desarrollado por Juan Carlos Salgado Robles. Uso autorizado bajo licencia exclusiva para la Universidad Politécnica de Santa Rosa Jáuregui. Prohibida su distribución externa sin consentimiento por escrito del autor.
+                  </p>
+               </div>
+            </footer>
         </motion.div>
       </main>
 
