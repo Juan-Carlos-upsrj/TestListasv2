@@ -1,5 +1,5 @@
 {
-  "version": "3.3.1",
-  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v3.3.1/app-debug.apk",
-  "notes": "Corrección de error crítico de SemVer: Eliminación de ceros a la izquierda en el número de parche para compatibilidad con Electron Updater."
+  "version": "3.3.2",
+  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v3.3.2/app-debug.apk",
+  "notes": "Actualización de footer legal con información de derechos de autor v2026 y deslinde de responsabilidad formal para UPSRJ."
 }

@@ -11,7 +11,7 @@ interface TermsModalProps {
 const TermsModal: React.FC<TermsModalProps> = ({ isOpen, onClose }) => {
     return (
         <Modal isOpen={isOpen} onClose={onClose} title="Términos y Condiciones del Software" size="lg">
-            <div className="space-y-6 max-h-[65vh] overflow-y-auto custom-scrollbar pr-2">
+            <div className="space-y-6 max-h-[60vh] overflow-y-auto custom-scrollbar pr-2">
                 <div className="p-4 bg-indigo-50 border border-indigo-100 rounded-2xl">
                     <h4 className="flex items-center gap-2 text-indigo-700 font-bold text-sm mb-2 uppercase tracking-tight">
                         <Icon name="shield" className="w-4 h-4" /> 1. TITULARIDAD
@@ -49,7 +49,16 @@ const TermsModal: React.FC<TermsModalProps> = ({ isOpen, onClose }) => {
                 </div>
             </div>
             
-            <div className="mt-8 pt-4 border-t border-slate-100">
+            <div className="mt-8 pt-4 border-t border-slate-100 space-y-4">
+                <div className="text-center space-y-2">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                        © 2026 Juan Carlos Salgado Robles. Todos los derechos reservados.
+                    </p>
+                    <p className="text-[9px] text-slate-400 leading-tight max-w-md mx-auto italic">
+                        Desarrollado por Juan Carlos Salgado Robles. Uso autorizado bajo licencia exclusiva para la Universidad Politécnica de Santa Rosa Jáuregui. Prohibida su distribución externa sin consentimiento por escrito del autor.
+                    </p>
+                </div>
+                
                 <Button onClick={onClose} className="w-full">
                     He leído y acepto los términos
                 </Button>
