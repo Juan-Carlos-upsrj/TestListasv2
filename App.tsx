@@ -277,23 +277,34 @@ const App: React.FC = () => {
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: -10 }}
                     transition={{ duration: 0.2 }}
-                    className={`flex-1 p-3 sm:p-5 lg:p-6 min-h-0 min-w-0 flex flex-col ${isFullScreenView ? 'h-full' : ''}`}
+                    className={`flex-1 p-3 sm:p-5 lg:p-6 min-h-0 min-w-0 flex flex-col ${isFullScreenView ? 'h-full' : 'pb-10'}`}
                 >
                     {renderView()}
+                    
+                    {/* GLOBAL FOOTER: Se integra al flujo de scroll si NO es vista de pantalla completa */}
+                    {!isFullScreenView && (
+                        <footer className="mt-12 shrink-0 p-4 text-center">
+                           <div className="max-w-4xl mx-auto space-y-1.5 opacity-60">
+                              <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.15em]">
+                                 © 2026 Juan Carlos Salgado Robles. Todos los derechos reservados.
+                              </p>
+                              <p className="text-[8px] text-slate-400 leading-tight italic">
+                                 Desarrollado por Juan Carlos Salgado Robles. Uso autorizado bajo licencia exclusiva para la Universidad Politécnica de Santa Rosa Jáuregui. Prohibida su distribución externa sin consentimiento por escrito del autor.
+                              </p>
+                           </div>
+                        </footer>
+                    )}
                 </motion.div>
             </AnimatePresence>
 
-            {/* GLOBAL FOOTER WITH LEGAL NOTICE */}
-            <footer className={`shrink-0 p-3 sm:p-4 text-center border-t border-border-color bg-surface/40 backdrop-blur-md ${isFullScreenView ? 'py-1 sm:py-1.5' : ''}`}>
-               <div className="max-w-4xl mx-auto space-y-1 sm:space-y-1.5">
-                  <p className="text-[8px] sm:text-[10px] font-black text-slate-400 uppercase tracking-[0.15em]">
-                     © 2026 Juan Carlos Salgado Robles. Todos los derechos reservados.
-                  </p>
-                  <p className="text-[7px] sm:text-[9px] text-slate-400/80 leading-tight italic">
-                     Desarrollado por Juan Carlos Salgado Robles. Uso autorizado bajo licencia exclusiva para la Universidad Politécnica de Santa Rosa Jáuregui. Prohibida su distribución externa sin consentimiento por escrito del autor.
-                  </p>
-               </div>
-            </footer>
+            {/* MINIMAL FOOTER: Solo para vistas de pantalla completa para no estorbar la vision */}
+            {isFullScreenView && (
+                <footer className="shrink-0 py-1 px-4 text-center border-t border-border-color bg-surface/30 backdrop-blur-md">
+                   <p className="text-[7px] font-black text-slate-400 uppercase tracking-widest truncate">
+                      © 2026 Juan Carlos Salgado Robles • UPSRJ Licencia Exclusiva
+                   </p>
+                </footer>
+            )}
         </motion.div>
       </main>
 
