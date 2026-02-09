@@ -1,4 +1,3 @@
-
 import React from 'react';
 
 // This is a mapping of icon names to their SVG path data.
@@ -46,6 +45,7 @@ const ICONS: { [key: string]: React.ReactNode } = {
   camera: <><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></>,
   dog: <><path d="M10 5.172a2 2 0 0 0-1.414.586l-1.172 1.172A2 2 0 0 1 6 7.5H3a1 1 0 0 0-1 1v5.5a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3V8.5a1 1 0 0 0-1-1h-3a2 2 0 0 1-1.414-.586l-1.172-1.172A2 2 0 0 0 10 5.172z"/><circle cx="8" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><path d="M9.5 14.5c.333.333.667.5 1 .5s.667-.167 1-.5"/></>,
   footprints: <><path d="M4 16v-2.382a1 1 0 0 0-.553-.894l-1.236-.618A2 2 0 0 1 1.106 9.382L3.5 4.585A3 3 0 0 1 6.182 3H9a3 3 0 0 1 3 3v2"/><path d="M12 14v2.382a1 1 0 0 0 .553.894l1.236.618A2 2 0 0 1 14.894 20.618l-2.394 4.797A3 3 0 0 1 9.818 27H7a3 3 0 0 1-3-3v-2"/><circle cx="18" cy="7" r="1"/><circle cx="21" cy="9" r="1"/><circle cx="15" cy="11" r="1"/><circle cx="19" cy="13" r="1"/></>,
+  shield: <><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></>,
 };
 
 type IconProps = {

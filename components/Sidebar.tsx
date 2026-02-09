@@ -1,12 +1,11 @@
-
 import React, { useContext, useState, SetStateAction, useMemo } from 'react';
 import { AppContext } from '../context/AppContext';
 import SettingsModal from './SettingsModal';
+import TermsModal from './TermsModal';
 import Icon from './icons/Icon';
 import { motion } from 'framer-motion';
 import { ActiveView, SidebarGroupDisplayMode } from '../types';
 import { GROUP_COLORS, APP_VERSION } from '../constants';
-import { startTour } from '../services/tourService';
 import useLocalStorage from '../hooks/useLocalStorage';
 
 // Helper to parse quarter for sorting (e.g. "5º" -> 5)
@@ -32,6 +31,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
   const { state, dispatch } = useContext(AppContext);
   const { groups, selectedGroupId, settings } = state;
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isTermsOpen, setIsTermsOpen] = useState(false);
   
   const [isCollapsed, setIsCollapsed] = useLocalStorage('sidebarCollapsed', false);
 
@@ -216,15 +216,6 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
         
         <div className={`p-4 border-t border-border-color space-y-2 flex-shrink-0 ${isCollapsed ? 'flex flex-col items-center px-2' : ''}`}>
           <button
-            onClick={startTour}
-            title={isCollapsed ? "Guía Rápida" : ""}
-            className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-text-secondary hover:text-primary hover:bg-surface-secondary transition-colors duration-200 border border-transparent hover:border-primary/20 ${isCollapsed ? 'justify-center px-2' : ''}`}
-          >
-            <Icon name="help-circle" className="w-5 h-5 flex-shrink-0" />
-            {!isCollapsed && <span className="text-sm font-semibold whitespace-nowrap">Guía Rápida</span>}
-          </button>
-          
-          <button
             id="sidebar-settings"
             onClick={() => setIsSettingsOpen(true)}
             title={isCollapsed ? "Configuración" : ""}
@@ -234,15 +225,25 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
             {!isCollapsed && <span className="text-base font-semibold whitespace-nowrap">Configuración</span>}
           </button>
 
+          <button
+            onClick={() => setIsTermsOpen(true)}
+            title={isCollapsed ? "Términos Legales" : ""}
+            className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-text-secondary hover:text-indigo-600 hover:bg-indigo-50 transition-colors duration-200 border border-transparent hover:border-indigo-100 ${isCollapsed ? 'justify-center px-2' : ''}`}
+          >
+            <Icon name="shield" className="w-5 h-5 flex-shrink-0" />
+            {!isCollapsed && <span className="text-sm font-semibold whitespace-nowrap">Términos y condiciones</span>}
+          </button>
+
           {!isCollapsed && (
             <div className="pt-2 flex flex-col items-center">
-               <span className="text-[10px] font-black text-slate-400 tracking-widest uppercase">Versión Actual</span>
+               <span className="text-[10px] font-black text-slate-400 tracking-widest uppercase">Versión Ecosistema</span>
                <span className="text-xs font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full mt-1 border border-primary/20">v{APP_VERSION}</span>
             </div>
           )}
         </div>
       </aside>
       <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
+      <TermsModal isOpen={isTermsOpen} onClose={() => setIsTermsOpen(false)} />
     </>
   );
 };

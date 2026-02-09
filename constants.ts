@@ -1,7 +1,8 @@
 import { AttendanceStatus, DayOfWeek, MotivationalQuote, Professor } from './types';
 
 // Manual version control for the web/mobile app
-export const APP_VERSION = '3.3.8'; 
+// New format: 3.3.XXX (Triple digit patch for granular control)
+export const APP_VERSION = '3.3.001'; 
 
 export const DAYS_OF_WEEK: DayOfWeek[] = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
 
