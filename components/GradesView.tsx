@@ -1,5 +1,4 @@
-
-import React, { useContext, useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useContext, useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { AppContext } from '../context/AppContext';
 import { Evaluation, Group } from '../types';
 import { v4 as uuidv4 } from 'uuid';
@@ -11,11 +10,14 @@ import { GroupForm } from './GroupManagement';
 import { calculatePartialAverage, getGradeColor, calculateFinalGradeWithRecovery } from '../services/gradeCalculation';
 import GradeImageModal from './GradeImageModal';
 import CopyEvaluationsModal from './CopyEvaluationsModal';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const GRADE_REMEDIAL_P1 = 'GRADE_REMEDIAL_P1';
 const GRADE_REMEDIAL_P2 = 'GRADE_REMEDIAL_P2';
 const GRADE_EXTRA = 'GRADE_EXTRA';
 const GRADE_SPECIAL = 'GRADE_SPECIAL';
+
+interface Coords { r: number; c: string; } // c es evaluationId
 
 const EvaluationForm: React.FC<{
     evaluation?: Evaluation;
@@ -28,7 +30,6 @@ const EvaluationForm: React.FC<{
     const [partial, setPartial] = useState<1 | 2>(evaluation?.partial || 1);
     const [isTeamBased, setIsTeamBased] = useState(evaluation?.isTeamBased || false);
     
-    // Detectar qué tipos de equipos existen en el grupo para decidir el default
     const hasBaseTeams = useMemo(() => group.students.some(s => s.team), [group]);
     const hasCoyoteTeams = useMemo(() => group.students.some(s => s.teamCoyote), [group]);
     
@@ -115,7 +116,6 @@ const EvaluationForm: React.FC<{
                                     <Icon name="dog" className="w-4 h-4"/> Equipos Coyote {!hasCoyoteTeams && '(Vacío)'}
                                 </button>
                             </div>
-                            <p className="mt-2 text-[10px] text-indigo-500 italic">La nota se copiará automáticamente a todos los integrantes del tipo de equipo seleccionado.</p>
                         </div>
                     )}
                 </div>
@@ -140,9 +140,14 @@ const GradesView: React.FC = () => {
     const [viewMode, setViewMode] = useState<'ordinary' | 'recovery'>('ordinary');
     const [searchTerm, setSearchTerm] = useState('');
     const [confirmDeleteEval, setConfirmDeleteEval] = useState<Evaluation | null>(null);
-    
-    // Nuevo estado para controlar qué equipo se muestra en la columna Eq.
     const [displayTeamType, setDisplayTeamType] = useState<'base' | 'coyote'>('base');
+
+    // ESTADOS PARA SELECCIÓN TIPO EXCEL
+    const [selection, setSelection] = useState<{ start: Coords | null, end: Coords | null, isDragging: boolean }>({
+        start: null, end: null, isDragging: false
+    });
+    const [bulkGradeValue, setBulkGradeValue] = useState('');
+    const [floatingPos, setFloatingPos] = useState({ x: 0, y: 0 });
 
     const setSelectedGroupId = useCallback((id: string | null) => {
         dispatch({ type: 'SET_SELECTED_GROUP', payload: id });
@@ -150,28 +155,17 @@ const GradesView: React.FC = () => {
 
     const group = useMemo(() => groups.find(g => g.id === selectedGroupId), [groups, selectedGroupId]);
     
-    // Auto-reset de displayTeamType si el grupo actual no tiene alumnos Coyote
-    useEffect(() => {
-        if (group) {
-            const hasCoyote = group.students.some(s => s.teamCoyote);
-            if (!hasCoyote && displayTeamType === 'coyote') {
-                setDisplayTeamType('base');
-            }
-        }
-    }, [selectedGroupId, group]);
-
-    // Detectar si existen ambos tipos para mostrar el switch
-    const hasBothTeamTypes = useMemo(() => {
-        if (!group) return false;
-        const hasBase = group.students.some(s => s.team);
-        const hasCoyote = group.students.some(s => s.teamCoyote);
-        return hasBase && hasCoyote;
-    }, [group]);
-
     const groupEvaluations = useMemo(() => (evaluations[selectedGroupId || ''] || []), [evaluations, selectedGroupId]);
     const groupGrades = useMemo(() => grades[selectedGroupId || ''] || {}, [grades, selectedGroupId]);
+    
     const p1Evaluations = useMemo(() => groupEvaluations.filter(e => e.partial === 1), [groupEvaluations]);
     const p2Evaluations = useMemo(() => groupEvaluations.filter(e => e.partial === 2), [groupEvaluations]);
+    
+    const allColumnIds = useMemo(() => {
+        if (viewMode === 'recovery') return [GRADE_REMEDIAL_P1, GRADE_REMEDIAL_P2, GRADE_EXTRA, GRADE_SPECIAL];
+        return [...p1Evaluations.map(e => e.id), ...p2Evaluations.map(e => e.id)];
+    }, [viewMode, p1Evaluations, p2Evaluations]);
+
     const p1AttendanceType = useMemo(() => group?.evaluationTypes.partial1.find(t => t.isAttendance), [group]);
     const p2AttendanceType = useMemo(() => group?.evaluationTypes.partial2.find(t => t.isAttendance), [group]);
 
@@ -198,10 +192,119 @@ const GradesView: React.FC = () => {
         });
     }, [group, filteredStudents, groupEvaluations, groupGrades, settings, attendance]);
 
+    const hasBothTeamTypes = useMemo(() => {
+        if (!group) return false;
+        return group.students.some(s => s.team) && group.students.some(s => s.teamCoyote);
+    }, [group]);
+
     const handleGradeChange = (studentId: string, evaluationId: string, score: string) => {
         if (selectedGroupId) {
-            const scoreValue = score === '' ? null : parseFloat(score);
+            const scoreValue = score === '' ? null : Math.max(0, parseFloat(score));
             dispatch({ type: 'UPDATE_GRADE', payload: { groupId: selectedGroupId, studentId, evaluationId, score: scoreValue } });
+        }
+    };
+
+    // LÓGICA DE SELECCIÓN POR ARRASTRE
+    const onMouseDown = (r: number, c: string, e: React.MouseEvent) => {
+        // Solo iniciar si es click izquierdo
+        if (e.button !== 0) return;
+        setSelection({ start: { r, c }, end: { r, c }, isDragging: true });
+    };
+
+    const onMouseEnter = (r: number, c: string) => {
+        if (selection.isDragging) {
+            setSelection(prev => ({ ...prev, end: { r, c } }));
+        }
+    };
+
+    const onMouseUp = (e: React.MouseEvent) => {
+        if (selection.isDragging) {
+            setSelection(prev => ({ ...prev, isDragging: false }));
+            setFloatingPos({ x: e.clientX, y: e.clientY });
+        }
+    };
+
+    const isSelected = (r: number, cId: string) => {
+        if (!selection.start || !selection.end) return false;
+        
+        const minR = Math.min(selection.start.r, selection.end.r);
+        const maxR = Math.max(selection.start.r, selection.end.r);
+        
+        const startCIdx = allColumnIds.indexOf(selection.start.c);
+        const endCIdx = allColumnIds.indexOf(selection.end.c);
+        const minC = Math.min(startCIdx, endCIdx);
+        const maxC = Math.max(startCIdx, endCIdx);
+        
+        const currentCIdx = allColumnIds.indexOf(cId);
+        
+        return r >= minR && r <= maxR && currentCIdx >= minC && currentCIdx <= maxC;
+    };
+
+    const handleBulkFill = () => {
+        if (!selection.start || !selection.end || !selectedGroupId) return;
+        
+        const minR = Math.min(selection.start.r, selection.end.r);
+        const maxR = Math.max(selection.start.r, selection.end.r);
+        const startCIdx = allColumnIds.indexOf(selection.start.c);
+        const endCIdx = allColumnIds.indexOf(selection.end.c);
+        const minC = Math.min(startCIdx, endCIdx);
+        const maxC = Math.max(startCIdx, endCIdx);
+
+        const targetList = viewMode === 'recovery' ? studentsForRecovery : filteredStudents;
+        const numericValue = bulkGradeValue === '' ? null : Math.max(0, parseFloat(bulkGradeValue));
+        
+        let count = 0;
+        for (let r = minR; r <= maxR; r++) {
+            const student = targetList[r];
+            if (!student) continue;
+            for (let cIdx = minC; cIdx <= maxC; cIdx++) {
+                const evalId = allColumnIds[cIdx];
+                dispatch({ type: 'UPDATE_GRADE', payload: { groupId: selectedGroupId, studentId: student.id, evaluationId: evalId, score: numericValue } });
+                count++;
+            }
+        }
+        
+        dispatch({ type: 'ADD_TOAST', payload: { message: `Se actualizaron ${count} celdas.`, type: 'success' } });
+        setSelection({ start: null, end: null, isDragging: false });
+        setBulkGradeValue('');
+    };
+
+    // Cerrar selección al hacer click fuera
+    useEffect(() => {
+        const handleClickOutside = () => {
+            if (!selection.isDragging && selection.start) {
+                // Pequeño delay para permitir que el botón de Llenar funcione antes de limpiar
+                setTimeout(() => {
+                    const activeElement = document.activeElement;
+                    if (activeElement?.id !== 'bulk-fill-input' && activeElement?.id !== 'bulk-fill-btn') {
+                         setSelection({ start: null, end: null, isDragging: false });
+                    }
+                }, 100);
+            }
+        };
+        window.addEventListener('mousedown', handleClickOutside);
+        return () => window.removeEventListener('mousedown', handleClickOutside);
+    }, [selection]);
+
+    const handlePaste = (e: React.ClipboardEvent, studentIndex: number, evaluationId: string) => {
+        const pasteData = e.clipboardData.getData('text');
+        const rows = pasteData.split(/\r?\n/).filter(line => line.trim() !== "");
+        
+        if (rows.length > 1 && selectedGroupId) {
+            e.preventDefault();
+            let count = 0;
+            rows.forEach((rowValue, offset) => {
+                const targetStudent = filteredStudents[studentIndex + offset];
+                if (targetStudent) {
+                    const cleanValue = rowValue.trim().replace(',', '.');
+                    const numericValue = parseFloat(cleanValue);
+                    if (!isNaN(numericValue)) {
+                        handleGradeChange(targetStudent.id, evaluationId, Math.max(0, numericValue).toString());
+                        count++;
+                    }
+                }
+            });
+            dispatch({ type: 'ADD_TOAST', payload: { message: `Se pegaron ${count} calificaciones correctamente.`, type: 'success' } });
         }
     };
 
@@ -217,15 +320,6 @@ const GradesView: React.FC = () => {
         setEvalModalOpen(true);
     };
 
-    const toggleTeamsVisibility = () => {
-        dispatch({ type: 'UPDATE_SETTINGS', payload: { showTeamsInGrades: !settings.showTeamsInGrades } });
-    };
-
-    const toggleDisplayTeamType = (e: React.MouseEvent) => {
-        e.stopPropagation();
-        setDisplayTeamType(prev => prev === 'base' ? 'coyote' : 'base');
-    };
-
     const renderHeaderButtons = (ev: Evaluation) => (
         <div className="flex flex-col items-center justify-center p-2 relative group w-full">
             <div className="absolute top-0 right-0 flex sm:opacity-0 sm:group-hover:opacity-100 transition-opacity bg-white/80 rounded-md shadow-sm z-10">
@@ -233,17 +327,17 @@ const GradesView: React.FC = () => {
                 <button onClick={() => setConfirmDeleteEval(ev)} className="p-1 text-red-600 hover:bg-red-50 rounded" title="Borrar"><Icon name="trash-2" className="w-3.5 h-3.5"/></button>
             </div>
             {ev.isTeamBased && (
-                <div className="flex items-center gap-1 mb-0.5" title={`Evaluación por ${ev.teamType === 'coyote' ? 'Equipo Coyote' : 'Equipo Base'}`}>
+                <div className="flex items-center gap-1 mb-0.5">
                     <Icon name={ev.teamType === 'coyote' ? "dog" : "users"} className={`w-3 h-3 ${ev.teamType === 'coyote' ? 'text-orange-500' : 'text-indigo-500'}`} />
                 </div>
             )}
-            <span className={`text-[10px] font-bold leading-tight line-clamp-2 px-1 text-center ${ev.isTeamBased ? (ev.teamType === 'coyote' ? 'text-orange-800' : 'text-indigo-800') : ''}`} title={ev.name}>{ev.name}</span>
+            <span className={`text-[10px] font-bold leading-tight line-clamp-2 px-1 text-center ${ev.isTeamBased ? (ev.teamType === 'coyote' ? 'text-orange-800' : 'text-indigo-800') : ''}`}>{ev.name}</span>
             <span className="text-[9px] opacity-60 font-normal">({ev.maxScore} pts)</span>
         </div>
     );
 
     return (
-        <div className="flex flex-col h-full overflow-hidden">
+        <div className="flex flex-col h-full overflow-hidden" onMouseUp={onMouseUp}>
             <div className="bg-surface p-3 mb-4 rounded-xl border border-border-color shadow-sm flex flex-col gap-3">
                 <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
                     <select value={selectedGroupId || ''} onChange={(e) => setSelectedGroupId(e.target.value)} className="w-full sm:w-56 p-2 border border-border-color rounded-md bg-white text-sm focus:ring-2 focus:ring-primary">
@@ -258,39 +352,36 @@ const GradesView: React.FC = () => {
                         <input 
                             type="text" 
                             className="block w-full pl-9 pr-3 py-2 border border-border-color rounded-md bg-white text-sm focus:ring-1 focus:ring-primary" 
-                            placeholder="Buscar alumno por nombre, matrícula o apodo..." 
+                            placeholder="Buscar alumno..." 
                             value={searchTerm} 
                             onChange={(e) => setSearchTerm(e.target.value)} 
                         />
                     </div>
 
-                    <div className="flex-grow flex flex-wrap gap-2 justify-end">
-                        <div className="bg-surface-secondary p-1 rounded-lg flex border border-border-color">
-                            <button onClick={() => setViewMode('ordinary')} className={`px-2 py-1.5 rounded-md text-xs font-bold ${viewMode === 'ordinary' ? 'bg-white shadow text-primary' : 'text-text-secondary'}`}>Ordinario</button>
-                            <button onClick={() => setViewMode('recovery')} className={`px-2 py-1.5 rounded-md text-xs font-bold ${viewMode === 'recovery' ? 'bg-amber-100 shadow text-amber-800' : 'text-text-secondary'}`}>Recuperación</button>
-                        </div>
+                    <div className="bg-surface-secondary p-1 rounded-lg flex border border-border-color">
+                        <button onClick={() => setViewMode('ordinary')} className={`px-3 py-1.5 rounded-md text-xs font-bold ${viewMode === 'ordinary' ? 'bg-white shadow text-primary' : 'text-text-secondary'}`}>Ordinario</button>
+                        <button onClick={() => setViewMode('recovery')} className={`px-3 py-1.5 rounded-md text-xs font-bold ${viewMode === 'recovery' ? 'bg-amber-100 shadow text-amber-800' : 'text-text-secondary'}`}>Recuperación</button>
                     </div>
                 </div>
 
                 <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border-color pt-3">
                     <div className="flex items-center gap-4">
-                        <div className="flex items-center gap-2">
-                             <button 
-                                onClick={toggleTeamsVisibility}
-                                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs font-bold transition-all ${settings.showTeamsInGrades ? 'bg-indigo-50 border-indigo-200 text-indigo-700' : 'bg-surface border-border-color text-text-secondary'}`}
-                            >
-                                <Icon name="users" className="w-4 h-4"/>
-                                {settings.showTeamsInGrades ? 'Equipos: ON' : 'Equipos: OFF'}
-                            </button>
-                        </div>
-                        <span className="text-xs text-text-secondary font-medium">Resultados: {viewMode === 'ordinary' ? filteredStudents.length : studentsForRecovery.length}</span>
+                        <button 
+                            onClick={() => dispatch({ type: 'UPDATE_SETTINGS', payload: { showTeamsInGrades: !settings.showTeamsInGrades } })}
+                            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs font-bold transition-all ${settings.showTeamsInGrades ? 'bg-indigo-50 border-indigo-200 text-indigo-700' : 'bg-surface border-border-color text-text-secondary'}`}
+                        >
+                            <Icon name="users" className="w-4 h-4"/> Equipos: {settings.showTeamsInGrades ? 'ON' : 'OFF'}
+                        </button>
+                        <span className="text-[10px] text-slate-400 font-bold uppercase tracking-tight flex items-center gap-2">
+                            <Icon name="copy" className="w-3 h-3"/> Arrastra para seleccionar múltiples celdas
+                        </span>
                     </div>
 
                     {viewMode === 'ordinary' && (
                         <div className="flex gap-2">
-                            <Button variant="secondary" size="sm" onClick={() => setCopyModalOpen(true)} title="Importar de otro grupo"><Icon name="copy" className="w-4 h-4"/><span className="hidden lg:inline ml-1">Importar Tareas</span></Button>
-                            <Button variant="secondary" size="sm" onClick={() => setImageModalOpen(true)} title="Captura de Calificaciones"><Icon name="camera" className="w-4 h-4"/></Button>
-                            <Button variant="secondary" size="sm" onClick={() => setGroupConfigOpen(true)} title="Criterios"><Icon name="settings" className="w-4 h-4"/></Button>
+                            <Button variant="secondary" size="sm" onClick={() => setCopyModalOpen(true)}><Icon name="copy" className="w-4 h-4"/><span className="hidden lg:inline ml-1">Copiar Tareas</span></Button>
+                            <Button variant="secondary" size="sm" onClick={() => setImageModalOpen(true)}><Icon name="camera" className="w-4 h-4"/></Button>
+                            <Button variant="secondary" size="sm" onClick={() => setGroupConfigOpen(true)}><Icon name="settings" className="w-4 h-4"/></Button>
                             <Button size="sm" onClick={() => { setEditingEvaluation(undefined); setEvalModalOpen(true); }}><Icon name="plus" className="w-4 h-4"/> <span className="hidden sm:inline ml-1">Nueva Evaluación</span></Button>
                         </div>
                     )}
@@ -298,8 +389,41 @@ const GradesView: React.FC = () => {
             </div>
 
             {group ? (
-                <div className="flex-1 bg-surface rounded-xl border border-border-color shadow-sm overflow-hidden flex flex-col">
-                    <div className="overflow-auto flex-1 custom-scrollbar">
+                <div className="flex-1 bg-surface rounded-xl border border-border-color shadow-sm overflow-hidden flex flex-col relative">
+                    {/* BARRA FLOTANTE DE LLENADO MASIVO */}
+                    <AnimatePresence>
+                        {selection.start && selection.end && !selection.isDragging && (Math.abs(selection.start.r - selection.end.r) > 0 || selection.start.c !== selection.end.c) && (
+                            <motion.div 
+                                initial={{ opacity: 0, scale: 0.8, y: 10 }}
+                                animate={{ opacity: 1, scale: 1, y: 0 }}
+                                exit={{ opacity: 0, scale: 0.8 }}
+                                className="fixed z-[100] bg-white border border-indigo-200 shadow-2xl p-1.5 rounded-xl flex items-center gap-2"
+                                style={{ 
+                                    left: Math.min(window.innerWidth - 250, floatingPos.x), 
+                                    top: Math.min(window.innerHeight - 80, floatingPos.y + 15) 
+                                }}
+                            >
+                                <div className="bg-indigo-600 p-2 rounded-lg text-white">
+                                    <Icon name="edit-3" className="w-4 h-4" />
+                                </div>
+                                <input 
+                                    id="bulk-fill-input"
+                                    type="number" step="0.1" min="0" placeholder="Nota..." 
+                                    className="w-20 p-1.5 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary font-bold"
+                                    value={bulkGradeValue}
+                                    onChange={e => setBulkGradeValue(e.target.value)}
+                                    autoFocus
+                                    onKeyDown={e => e.key === 'Enter' && handleBulkFill()}
+                                />
+                                <Button id="bulk-fill-btn" size="sm" onClick={handleBulkFill} className="!py-1.5 !px-3 shadow-sm">Llenar</Button>
+                                <button onClick={() => setSelection({ start: null, end: null, isDragging: false })} className="p-1.5 hover:bg-slate-100 rounded text-slate-400">
+                                    <Icon name="x" className="w-4 h-4" />
+                                </button>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+
+                    <div className="overflow-auto flex-1 custom-scrollbar select-none">
                         {viewMode === 'ordinary' ? (
                             <table className="w-full border-collapse text-xs">
                                 <thead className="sticky top-0 z-20 bg-slate-50 shadow-sm">
@@ -307,16 +431,14 @@ const GradesView: React.FC = () => {
                                         <th rowSpan={2} className="sticky left-0 bg-slate-50 p-3 text-left font-bold border-b border-r border-slate-200 z-30 min-w-max">Alumno</th>
                                         {settings.showTeamsInGrades && (
                                             <th rowSpan={2} className="p-0 font-bold text-center border-b border-r border-slate-200 bg-slate-100 text-[10px] w-20">
-                                                <div className="flex flex-col h-full items-center justify-center gap-1 group/eq">
+                                                <div className="flex flex-col h-full items-center justify-center gap-1">
                                                     <span className="uppercase tracking-tighter opacity-60">Eq.</span>
                                                     {hasBothTeamTypes ? (
                                                         <button 
-                                                            onClick={toggleDisplayTeamType}
+                                                            onClick={(e) => { e.stopPropagation(); setDisplayTeamType(prev => prev === 'base' ? 'coyote' : 'base'); }}
                                                             className={`p-1 rounded-md transition-all flex items-center gap-1.5 ${displayTeamType === 'coyote' ? 'bg-orange-100 text-orange-700' : 'bg-indigo-100 text-indigo-700'}`}
-                                                            title={`Viendo: ${displayTeamType === 'coyote' ? 'Equipo Coyote' : 'Equipo Base'}. Haz clic para cambiar.`}
                                                         >
                                                             <Icon name={displayTeamType === 'coyote' ? "dog" : "users"} className="w-3 h-3"/>
-                                                            <Icon name="layout" className="w-2.5 h-2.5 opacity-40"/>
                                                         </button>
                                                     ) : (
                                                         <Icon name={displayTeamType === 'coyote' ? "dog" : "users"} className="w-3.5 h-3.5 text-slate-400"/>
@@ -340,8 +462,6 @@ const GradesView: React.FC = () => {
                                     {filteredStudents.map((student, idx) => {
                                         const p1Avg = calculatePartialAverage(group, 1, groupEvaluations, groupGrades[student.id] || {}, settings, attendance[group.id]?.[student.id] || {});
                                         const p2Avg = calculatePartialAverage(group, 2, groupEvaluations, groupGrades[student.id] || {}, settings, attendance[group.id]?.[student.id] || {});
-                                        
-                                        // Valor dinámico de la columna Eq.
                                         const teamValue = displayTeamType === 'coyote' ? student.teamCoyote : student.team;
 
                                         return (
@@ -355,20 +475,44 @@ const GradesView: React.FC = () => {
                                                     </div>
                                                 </td>
                                                 {settings.showTeamsInGrades && (
-                                                    <td className={`p-1 text-center font-bold border-r border-slate-100 text-[10px] truncate max-w-[80px] ${displayTeamType === 'coyote' ? 'text-orange-600 bg-orange-50/20' : 'text-indigo-600 bg-indigo-50/20'}`} title={teamValue || ''}>
+                                                    <td className="p-1 text-center font-bold border-r border-slate-100 text-[10px] truncate max-w-[80px]">
                                                         {teamValue || '-'}
                                                     </td>
                                                 )}
                                                 {p1Evaluations.map(ev => (
-                                                    <td key={ev.id} className="p-1 border-r border-slate-100">
-                                                        <input type="number" step="0.1" value={groupGrades[student.id]?.[ev.id] ?? ''} onChange={(e) => handleGradeChange(student.id, ev.id, e.target.value)} className="w-full max-w-[50px] mx-auto block bg-transparent text-center focus:ring-1 focus:ring-primary rounded py-1" placeholder="-"/>
+                                                    <td 
+                                                        key={ev.id} 
+                                                        className={`p-1 border-r border-slate-100 transition-colors ${isSelected(idx, ev.id) ? 'bg-indigo-100/80 ring-2 ring-indigo-500 ring-inset z-10' : ''}`}
+                                                        onMouseDown={(e) => onMouseDown(idx, ev.id, e)}
+                                                        onMouseEnter={() => onMouseEnter(idx, ev.id)}
+                                                    >
+                                                        <input 
+                                                            type="number" step="0.1" min="0"
+                                                            value={groupGrades[student.id]?.[ev.id] ?? ''} 
+                                                            onChange={(e) => handleGradeChange(student.id, ev.id, e.target.value)} 
+                                                            onPaste={(e) => handlePaste(e, idx, ev.id)}
+                                                            className={`w-full max-w-[50px] mx-auto block bg-transparent text-center focus:ring-1 focus:ring-primary rounded py-1 ${isSelected(idx, ev.id) ? 'font-black text-indigo-900' : ''}`} 
+                                                            placeholder="-"
+                                                        />
                                                     </td>
                                                 ))}
                                                 {p1AttendanceType && <td className="p-1 text-center text-emerald-600 border-r border-slate-100">✔</td>}
                                                 <td className={`p-2 text-center font-bold border-r border-slate-100 bg-slate-50/50 ${getGradeColor(p1Avg)}`}>{p1Avg?.toFixed(1) || '-'}</td>
                                                 {p2Evaluations.map(ev => (
-                                                    <td key={ev.id} className="p-1 border-r border-slate-100">
-                                                        <input type="number" step="0.1" value={groupGrades[student.id]?.[ev.id] ?? ''} onChange={(e) => handleGradeChange(student.id, ev.id, e.target.value)} className="w-full max-w-[50px] mx-auto block bg-transparent text-center focus:ring-1 focus:ring-primary rounded py-1" placeholder="-"/>
+                                                    <td 
+                                                        key={ev.id} 
+                                                        className={`p-1 border-r border-slate-100 transition-colors ${isSelected(idx, ev.id) ? 'bg-indigo-100/80 ring-2 ring-indigo-500 ring-inset z-10' : ''}`}
+                                                        onMouseDown={(e) => onMouseDown(idx, ev.id, e)}
+                                                        onMouseEnter={() => onMouseEnter(idx, ev.id)}
+                                                    >
+                                                        <input 
+                                                            type="number" step="0.1" min="0"
+                                                            value={groupGrades[student.id]?.[ev.id] ?? ''} 
+                                                            onChange={(e) => handleGradeChange(student.id, ev.id, e.target.value)} 
+                                                            onPaste={(e) => handlePaste(e, idx, ev.id)}
+                                                            className={`w-full max-w-[50px] mx-auto block bg-transparent text-center focus:ring-1 focus:ring-primary rounded py-1 ${isSelected(idx, ev.id) ? 'font-black text-indigo-900' : ''}`} 
+                                                            placeholder="-"
+                                                        />
                                                     </td>
                                                 ))}
                                                 {p2AttendanceType && <td className="p-1 text-center text-emerald-600 border-r border-slate-100">✔</td>}
@@ -403,10 +547,18 @@ const GradesView: React.FC = () => {
                                                 <td className="p-2.5 font-bold whitespace-nowrap">
                                                     {student.name} {student.nickname && <span className="text-[10px] text-text-secondary italic">({student.nickname})</span>} {student.isRepeating && <span className="bg-rose-600 text-white text-[8px] font-bold px-1 rounded-full">R</span>}
                                                 </td>
-                                                <td className="p-1 text-center"><input type="number" value={r1 ?? ''} onChange={(e) => handleGradeChange(student.id, GRADE_REMEDIAL_P1, e.target.value)} className="w-12 text-center border-amber-200 focus:ring-amber-500 rounded py-1"/></td>
-                                                <td className="p-1 text-center"><input type="number" value={r2 ?? ''} onChange={(e) => handleGradeChange(student.id, GRADE_REMEDIAL_P2, e.target.value)} className="w-12 text-center border-amber-200 focus:ring-amber-500 rounded py-1"/></td>
-                                                <td className="p-1 text-center"><input type="number" value={extra ?? ''} onChange={(e) => handleGradeChange(student.id, GRADE_EXTRA, e.target.value)} disabled={!canTakeExtra} className={`w-12 text-center rounded py-1 ${!canTakeExtra ? 'opacity-30' : 'border-amber-400 focus:ring-amber-500'}`}/></td>
-                                                <td className="p-1 text-center"><input type="number" value={special ?? ''} onChange={(e) => handleGradeChange(student.id, GRADE_SPECIAL, e.target.value)} disabled={!student.isRepeating} className={`w-12 text-center rounded py-1 ${!student.isRepeating ? 'opacity-30' : 'border-amber-500 focus:ring-amber-500'}`}/></td>
+                                                <td className={`p-1 text-center transition-colors ${isSelected(idx, GRADE_REMEDIAL_P1) ? 'bg-amber-200' : ''}`} onMouseDown={(e) => onMouseDown(idx, GRADE_REMEDIAL_P1, e)} onMouseEnter={() => onMouseEnter(idx, GRADE_REMEDIAL_P1)}>
+                                                    <input type="number" min="0" value={r1 ?? ''} onChange={(e) => handleGradeChange(student.id, GRADE_REMEDIAL_P1, e.target.value)} onPaste={(e) => handlePaste(e, idx, GRADE_REMEDIAL_P1)} className="w-12 text-center border-amber-200 focus:ring-amber-500 rounded py-1 bg-transparent"/>
+                                                </td>
+                                                <td className={`p-1 text-center transition-colors ${isSelected(idx, GRADE_REMEDIAL_P2) ? 'bg-amber-200' : ''}`} onMouseDown={(e) => onMouseDown(idx, GRADE_REMEDIAL_P2, e)} onMouseEnter={() => onMouseEnter(idx, GRADE_REMEDIAL_P2)}>
+                                                    <input type="number" min="0" value={r2 ?? ''} onChange={(e) => handleGradeChange(student.id, GRADE_REMEDIAL_P2, e.target.value)} onPaste={(e) => handlePaste(e, idx, GRADE_REMEDIAL_P2)} className="w-12 text-center border-amber-200 focus:ring-amber-500 rounded py-1 bg-transparent"/>
+                                                </td>
+                                                <td className={`p-1 text-center transition-colors ${isSelected(idx, GRADE_EXTRA) ? 'bg-amber-200' : ''}`} onMouseDown={(e) => canTakeExtra && onMouseDown(idx, GRADE_EXTRA, e)} onMouseEnter={() => canTakeExtra && onMouseEnter(idx, GRADE_EXTRA)}>
+                                                    <input type="number" min="0" value={extra ?? ''} onChange={(e) => handleGradeChange(student.id, GRADE_EXTRA, e.target.value)} onPaste={(e) => handlePaste(e, idx, GRADE_EXTRA)} disabled={!canTakeExtra} className={`w-12 text-center rounded py-1 bg-transparent ${!canTakeExtra ? 'opacity-30' : 'border-amber-400 focus:ring-amber-500'}`}/>
+                                                </td>
+                                                <td className={`p-1 text-center transition-colors ${isSelected(idx, GRADE_SPECIAL) ? 'bg-amber-200' : ''}`} onMouseDown={(e) => student.isRepeating && onMouseDown(idx, GRADE_SPECIAL, e)} onMouseEnter={() => student.isRepeating && onMouseEnter(idx, GRADE_SPECIAL)}>
+                                                    <input type="number" min="0" value={special ?? ''} onChange={(e) => handleGradeChange(student.id, GRADE_SPECIAL, e.target.value)} onPaste={(e) => handlePaste(e, idx, GRADE_SPECIAL)} disabled={!student.isRepeating} className={`w-12 text-center rounded py-1 bg-transparent ${!student.isRepeating ? 'opacity-30' : 'border-amber-500 focus:ring-amber-500'}`}/>
+                                                </td>
                                                 <td className={`p-2 text-center font-bold bg-amber-100/50 ${getGradeColor(finalScore)}`}>{finalScore?.toFixed(1) || '-'}</td>
                                             </tr>
                                         );
@@ -434,7 +586,6 @@ const GradesView: React.FC = () => {
                         confirmText="Eliminar"
                     >
                         ¿Seguro que deseas eliminar la evaluación <strong>"{confirmDeleteEval?.name}"</strong>?
-                        <p className="mt-2 text-xs opacity-70 text-red-500">Esta acción no se puede deshacer y borrará todas las calificaciones asignadas a ella.</p>
                     </ConfirmationModal>
                 </>
             )}
