@@ -1,9 +1,8 @@
-
 import React, { useContext, useState, useMemo, useEffect, useCallback, useRef, createContext } from 'react';
 import { AppContext } from '../context/AppContext';
 import { AttendanceStatus, Student } from '../types';
 import { getClassDates } from '../services/dateUtils';
-import { STATUS_STYLES } from '../constants';
+import { STATUS_STYLES, ATTENDANCE_STATUSES } from '../constants';
 import Icon from './icons/Icon';
 import Modal from './common/Modal';
 import Button from './common/Button';
@@ -16,6 +15,7 @@ import * as ReactWindow from 'react-window';
 import type { ListChildComponentProps } from 'react-window';
 // @ts-ignore
 import AutoSizer from 'react-virtualized-auto-sizer';
+import { motion, AnimatePresence } from 'framer-motion';
 
 // Robust import for FixedSizeList
 const List = (ReactWindow as any).FixedSizeList || (ReactWindow as any).default?.FixedSizeList || ReactWindow.FixedSizeList;
@@ -230,7 +230,7 @@ const Row = React.memo(({ index, style }: ListChildComponentProps) => {
                 return (
                     <div 
                         key={date}
-                        className={`flex items-center justify-center border-r border-slate-200 h-full cursor-pointer select-none relative z-0 ${date === todayStr ? 'bg-blue-50/30' : ''} ${isSelected ? '!bg-blue-100' : ''}`}
+                        className={`flex items-center justify-center border-r border-slate-200 h-full cursor-pointer select-none relative z-0 ${date === todayStr ? 'bg-blue-50/30' : ''} ${isSelected ? '!bg-blue-100 ring-1 ring-blue-400 ring-inset' : ''}`}
                         style={{ width: DATE_COL_WIDTH }}
                         onMouseDown={() => onMouseDown(index, colIndex)}
                         onMouseEnter={() => onMouseEnter(index, colIndex)}
@@ -263,6 +263,10 @@ const AttendanceView: React.FC = () => {
     const [nameColWidth, setNameColWidth] = useState(getResponsiveNameColWidth());
     const [displayMode, setDisplayMode] = useState<StatDisplayMode>('percent');
 
+    // ESTADOS PARA BARRA FLOTANTE (ESTILO EXCEL)
+    const [selection, setSelection] = useState<{ start: Coords | null; end: Coords | null; isDragging: boolean }>({ start: null, end: null, isDragging: false });
+    const [floatingPos, setFloatingPos] = useState({ x: 0, y: 0 });
+
     useEffect(() => {
         setIsReady(false);
         const timer = setTimeout(() => setIsReady(true), 150);
@@ -279,8 +283,6 @@ const AttendanceView: React.FC = () => {
     const todayStr = useMemo(() => new Date().toISOString().split('T')[0], []);
 
     const [focusedCell, setFocusedCell] = useState<Coords | null>(null);
-    const [selection, setSelection] = useState<{ start: Coords | null; end: Coords | null; isDragging: boolean }>({ start: null, end: null, isDragging: false });
-    
     const stateRef = useRef({ focusedCell, selection, filteredStudents: [] as Student[], classDates: [] as string[] });
 
     const setSelectedGroupId = useCallback((id: string | null) => {
@@ -323,8 +325,39 @@ const AttendanceView: React.FC = () => {
         setSelection(prev => prev.isDragging ? { ...prev, end: { r, c } } : prev);
     }, []);
 
+    const handleMouseUp = useCallback((e: React.MouseEvent) => {
+        if (selection.isDragging) {
+            setSelection(prev => ({ ...prev, isDragging: false }));
+            setFloatingPos({ x: e.clientX, y: e.clientY });
+        }
+    }, [selection.isDragging]);
+
+    const handleBulkFill = (status: AttendanceStatus) => {
+        if (!selection.start || !selection.end || !selectedGroupId) return;
+
+        const minR = Math.min(selection.start.r, selection.end.r);
+        const maxR = Math.max(selection.start.r, selection.end.r);
+        const minC = Math.min(selection.start.c, selection.end.c);
+        const maxC = Math.max(selection.start.c, selection.end.c);
+
+        let count = 0;
+        for (let r = minR; r <= maxR; r++) {
+            const student = filteredStudents[r];
+            if (!student) continue;
+            for (let c = minC; c <= maxC; c++) {
+                const date = classDates[c];
+                if (!date) continue;
+                dispatch({ type: 'UPDATE_ATTENDANCE', payload: { groupId: selectedGroupId, studentId: student.id, date, status } });
+                count++;
+            }
+        }
+
+        dispatch({ type: 'ADD_TOAST', payload: { message: `Actualizados ${count} registros de asistencia.`, type: 'success' } });
+        setSelection({ start: null, end: null, isDragging: false });
+    };
+
     useEffect(() => {
-        const handleMouseUp = () => setSelection(prev => ({ ...prev, isDragging: false }));
+        const handleGlobalMouseUp = () => setSelection(prev => prev.isDragging ? { ...prev, isDragging: false } : prev);
         
         const handleKeyDown = (e: KeyboardEvent) => {
             const target = e.target;
@@ -370,10 +403,10 @@ const AttendanceView: React.FC = () => {
             }
         };
 
-        window.addEventListener('mouseup', handleMouseUp);
+        window.addEventListener('mouseup', handleGlobalMouseUp);
         window.addEventListener('keydown', handleKeyDown);
         return () => {
-            window.removeEventListener('mouseup', handleMouseUp);
+            window.removeEventListener('mouseup', handleGlobalMouseUp);
             window.removeEventListener('keydown', handleKeyDown);
         };
     }, [handleStatusChange]);
@@ -477,7 +510,7 @@ const AttendanceView: React.FC = () => {
     }), [filteredStudents, classDates, attendance, group, focusedCell, selection, todayStr, headerStructure, totalWidth, handleStatusChange, handleMouseDown, handleMouseEnter, precalcStats, nameColWidth, displayMode, settings.lowAttendanceThreshold, allowedAbsencesLimits, isCurrentP1, isCurrentP2]);
 
     return (
-        <div className="flex flex-col h-full overflow-hidden">
+        <div className="flex flex-col h-full overflow-hidden" onMouseUp={handleMouseUp}>
             <div className="bg-surface p-3 mb-4 rounded-xl border border-border-color shadow-sm flex flex-col gap-3 shrink-0">
                  <div className="flex flex-col sm:flex-row gap-3">
                     <select value={selectedGroupId || ''} onChange={(e) => setSelectedGroupId(e.target.value)} className="w-full sm:w-56 p-2 border border-border-color rounded-md bg-white text-sm focus:ring-2 focus:ring-primary">
@@ -488,7 +521,7 @@ const AttendanceView: React.FC = () => {
                         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
                             <Icon name="search" className="h-4 w-4" />
                         </div>
-                        <input type="text" className="block w-full pl-9 pr-3 py-2 border border-border-color rounded-md bg-white text-sm focus:ring-1 focus:ring-primary" placeholder="Buscar alumno o apodo..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+                        <input type="text" className="block w-full pl-9 pr-3 py-2 border border-border-color rounded-md bg-white text-sm focus:ring-1 focus:ring-primary" placeholder="Buscar alumno..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
                     </div>
                 </div>
 
@@ -496,29 +529,32 @@ const AttendanceView: React.FC = () => {
                     <div className="flex flex-wrap items-center gap-4 bg-indigo-50/50 p-2.5 rounded-lg border border-indigo-100">
                         <div className="flex items-center gap-2">
                             <Icon name="info" className="w-4 h-4 text-indigo-600" />
-                            <span className="text-[10px] font-black uppercase text-indigo-900 tracking-wider">Límite de Faltas ({settings.lowAttendanceThreshold}%):</span>
+                            <span className="text-[10px] font-black uppercase text-indigo-900 tracking-wider">Faltas Permitidas:</span>
                         </div>
                         <div className="flex gap-4">
-                            <div className={`flex items-center gap-1.5 p-1 rounded ${isCurrentP1 ? 'bg-indigo-100/50 ring-1 ring-indigo-200 shadow-inner' : ''}`}>
-                                <span className={`text-[9px] font-bold uppercase ${isCurrentP1 ? 'text-indigo-800' : 'text-slate-50'}`}>P1:</span>
-                                <span className={`text-xs font-black px-2 py-0.5 rounded shadow-sm ${isCurrentP1 ? 'text-white bg-indigo-600' : 'text-indigo-700 bg-white'}`}>{allowedAbsencesLimits.p1} de {allowedAbsencesLimits.p1Total}</span>
-                                {isCurrentP1 && <span className="text-[7px] font-black text-indigo-400 uppercase tracking-tighter ml-1">ACTUAL</span>}
+                            <div className={`flex items-center gap-1.5 p-1 rounded ${isCurrentP1 ? 'bg-indigo-100/50 ring-1 ring-indigo-200' : ''}`}>
+                                <span className={`text-[9px] font-bold uppercase ${isCurrentP1 ? 'text-indigo-800' : 'text-slate-400'}`}>P1:</span>
+                                <span className={`text-xs font-black px-2 py-0.5 rounded shadow-sm ${isCurrentP1 ? 'text-white bg-indigo-600' : 'text-indigo-700 bg-white'}`}>{allowedAbsencesLimits.p1}</span>
                             </div>
-                            <div className={`flex items-center gap-1.5 p-1 rounded ${isCurrentP2 ? 'bg-indigo-100/50 ring-1 ring-indigo-200 shadow-inner' : ''}`}>
-                                <span className={`text-[9px] font-bold uppercase ${isCurrentP2 ? 'text-indigo-800' : 'text-slate-50'}`}>P2:</span>
-                                <span className={`text-xs font-black px-2 py-0.5 rounded shadow-sm ${isCurrentP2 ? 'text-white bg-indigo-600' : 'text-indigo-700 bg-white'}`}>{allowedAbsencesLimits.p2} de {allowedAbsencesLimits.p2Total}</span>
-                                {isCurrentP2 && <span className="text-[7px] font-black text-indigo-400 uppercase tracking-tighter ml-1">ACTUAL</span>}
+                            <div className={`flex items-center gap-1.5 p-1 rounded ${isCurrentP2 ? 'bg-indigo-100/50 ring-1 ring-indigo-200' : ''}`}>
+                                <span className={`text-[9px] font-bold uppercase ${isCurrentP2 ? 'text-indigo-800' : 'text-slate-400'}`}>P2:</span>
+                                <span className={`text-xs font-black px-2 py-0.5 rounded shadow-sm ${isCurrentP2 ? 'text-white bg-indigo-600' : 'text-indigo-700 bg-white'}`}>{allowedAbsencesLimits.p2}</span>
                             </div>
                             <div className="flex items-center gap-1.5">
-                                <span className="text-[9px] font-bold text-slate-500 uppercase">Total:</span>
-                                <span className="text-xs font-black text-rose-700 bg-white px-2 py-0.5 rounded shadow-sm">{allowedAbsencesLimits.global} de {allowedAbsencesLimits.totalClasses}</span>
+                                <span className="text-[9px] font-bold text-slate-500 uppercase">Global:</span>
+                                <span className="text-xs font-black text-rose-700 bg-white px-2 py-0.5 rounded shadow-sm border border-rose-100">{allowedAbsencesLimits.global}</span>
                             </div>
                         </div>
-                        <p className="hidden lg:block text-[9px] text-slate-400 italic flex-1 text-right">Cálculo de faltas permitidas aplicado.</p>
                     </div>
                 )}
 
                 <div className="flex flex-wrap gap-2 justify-end">
+                    <div className="flex items-center gap-4 mr-auto">
+                        <span className="text-[10px] text-slate-400 font-bold uppercase tracking-tight flex items-center gap-2">
+                            <Icon name="copy" className="w-3 h-3"/> Arrastra para seleccionar múltiples celdas
+                        </span>
+                    </div>
+
                     <div className="flex items-center bg-surface-secondary border border-border-color rounded-md p-0.5" title="Cambiar visualización de estadísticas">
                         <button 
                             onClick={() => setDisplayMode('percent')} 
@@ -543,6 +579,47 @@ const AttendanceView: React.FC = () => {
 
             {group && isReady ? (
                 <div className="flex-1 border border-border-color rounded-xl overflow-hidden bg-white shadow-sm min-h-[200px] relative z-0">
+                    {/* BARRA FLOTANTE DE LLENADO MASIVO ASISTENCIA */}
+                    <AnimatePresence>
+                        {selection.start && selection.end && !selection.isDragging && (Math.abs(selection.start.r - selection.end.r) > 0 || selection.start.c !== selection.end.c) && (
+                            <motion.div 
+                                initial={{ opacity: 0, scale: 0.8, y: 10 }}
+                                animate={{ opacity: 1, scale: 1, y: 0 }}
+                                exit={{ opacity: 0, scale: 0.8 }}
+                                className="fixed z-[100] bg-white border border-indigo-200 shadow-2xl p-1.5 rounded-xl flex items-center gap-1.5"
+                                style={{ 
+                                    left: Math.min(window.innerWidth - 300, floatingPos.x), 
+                                    top: Math.min(window.innerHeight - 80, floatingPos.y + 15) 
+                                }}
+                            >
+                                <div className="bg-indigo-600 p-2 rounded-lg text-white mr-1">
+                                    <Icon name="list-checks" className="w-4 h-4" />
+                                </div>
+                                {ATTENDANCE_STATUSES.map(status => (
+                                    <button 
+                                        key={status}
+                                        onClick={() => handleBulkFill(status)}
+                                        className={`w-9 h-9 rounded-lg flex items-center justify-center text-xs font-black transition-all transform hover:scale-110 active:scale-95 ${STATUS_STYLES[status].color}`}
+                                        title={status}
+                                    >
+                                        {STATUS_STYLES[status].symbol}
+                                    </button>
+                                ))}
+                                <button 
+                                    onClick={() => handleBulkFill(AttendanceStatus.Pending)}
+                                    className="w-9 h-9 rounded-lg flex items-center justify-center text-xs font-black transition-all bg-slate-100 text-slate-400 hover:bg-slate-200"
+                                    title="Limpiar"
+                                >
+                                    -
+                                </button>
+                                <div className="w-px h-6 bg-slate-200 mx-1"></div>
+                                <button onClick={() => setSelection({ start: null, end: null, isDragging: false })} className="p-1.5 hover:bg-slate-100 rounded text-slate-400">
+                                    <Icon name="x" className="w-4 h-4" />
+                                </button>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+
                     <AttendanceInternalContext.Provider value={contextValue}>
                         <AutoSizer>
                             {({ height, width }: any) => {
