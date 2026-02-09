@@ -1,5 +1,5 @@
 {
-  "version": "3.3.9",
-  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v3.3.9/app-debug.apk",
-  "notes": "Llenado Masivo de Asistencia: Se implementó la selección por arrastre y una barra de herramientas flotante para asignar estados (P, A, R, J, I) a múltiples celdas de una sola vez."
+  "version": "3.3.10",
+  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v3.3.10/app-debug.apk",
+  "notes": "Dashboard Simplificado: Se eliminó el botón 'Cargar Horario' de las acciones rápidas para una interfaz más limpia. La sincronización de horario ahora reside exclusivamente en la sección de Configuración para mayor seguridad."
 }

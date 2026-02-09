@@ -1,4 +1,3 @@
-
 import React, { useContext, useMemo, useState } from 'react';
 import { Responsive, WidthProvider } from 'react-grid-layout';
 import { AppContext } from '../context/AppContext';
@@ -455,9 +454,16 @@ const CombinedOverviewWidget: React.FC<{ todayStr: string }> = ({ todayStr }) =>
 const QuickActionsWidget: React.FC = () => {
     const { state, dispatch } = useContext(AppContext);
     return (
-        <div className="flex flex-col gap-3 h-full justify-center px-2">
-            <Button onClick={() => syncAttendanceData(state, dispatch, 'today')} variant="secondary" size="sm" className="w-full justify-start text-[11px] sm:text-xs !px-4 shadow-sm border border-border-color hover:bg-white"><Icon name="upload-cloud" className="w-4 h-4 text-indigo-600" /> <span className="truncate font-bold">Sincronizar Hoy</span></Button>
-            <Button onClick={() => syncScheduleData(state, dispatch)} size="sm" className="w-full justify-start bg-primary text-white text-[11px] sm:text-xs !px-4 shadow-md"><Icon name="download-cloud" className="w-4 h-4" /> <span className="truncate font-bold">Cargar Horario</span></Button>
+        <div className="flex flex-col gap-3 h-full justify-center px-4">
+            <Button 
+                onClick={() => syncAttendanceData(state, dispatch, 'today')} 
+                variant="primary" 
+                size="md" 
+                className="w-full shadow-lg"
+            >
+                <Icon name="upload-cloud" className="w-5 h-5" /> 
+                <span className="truncate font-black">Sincronizar Hoy</span>
+            </Button>
         </div>
     );
 };
