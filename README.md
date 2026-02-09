@@ -1,20 +1,10 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# Ecosistema Yeici - Gestión Académica Integral
 
-# Run and deploy your AI Studio app
+## AVISO DE CONFIDENCIALIDAD Y PROPIEDAD
+Este código fuente es PROPIEDAD PRIVADA de Juan Carlos Salgado Robles.
 
-This contains everything you need to run your app locally.
+El acceso a este repositorio se otorga únicamente con fines de **auditoría técnica y revisión**. El acceso NO implica transferencia de derechos de autor ni permiso para bifurcar (fork), clonar o reutilizar este código en otros proyectos ajenos a la licencia pactada.
 
-View your app in AI Studio: https://ai.studio/apps/drive/1ET2BeefgGYS7ipGA6kfep96yKMs8huo3
+Cualquier uso no autorizado será perseguido conforme a la Ley Federal del Derecho de Autor (México) y tratados internacionales aplicables.
 
-## Run Locally
-
-**Prerequisites:**  Node.js
-
-
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+Copyright © 2026 Juan Carlos Salgado Robles.
