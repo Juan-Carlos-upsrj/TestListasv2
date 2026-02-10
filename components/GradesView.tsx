@@ -338,6 +338,8 @@ const GradesView: React.FC = () => {
         </div>
     );
 
+    const attThresholdNote = useMemo(() => (settings.lowAttendanceThreshold || 80) / 10, [settings.lowAttendanceThreshold]);
+
     return (
         <div className="flex flex-col h-full overflow-hidden" onMouseUp={onMouseUp}>
             <div className="bg-surface p-3 mb-4 rounded-xl border border-border-color shadow-sm flex flex-col gap-3">
@@ -506,7 +508,7 @@ const GradesView: React.FC = () => {
                                                     </td>
                                                 ))}
                                                 {p1AttendanceType && (
-                                                    <td className={`p-1 text-center font-black border-r border-slate-100 ${p1AttNote < 8 ? 'text-rose-600' : 'text-emerald-600'}`}>
+                                                    <td className={`p-1 text-center font-black border-r border-slate-100 ${p1AttNote < attThresholdNote ? 'text-rose-600' : 'text-emerald-600'}`}>
                                                         {p1AttNote.toFixed(1)}
                                                     </td>
                                                 )}
@@ -529,7 +531,7 @@ const GradesView: React.FC = () => {
                                                     </td>
                                                 ))}
                                                 {p2AttendanceType && (
-                                                    <td className={`p-1 text-center font-black border-r border-slate-100 ${p2AttNote < 8 ? 'text-rose-600' : 'text-emerald-600'}`}>
+                                                    <td className={`p-1 text-center font-black border-r border-slate-100 ${p2AttNote < attThresholdNote ? 'text-rose-600' : 'text-emerald-600'}`}>
                                                         {p2AttNote.toFixed(1)}
                                                     </td>
                                                 )}

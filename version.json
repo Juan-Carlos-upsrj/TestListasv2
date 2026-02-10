@@ -1,5 +1,5 @@
 {
-  "version": "3.3.13",
-  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v3.3.13/app-debug.apk",
-  "notes": "Corrección técnica: Eliminación de importación no utilizada en la vista de calificaciones para asegurar una compilación limpia. Estabilidad mejorada."
+  "version": "3.3.14",
+  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v3.3.14/app-debug.apk",
+  "notes": "Corrección de Umbral de Asistencia: Se ajustó la lógica visual para que el indicador rojo solo se active cuando la asistencia sea estrictamente menor al 80% (o el valor configurado), permitiendo que asistencias satisfactorias (como el 90% o 95%) se mantengan en color verde."
 }

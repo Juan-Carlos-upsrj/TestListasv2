@@ -1,4 +1,4 @@
-import React, { useState, useRef, useContext } from 'react';
+import React, { useState, useRef, useContext, useMemo } from 'react';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import Modal from './common/Modal';
@@ -120,6 +120,7 @@ const GradeImageModal: React.FC<GradeImageModalProps> = ({
     const partialEvaluations = evaluations.filter(e => e.partial === (viewMode === 'p1' ? 1 : 2));
     const p1Attendance = group.evaluationTypes.partial1.find(t => t.isAttendance);
     const p2Attendance = group.evaluationTypes.partial2.find(t => t.isAttendance);
+    const attThresholdNote = useMemo(() => (settings.lowAttendanceThreshold || 80) / 10, [settings.lowAttendanceThreshold]);
 
     return (
         <Modal isOpen={isOpen} onClose={onClose} title="Captura de Calificaciones" size="xl">
@@ -221,8 +222,8 @@ const GradeImageModal: React.FC<GradeImageModalProps> = ({
                                                 </td>
                                             ))}
                                             
-                                            {(viewMode === 'p1' && p1Attendance) && <td className="p-2 text-center text-emerald-600 font-bold">{p1AttNote.toFixed(1)}</td>}
-                                            {(viewMode === 'p2' && p2Attendance) && <td className="p-2 text-center text-emerald-600 font-bold">{p2AttNote.toFixed(1)}</td>}
+                                            {(viewMode === 'p1' && p1Attendance) && <td className={`p-2 text-center font-bold ${p1AttNote < attThresholdNote ? 'text-rose-600' : 'text-emerald-600'}`}>{p1AttNote.toFixed(1)}</td>}
+                                            {(viewMode === 'p2' && p2Attendance) && <td className={`p-2 text-center font-bold ${p2AttNote < attThresholdNote ? 'text-rose-600' : 'text-emerald-600'}`}>{p2AttNote.toFixed(1)}</td>}
 
                                             {viewMode === 'final' ? (
                                                 <>
