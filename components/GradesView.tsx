@@ -480,9 +480,14 @@ const GradesView: React.FC = () => {
                                                 <td className="sticky left-0 bg-inherit p-2.5 font-medium border-r border-slate-100 z-10 whitespace-nowrap">
                                                     <div className="flex items-center gap-1.5">
                                                         <span className="text-[10px] text-slate-400 w-4 inline-block text-right">{idx + 1}.</span>
-                                                        <span className={`font-bold ${isLowAtt ? 'text-rose-600' : ''}`}>{student.name}</span>
-                                                        {student.nickname && <span className="text-[10px] text-text-secondary italic">({student.nickname})</span>}
-                                                        {student.isRepeating && <span className="bg-rose-600 text-white text-[8px] font-bold px-1 rounded-full shrink-0">R</span>}
+                                                        <div className="flex flex-col">
+                                                            <div className="flex items-center gap-1.5">
+                                                                <span className={`font-bold ${isLowAtt ? 'text-rose-600' : ''}`}>{student.name}</span>
+                                                                {isLowAtt && <span className="text-[7px] font-black bg-rose-600 text-white px-1 rounded-sm uppercase tracking-tighter">Faltas</span>}
+                                                            </div>
+                                                            {student.nickname && <span className="text-[10px] text-text-secondary italic leading-none mt-0.5">({student.nickname})</span>}
+                                                        </div>
+                                                        {student.isRepeating && <span className="bg-rose-600 text-white text-[8px] font-bold px-1 rounded-full shrink-0 ml-auto">R</span>}
                                                     </div>
                                                 </td>
                                                 {settings.showTeamsInGrades && (
@@ -570,9 +575,14 @@ const GradesView: React.FC = () => {
                                         
                                         return (
                                             <tr key={student.id} className={`border-b border-amber-100 ${idx % 2 === 0 ? 'bg-white' : 'bg-amber-50/30'} ${lowAttendance ? 'bg-rose-50' : ''}`}>
-                                                <td className="p-2.5 font-bold whitespace-nowrap flex flex-col">
-                                                    <span>{student.name}</span>
-                                                    <span className="text-[9px] font-normal text-slate-400">Mat: {student.matricula}</span>
+                                                <td className="p-2.5 font-bold whitespace-nowrap">
+                                                    <div className="flex flex-col">
+                                                        <div className="flex items-center gap-1.5">
+                                                            <span className={lowAttendance ? 'text-rose-700' : ''}>{student.name}</span>
+                                                            {lowAttendance && <span className="text-[7px] font-black bg-rose-700 text-white px-1.5 py-0.5 rounded-sm uppercase tracking-tighter shadow-sm">Reprobado por Faltas</span>}
+                                                        </div>
+                                                        <span className="text-[9px] font-normal text-slate-400">Mat: {student.matricula}</span>
+                                                    </div>
                                                 </td>
                                                 <td className={`p-1 text-center font-black ${lowAttendance ? 'text-rose-600' : 'text-slate-500'}`}>
                                                     {globalAtt.toFixed(0)}%

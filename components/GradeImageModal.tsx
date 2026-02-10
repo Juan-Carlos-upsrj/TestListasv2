@@ -178,7 +178,7 @@ const GradeImageModal: React.FC<GradeImageModalProps> = ({
                                             {ev.name} <br/><span className="font-normal opacity-70">({ev.maxScore})</span>
                                         </th>
                                     ))}
-                                    {viewMode === 'p1' && p1Attendance && <th className="p-2 text-center font-semibold text-emerald-600 text-xs">Asist.</th>}
+                                    {viewMode === 'p1' && p1Attendance && <th className="p-2 text-center font-semibold text-emerald-600 text-xs">Asist..</th>}
                                     {viewMode === 'p2' && p2Attendance && <th className="p-2 text-center font-semibold text-emerald-600 text-xs">Asist.</th>}
                                     
                                     {viewMode === 'final' ? (
@@ -210,10 +210,12 @@ const GradeImageModal: React.FC<GradeImageModalProps> = ({
                                     else if (p2Avg !== null) finalAvg = p2Avg;
 
                                     return (
-                                        <tr key={student.id} className={`border-b border-slate-100 ${idx % 2 === 0 ? 'bg-slate-50/50' : ''} ${isLowAtt && viewMode === 'final' ? 'bg-rose-50' : ''}`}>
+                                        <tr key={student.id} className={`border-b border-slate-100 ${idx % 2 === 0 ? 'bg-slate-50/50' : ''} ${isLowAtt ? 'bg-rose-50' : ''}`}>
                                             <td className="p-2 font-medium text-slate-700">
-                                                {student.name}
-                                                {isLowAtt && viewMode === 'final' && <span className="ml-2 text-[8px] font-black text-rose-600 border border-rose-200 px-1 rounded">FALTAS</span>}
+                                                <div className="flex items-center gap-1">
+                                                    <span className={isLowAtt ? 'text-rose-700 font-bold' : ''}>{student.name}</span>
+                                                    {isLowAtt && <span className="text-[7px] font-black bg-rose-600 text-white px-1 rounded-sm uppercase tracking-tighter shrink-0">Baja Asist.</span>}
+                                                </div>
                                             </td>
 
                                             {viewMode !== 'final' && partialEvaluations.map(ev => (

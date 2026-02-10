@@ -1,5 +1,5 @@
 {
-  "version": "3.3.14",
-  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v3.3.14/app-debug.apk",
-  "notes": "Corrección de Umbral de Asistencia: Se ajustó la lógica visual para que el indicador rojo solo se active cuando la asistencia sea estrictamente menor al 80% (o el valor configurado), permitiendo que asistencias satisfactorias (como el 90% o 95%) se mantengan en color verde."
+  "version": "3.3.15",
+  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v3.3.15/app-debug.apk",
+  "notes": "Mejora de Visualización: Se añadió la etiqueta descriptiva 'Faltas' o 'Baja Asist.' junto al nombre del alumno en las tablas de calificaciones y capturas exportadas, facilitando la identificación inmediata de reprobados por inasistencia."
 }
