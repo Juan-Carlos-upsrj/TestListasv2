@@ -1,5 +1,5 @@
 {
-  "version": "3.3.15",
-  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v3.3.15/app-debug.apk",
-  "notes": "Mejora de Visualización: Se añadió la etiqueta descriptiva 'Faltas' o 'Baja Asist.' junto al nombre del alumno en las tablas de calificaciones y capturas exportadas, facilitando la identificación inmediata de reprobados por inasistencia."
+  "version": "3.3.16",
+  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v3.3.16/app-debug.apk",
+  "notes": "Actualización de Identificación Académica: Se añadió la etiqueta explícita 'REPROBADO POR FALTAS' junto al nombre en la vista ordinaria para mayor claridad. Incremento de versión técnica para facilitar la actualización en Android."
 }

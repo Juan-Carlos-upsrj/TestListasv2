@@ -483,7 +483,7 @@ const GradesView: React.FC = () => {
                                                         <div className="flex flex-col">
                                                             <div className="flex items-center gap-1.5">
                                                                 <span className={`font-bold ${isLowAtt ? 'text-rose-600' : ''}`}>{student.name}</span>
-                                                                {isLowAtt && <span className="text-[7px] font-black bg-rose-600 text-white px-1 rounded-sm uppercase tracking-tighter">Faltas</span>}
+                                                                {isLowAtt && <span className="text-[7px] font-black bg-rose-600 text-white px-1.5 py-0.5 rounded-sm uppercase tracking-tighter shadow-sm border border-rose-700">Reprobado por Faltas</span>}
                                                             </div>
                                                             {student.nickname && <span className="text-[10px] text-text-secondary italic leading-none mt-0.5">({student.nickname})</span>}
                                                         </div>
