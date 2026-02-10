@@ -1,6 +1,6 @@
 import React, { useContext, useState, useMemo, useEffect, useCallback } from 'react';
 import { AppContext } from '../context/AppContext';
-import { Evaluation, Group, AttendanceStatus } from '../types';
+import { Evaluation, Group } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 import Modal from './common/Modal';
 import Button from './common/Button';
