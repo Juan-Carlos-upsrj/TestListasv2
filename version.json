@@ -1,5 +1,5 @@
 {
-  "version": "3.3.11",
-  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v3.3.11/app-debug.apk",
-  "notes": "Corrección de errores de compilación (TS6133). Se optimizó el Dashboard eliminando dependencias no utilizadas y se incrementó la versión para la distribución oficial."
+  "version": "3.3.12",
+  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v3.3.12/app-debug.apk",
+  "notes": "Integración Académica: La asistencia ahora se computa como una nota numérica. Se implementó la regla institucional del 80% mínimo de asistencia para aprobación (reprobación automática si no se cumple)."
 }

@@ -1,4 +1,3 @@
-
 import { Group, Settings, AttendanceStatus, Evaluation, EvaluationType } from '../types';
 import { getClassDates } from './dateUtils';
 
@@ -9,26 +8,25 @@ export const getGradeColor = (grade: number | null): string => {
 
 export const calculateAttendancePercentage = (
     group: Group,
-    partial: 1 | 2,
+    partial: 1 | 2 | 'global',
     settings: Settings,
     attendanceData: { [date: string]: AttendanceStatus }
 ): number => {
     const today = new Date();
     const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
     
-    // Rango de fechas del parcial pivotado en p1EvalEnd
-    const start = settings.semesterStart;
-    const end = partial === 1 ? settings.p1EvalEnd : settings.semesterEnd;
-    
-    let partialStart = start;
-    if (partial === 2) {
-        // El parcial 2 empieza después de que termine el 1 (p1EvalEnd)
+    let start = settings.semesterStart;
+    let end = settings.semesterEnd;
+
+    if (partial === 1) {
+        end = settings.p1EvalEnd;
+    } else if (partial === 2) {
         const p1End = new Date(settings.p1EvalEnd + 'T00:00:00');
         p1End.setDate(p1End.getDate() + 1);
-        partialStart = p1End.toISOString().split('T')[0];
+        start = p1End.toISOString().split('T')[0];
     }
     
-    const dates = getClassDates(partialStart, end, group.classDays);
+    const dates = getClassDates(start, end, group.classDays);
     if (dates.length === 0) return 100;
 
     let presentCount = 0;
@@ -37,6 +35,7 @@ export const calculateAttendancePercentage = (
     dates.forEach(date => {
         const status = (attendanceData[date] || AttendanceStatus.Pending) as AttendanceStatus;
         
+        // Contamos días pasados o días que ya tengan un registro explícito
         if (date <= todayStr || status !== AttendanceStatus.Pending) {
             totalCount++;
             if (status === AttendanceStatus.Present || 
@@ -70,6 +69,7 @@ export const calculatePartialAverage = (
         
         if (type.isAttendance) {
             const attendancePct = calculateAttendancePercentage(group, partial, settings, studentAttendance);
+            // Convertimos porcentaje (0-100) a nota (0-10) ponderada
             finalPartialScore += (attendancePct / 100) * weight;
             totalWeightOfGradedItems += weight;
         } else {
@@ -109,35 +109,39 @@ export const calculateFinalGradeWithRecovery = (
     remedialP1: number | null,
     remedialP2: number | null,
     extra: number | null,
-    special: number | null
-): { score: number | null; type: 'Ordinario' | 'Remedial' | 'Extra' | 'Especial' | 'N/A'; isFailing: boolean } => {
+    special: number | null,
+    globalAttendancePct: number,
+    threshold: number = 80
+): { score: number | null; type: string; isFailing: boolean; lowAttendance: boolean } => {
     
-    if (p1Avg === null || p2Avg === null) return { score: null, type: 'N/A', isFailing: false };
+    const lowAttendance = globalAttendancePct < threshold;
     
-    const effectiveP1 = remedialP1 !== null ? remedialP1 : p1Avg;
-    const effectiveP2 = remedialP2 !== null ? remedialP2 : p2Avg;
+    if (p1Avg === null && p2Avg === null) return { score: null, type: 'N/A', isFailing: false, lowAttendance };
+    
+    const effectiveP1 = remedialP1 !== null ? remedialP1 : (p1Avg ?? 0);
+    const effectiveP2 = remedialP2 !== null ? remedialP2 : (p2Avg ?? 0);
 
     const ordinaryAvg = (effectiveP1 + effectiveP2) / 2;
 
+    let finalScore = ordinaryAvg;
+    let type = (remedialP1 !== null || remedialP2 !== null) ? 'Remedial' : 'Ordinario';
+
     if (special !== null) {
-        return { score: special, type: 'Especial', isFailing: special < 7 };
-    }
-    
-    if (extra !== null) {
-        return { score: extra, type: 'Extra', isFailing: extra < 7 };
-    }
-
-    const failedRemedialP1 = remedialP1 !== null && remedialP1 < 7;
-    const failedRemedialP2 = remedialP2 !== null && remedialP2 < 7;
-    
-    if (failedRemedialP1 || failedRemedialP2) {
-        return { score: ordinaryAvg, type: 'Ordinario', isFailing: true }; 
+        finalScore = special;
+        type = 'Especial';
+    } else if (extra !== null) {
+        finalScore = extra;
+        type = 'Extra';
     }
 
-    if (ordinaryAvg < 7) {
-        return { score: ordinaryAvg, type: 'Ordinario', isFailing: true };
-    }
+    // Un alumno reprueba si la nota es < 7 O si tiene baja asistencia
+    const isFailingByGrades = finalScore < 7;
+    const isFailing = isFailingByGrades || lowAttendance;
 
-    const type = (remedialP1 !== null || remedialP2 !== null) ? 'Remedial' : 'Ordinario';
-    return { score: ordinaryAvg, type, isFailing: false };
+    return { 
+        score: finalScore, 
+        type: lowAttendance ? `${type} (Faltas)` : type, 
+        isFailing, 
+        lowAttendance 
+    };
 };

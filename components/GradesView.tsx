@@ -1,13 +1,13 @@
 import React, { useContext, useState, useMemo, useEffect, useCallback } from 'react';
 import { AppContext } from '../context/AppContext';
-import { Evaluation, Group } from '../types';
+import { Evaluation, Group, AttendanceStatus } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 import Modal from './common/Modal';
 import Button from './common/Button';
 import Icon from './icons/Icon';
 import ConfirmationModal from './common/ConfirmationModal';
 import { GroupForm } from './GroupManagement';
-import { calculatePartialAverage, getGradeColor, calculateFinalGradeWithRecovery } from '../services/gradeCalculation';
+import { calculatePartialAverage, getGradeColor, calculateFinalGradeWithRecovery, calculateAttendancePercentage } from '../services/gradeCalculation';
 import GradeImageModal from './GradeImageModal';
 import CopyEvaluationsModal from './CopyEvaluationsModal';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -183,11 +183,13 @@ const GradesView: React.FC = () => {
 
     const studentsForRecovery = useMemo(() => {
         return filteredStudents.filter(student => {
-            const p1Avg = calculatePartialAverage(group!, 1, groupEvaluations, groupGrades[student.id] || {}, settings, attendance[group!.id]?.[student.id] || {});
-            const p2Avg = calculatePartialAverage(group!, 2, groupEvaluations, groupGrades[student.id] || {}, settings, attendance[group!.id]?.[student.id] || {});
+            const att = attendance[group!.id]?.[student.id] || {};
+            const globalAtt = calculateAttendancePercentage(group!, 'global', settings, att);
+            const p1Avg = calculatePartialAverage(group!, 1, groupEvaluations, groupGrades[student.id] || {}, settings, att);
+            const p2Avg = calculatePartialAverage(group!, 2, groupEvaluations, groupGrades[student.id] || {}, settings, att);
             const r1 = groupGrades[student.id]?.[GRADE_REMEDIAL_P1] ?? null, r2 = groupGrades[student.id]?.[GRADE_REMEDIAL_P2] ?? null;
             const extra = groupGrades[student.id]?.[GRADE_EXTRA] ?? null, special = groupGrades[student.id]?.[GRADE_SPECIAL] ?? null;
-            const { isFailing } = calculateFinalGradeWithRecovery(p1Avg, p2Avg, r1, r2, extra, special);
+            const { isFailing } = calculateFinalGradeWithRecovery(p1Avg, p2Avg, r1, r2, extra, special, globalAtt, settings.lowAttendanceThreshold);
             return isFailing || (p1Avg !== null && p1Avg < 7) || (p2Avg !== null && p2Avg < 7);
         });
     }, [group, filteredStudents, groupEvaluations, groupGrades, settings, attendance]);
@@ -460,16 +462,23 @@ const GradesView: React.FC = () => {
                                 </thead>
                                 <tbody>
                                     {filteredStudents.map((student, idx) => {
-                                        const p1Avg = calculatePartialAverage(group, 1, groupEvaluations, groupGrades[student.id] || {}, settings, attendance[group.id]?.[student.id] || {});
-                                        const p2Avg = calculatePartialAverage(group, 2, groupEvaluations, groupGrades[student.id] || {}, settings, attendance[group.id]?.[student.id] || {});
+                                        const att = attendance[group.id]?.[student.id] || {};
+                                        const p1Avg = calculatePartialAverage(group, 1, groupEvaluations, groupGrades[student.id] || {}, settings, att);
+                                        const p2Avg = calculatePartialAverage(group, 2, groupEvaluations, groupGrades[student.id] || {}, settings, att);
+                                        
+                                        const p1AttNote = calculateAttendancePercentage(group, 1, settings, att) / 10;
+                                        const p2AttNote = calculateAttendancePercentage(group, 2, settings, att) / 10;
+                                        const globalAtt = calculateAttendancePercentage(group, 'global', settings, att);
+                                        const isLowAtt = globalAtt < settings.lowAttendanceThreshold;
+
                                         const teamValue = displayTeamType === 'coyote' ? student.teamCoyote : student.team;
 
                                         return (
-                                            <tr key={student.id} className={`${idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/40'} border-b border-slate-100 hover:bg-indigo-50/20`}>
+                                            <tr key={student.id} className={`${idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/40'} border-b border-slate-100 hover:bg-indigo-50/20 ${isLowAtt ? '!bg-rose-50/30' : ''}`}>
                                                 <td className="sticky left-0 bg-inherit p-2.5 font-medium border-r border-slate-100 z-10 whitespace-nowrap">
                                                     <div className="flex items-center gap-1.5">
                                                         <span className="text-[10px] text-slate-400 w-4 inline-block text-right">{idx + 1}.</span>
-                                                        <span className="font-bold">{student.name}</span>
+                                                        <span className={`font-bold ${isLowAtt ? 'text-rose-600' : ''}`}>{student.name}</span>
                                                         {student.nickname && <span className="text-[10px] text-text-secondary italic">({student.nickname})</span>}
                                                         {student.isRepeating && <span className="bg-rose-600 text-white text-[8px] font-bold px-1 rounded-full shrink-0">R</span>}
                                                     </div>
@@ -496,7 +505,11 @@ const GradesView: React.FC = () => {
                                                         />
                                                     </td>
                                                 ))}
-                                                {p1AttendanceType && <td className="p-1 text-center text-emerald-600 border-r border-slate-100">✔</td>}
+                                                {p1AttendanceType && (
+                                                    <td className={`p-1 text-center font-black border-r border-slate-100 ${p1AttNote < 8 ? 'text-rose-600' : 'text-emerald-600'}`}>
+                                                        {p1AttNote.toFixed(1)}
+                                                    </td>
+                                                )}
                                                 <td className={`p-2 text-center font-bold border-r border-slate-100 bg-slate-50/50 ${getGradeColor(p1Avg)}`}>{p1Avg?.toFixed(1) || '-'}</td>
                                                 {p2Evaluations.map(ev => (
                                                     <td 
@@ -515,7 +528,11 @@ const GradesView: React.FC = () => {
                                                         />
                                                     </td>
                                                 ))}
-                                                {p2AttendanceType && <td className="p-1 text-center text-emerald-600 border-r border-slate-100">✔</td>}
+                                                {p2AttendanceType && (
+                                                    <td className={`p-1 text-center font-black border-r border-slate-100 ${p2AttNote < 8 ? 'text-rose-600' : 'text-emerald-600'}`}>
+                                                        {p2AttNote.toFixed(1)}
+                                                    </td>
+                                                )}
                                                 <td className={`p-2 text-center font-bold bg-slate-50/50 ${getGradeColor(p2Avg)}`}>{p2Avg?.toFixed(1) || '-'}</td>
                                             </tr>
                                         );
@@ -527,6 +544,7 @@ const GradesView: React.FC = () => {
                                 <thead className="sticky top-0 z-20 bg-amber-50 shadow-sm font-bold">
                                     <tr className="text-amber-900 border-b border-amber-200">
                                         <th className="p-3 text-left">Alumno</th>
+                                        <th className="p-2 text-center">Asist %</th>
                                         <th className="p-2 text-center">Rem P1</th>
                                         <th className="p-2 text-center">Rem P2</th>
                                         <th className="p-2 text-center">Extra</th>
@@ -536,16 +554,26 @@ const GradesView: React.FC = () => {
                                 </thead>
                                 <tbody>
                                     {studentsForRecovery.map((student, idx) => {
-                                        const p1Avg = calculatePartialAverage(group, 1, groupEvaluations, groupGrades[student.id] || {}, settings, attendance[group.id]?.[student.id] || {});
-                                        const p2Avg = calculatePartialAverage(group, 2, groupEvaluations, groupGrades[student.id] || {}, settings, attendance[group.id]?.[student.id] || {});
+                                        const att = attendance[group.id]?.[student.id] || {};
+                                        const globalAtt = calculateAttendancePercentage(group, 'global', settings, att);
+                                        
+                                        const p1Avg = calculatePartialAverage(group, 1, groupEvaluations, groupGrades[student.id] || {}, settings, att);
+                                        const p2Avg = calculatePartialAverage(group, 2, groupEvaluations, groupGrades[student.id] || {}, settings, att);
                                         const r1 = groupGrades[student.id]?.[GRADE_REMEDIAL_P1] ?? null, r2 = groupGrades[student.id]?.[GRADE_REMEDIAL_P2] ?? null;
                                         const extra = groupGrades[student.id]?.[GRADE_EXTRA] ?? null, special = groupGrades[student.id]?.[GRADE_SPECIAL] ?? null;
-                                        const { score: finalScore, isFailing } = calculateFinalGradeWithRecovery(p1Avg, p2Avg, r1, r2, extra, special);
+                                        
+                                        const { score: finalScore, isFailing, lowAttendance } = calculateFinalGradeWithRecovery(p1Avg, p2Avg, r1, r2, extra, special, globalAtt, settings.lowAttendanceThreshold);
+                                        
                                         const canTakeExtra = ((r1 !== null ? r1 : p1Avg) || 0) < 7 || ((r2 !== null ? r2 : p2Avg) || 0) < 7 || isFailing;
+                                        
                                         return (
-                                            <tr key={student.id} className={`border-b border-amber-100 ${idx % 2 === 0 ? 'bg-white' : 'bg-amber-50/30'}`}>
-                                                <td className="p-2.5 font-bold whitespace-nowrap">
-                                                    {student.name} {student.nickname && <span className="text-[10px] text-text-secondary italic">({student.nickname})</span>} {student.isRepeating && <span className="bg-rose-600 text-white text-[8px] font-bold px-1 rounded-full">R</span>}
+                                            <tr key={student.id} className={`border-b border-amber-100 ${idx % 2 === 0 ? 'bg-white' : 'bg-amber-50/30'} ${lowAttendance ? 'bg-rose-50' : ''}`}>
+                                                <td className="p-2.5 font-bold whitespace-nowrap flex flex-col">
+                                                    <span>{student.name}</span>
+                                                    <span className="text-[9px] font-normal text-slate-400">Mat: {student.matricula}</span>
+                                                </td>
+                                                <td className={`p-1 text-center font-black ${lowAttendance ? 'text-rose-600' : 'text-slate-500'}`}>
+                                                    {globalAtt.toFixed(0)}%
                                                 </td>
                                                 <td className={`p-1 text-center transition-colors ${isSelected(idx, GRADE_REMEDIAL_P1) ? 'bg-amber-200' : ''}`} onMouseDown={(e) => onMouseDown(idx, GRADE_REMEDIAL_P1, e)} onMouseEnter={() => onMouseEnter(idx, GRADE_REMEDIAL_P1)}>
                                                     <input type="number" min="0" value={r1 ?? ''} onChange={(e) => handleGradeChange(student.id, GRADE_REMEDIAL_P1, e.target.value)} onPaste={(e) => handlePaste(e, idx, GRADE_REMEDIAL_P1)} className="w-12 text-center border-amber-200 focus:ring-amber-500 rounded py-1 bg-transparent"/>
@@ -559,7 +587,9 @@ const GradesView: React.FC = () => {
                                                 <td className={`p-1 text-center transition-colors ${isSelected(idx, GRADE_SPECIAL) ? 'bg-amber-200' : ''}`} onMouseDown={(e) => student.isRepeating && onMouseDown(idx, GRADE_SPECIAL, e)} onMouseEnter={() => student.isRepeating && onMouseEnter(idx, GRADE_SPECIAL)}>
                                                     <input type="number" min="0" value={special ?? ''} onChange={(e) => handleGradeChange(student.id, GRADE_SPECIAL, e.target.value)} onPaste={(e) => handlePaste(e, idx, GRADE_SPECIAL)} disabled={!student.isRepeating} className={`w-12 text-center rounded py-1 bg-transparent ${!student.isRepeating ? 'opacity-30' : 'border-amber-500 focus:ring-amber-500'}`}/>
                                                 </td>
-                                                <td className={`p-2 text-center font-bold bg-amber-100/50 ${getGradeColor(finalScore)}`}>{finalScore?.toFixed(1) || '-'}</td>
+                                                <td className={`p-2 text-center font-black bg-amber-100/50 ${getGradeColor(finalScore)} ${lowAttendance ? 'ring-2 ring-rose-500 ring-inset' : ''}`}>
+                                                    {finalScore?.toFixed(1) || '-'}
+                                                </td>
                                             </tr>
                                         );
                                     })}

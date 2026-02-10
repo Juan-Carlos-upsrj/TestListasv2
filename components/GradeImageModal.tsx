@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useContext } from 'react';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
@@ -6,7 +5,7 @@ import Modal from './common/Modal';
 import Button from './common/Button';
 import Icon from './icons/Icon';
 import { Group, Evaluation, Settings, AttendanceStatus } from '../types';
-import { calculatePartialAverage, getGradeColor } from '../services/gradeCalculation';
+import { calculatePartialAverage, getGradeColor, calculateAttendancePercentage } from '../services/gradeCalculation';
 import { AppContext } from '../context/AppContext';
 import { saveOrShareFile } from '../services/fileUtils';
 
@@ -78,11 +77,8 @@ const GradeImageModal: React.FC<GradeImageModalProps> = ({
             const pdfWidth = pdf.internal.pageSize.getWidth();
             const pdfHeight = pdf.internal.pageSize.getHeight();
             
-            const canvasWidth = canvas.width;
-            const canvasHeight = canvas.height;
-    
-            const ratio = pdfWidth / canvasWidth;
-            const totalPdfHeight = canvasHeight * ratio;
+            const ratio = pdfWidth / canvas.width;
+            const totalPdfHeight = canvas.height * ratio;
     
             let position = 0;
             let pageCount = 0;
@@ -91,16 +87,16 @@ const GradeImageModal: React.FC<GradeImageModalProps> = ({
                 if (pageCount > 0) {
                     pdf.addPage();
                 }
-    
+
                 const sliceHeightOnCanvas = pdfHeight / ratio;
                 const pageCanvas = document.createElement('canvas');
-                pageCanvas.width = canvasWidth;
+                pageCanvas.width = canvas.width;
                 pageCanvas.height = sliceHeightOnCanvas;
                 const pageCtx = pageCanvas.getContext('2d');
                 
                 if (!pageCtx) continue;
     
-                pageCtx.drawImage(canvas, 0, position / ratio, canvasWidth, sliceHeightOnCanvas, 0, 0, canvasWidth, sliceHeightOnCanvas);
+                pageCtx.drawImage(canvas, 0, position / ratio, canvas.width, sliceHeightOnCanvas, 0, 0, canvas.width, sliceHeightOnCanvas);
                 const pageDataUrl = pageCanvas.toDataURL('image/png');
     
                 pdf.addImage(pageDataUrl, 'PNG', 0, 0, pdfWidth, pdfHeight, undefined, 'FAST');
@@ -186,6 +182,7 @@ const GradeImageModal: React.FC<GradeImageModalProps> = ({
                                     
                                     {viewMode === 'final' ? (
                                         <>
+                                            <th className="p-2 text-center font-bold text-slate-600">Asist %</th>
                                             <th className="p-2 text-center font-bold text-slate-600">Parcial 1</th>
                                             <th className="p-2 text-center font-bold text-slate-600">Parcial 2</th>
                                             <th className="p-2 text-center font-bold text-indigo-700">Promedio</th>
@@ -197,18 +194,25 @@ const GradeImageModal: React.FC<GradeImageModalProps> = ({
                             </thead>
                             <tbody>
                                 {group.students.map((student, idx) => {
-                                    const p1Avg = calculatePartialAverage(group, 1, evaluations, grades[student.id] || {}, settings, attendance[student.id] || {});
-                                    const p2Avg = calculatePartialAverage(group, 2, evaluations, grades[student.id] || {}, settings, attendance[student.id] || {});
+                                    const studentAtt = attendance[student.id] || {};
+                                    const p1Avg = calculatePartialAverage(group, 1, evaluations, grades[student.id] || {}, settings, studentAtt);
+                                    const p2Avg = calculatePartialAverage(group, 2, evaluations, grades[student.id] || {}, settings, studentAtt);
                                     
+                                    const p1AttNote = calculateAttendancePercentage(group, 1, settings, studentAtt) / 10;
+                                    const p2AttNote = calculateAttendancePercentage(group, 2, settings, studentAtt) / 10;
+                                    const globalAtt = calculateAttendancePercentage(group, 'global', settings, studentAtt);
+                                    const isLowAtt = globalAtt < settings.lowAttendanceThreshold;
+
                                     let finalAvg: number | null = null;
                                     if (p1Avg !== null && p2Avg !== null) finalAvg = (p1Avg + p2Avg) / 2;
                                     else if (p1Avg !== null) finalAvg = p1Avg;
                                     else if (p2Avg !== null) finalAvg = p2Avg;
 
                                     return (
-                                        <tr key={student.id} className={`border-b border-slate-100 ${idx % 2 === 0 ? 'bg-slate-50/50' : ''}`}>
+                                        <tr key={student.id} className={`border-b border-slate-100 ${idx % 2 === 0 ? 'bg-slate-50/50' : ''} ${isLowAtt && viewMode === 'final' ? 'bg-rose-50' : ''}`}>
                                             <td className="p-2 font-medium text-slate-700">
                                                 {student.name}
+                                                {isLowAtt && viewMode === 'final' && <span className="ml-2 text-[8px] font-black text-rose-600 border border-rose-200 px-1 rounded">FALTAS</span>}
                                             </td>
 
                                             {viewMode !== 'final' && partialEvaluations.map(ev => (
@@ -217,14 +221,17 @@ const GradeImageModal: React.FC<GradeImageModalProps> = ({
                                                 </td>
                                             ))}
                                             
-                                            {(viewMode === 'p1' && p1Attendance) && <td className="p-2 text-center text-emerald-600 text-xs">✔</td>}
-                                            {(viewMode === 'p2' && p2Attendance) && <td className="p-2 text-center text-emerald-600 text-xs">✔</td>}
+                                            {(viewMode === 'p1' && p1Attendance) && <td className="p-2 text-center text-emerald-600 font-bold">{p1AttNote.toFixed(1)}</td>}
+                                            {(viewMode === 'p2' && p2Attendance) && <td className="p-2 text-center text-emerald-600 font-bold">{p2AttNote.toFixed(1)}</td>}
 
                                             {viewMode === 'final' ? (
                                                 <>
+                                                    <td className={`p-2 text-center font-black ${isLowAtt ? 'text-rose-600' : 'text-slate-400'}`}>{globalAtt.toFixed(0)}%</td>
                                                     <td className={`p-2 text-center font-bold ${getGradeColor(p1Avg)}`}>{p1Avg?.toFixed(1) || '-'}</td>
                                                     <td className={`p-2 text-center font-bold ${getGradeColor(p2Avg)}`}>{p2Avg?.toFixed(1) || '-'}</td>
-                                                    <td className={`p-2 text-center font-bold text-lg ${getGradeColor(finalAvg)}`}>{finalAvg?.toFixed(1) || '-'}</td>
+                                                    <td className={`p-2 text-center font-black text-lg ${isLowAtt ? 'text-rose-600' : getGradeColor(finalAvg)}`}>
+                                                        {finalAvg?.toFixed(1) || '-'}
+                                                    </td>
                                                 </>
                                             ) : (
                                                 <td className={`p-2 text-center font-bold bg-indigo-50 ${getGradeColor(viewMode === 'p1' ? p1Avg : p2Avg)}`}>
