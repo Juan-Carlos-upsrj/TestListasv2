@@ -1,5 +1,5 @@
 {
-  "version": "3.3.20",
-  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v3.3.20/app-debug.apk",
-  "notes": "Corrección de Errores: Se eliminó el error TS6133 que impedía la compilación. Lógica de Recuperación: Campos ahora se habilitan siguiendo un flujo estricto (P1/P2 < 7 -> Remedial; Si persiste reprobación -> Extra; Recursamiento + Falla -> Especial). Estética: La Baja Asistencia informativa ahora es Azul/Índigo en lugar de roja."
+  "version": "3.3.21",
+  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v3.3.21/app-debug.apk",
+  "notes": "Reordenamiento de Tareas: Ahora puedes mover tus evaluaciones a la izquierda o derecha dentro de su respectivo parcial usando las flechas en el encabezado. Mejora de Tabla: Los encabezados de las tareas ahora son más interactivos."
 }

@@ -194,6 +194,7 @@ export type AppAction =
   | { type: 'BULK_SET_ATTENDANCE'; payload: { groupId: string; records: { studentId: string; date: string; status: AttendanceStatus }[] } }
   | { type: 'SAVE_EVALUATION'; payload: { groupId: string; evaluation: Evaluation } }
   | { type: 'DELETE_EVALUATION'; payload: { groupId: string; evaluationId: string } }
+  | { type: 'REORDER_EVALUATION'; payload: { groupId: string; evaluationId: string; direction: 'left' | 'right' } }
   | { type: 'UPDATE_GRADE'; payload: { groupId: string; studentId: string; evaluationId: string; score: number | null } }
   | { type: 'UPDATE_SETTINGS'; payload: Partial<Settings> }
   | { type: 'ADD_TOAST'; payload: Omit<Toast, 'id'> }

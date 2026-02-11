@@ -224,6 +224,34 @@ const appReducer = (state: AppState, action: AppAction): AppState => {
         const newGrades = {...state.grades}; if(newGrades[groupId]) Object.keys(newGrades[groupId]).forEach(sid => { delete newGrades[groupId][sid][evaluationId]; });
         return { ...state, grades: newGrades, evaluations: { ...state.evaluations, [groupId]: (state.evaluations[groupId] || []).filter(e => e.id !== evaluationId) } };
     }
+    case 'REORDER_EVALUATION': {
+        const { groupId, evaluationId, direction } = action.payload;
+        const groupEvaluations = [...(state.evaluations[groupId] || [])];
+        const targetIdx = groupEvaluations.findIndex(e => e.id === evaluationId);
+        if (targetIdx === -1) return state;
+
+        const targetEval = groupEvaluations[targetIdx];
+        const samePartialIndices = groupEvaluations
+            .map((e, idx) => e.partial === targetEval.partial ? idx : -1)
+            .filter(idx => idx !== -1);
+        
+        const internalIdx = samePartialIndices.indexOf(targetIdx);
+        let neighborIdxInSamePartial = -1;
+
+        if (direction === 'left' && internalIdx > 0) {
+            neighborIdxInSamePartial = samePartialIndices[internalIdx - 1];
+        } else if (direction === 'right' && internalIdx < samePartialIndices.length - 1) {
+            neighborIdxInSamePartial = samePartialIndices[internalIdx + 1];
+        }
+
+        if (neighborIdxInSamePartial !== -1) {
+            const temp = groupEvaluations[targetIdx];
+            groupEvaluations[targetIdx] = groupEvaluations[neighborIdxInSamePartial];
+            groupEvaluations[neighborIdxInSamePartial] = temp;
+            return { ...state, evaluations: { ...state.evaluations, [groupId]: groupEvaluations } };
+        }
+        return state;
+    }
     case 'UPDATE_GRADE': {
         const { groupId, studentId, evaluationId, score } = action.payload;
         const group = state.groups.find(g => g.id === groupId);

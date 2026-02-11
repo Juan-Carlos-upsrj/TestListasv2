@@ -207,6 +207,12 @@ const GradesView: React.FC = () => {
         }
     };
 
+    const handleReorder = (evaluationId: string, direction: 'left' | 'right') => {
+        if (selectedGroupId) {
+            dispatch({ type: 'REORDER_EVALUATION', payload: { groupId: selectedGroupId, evaluationId, direction } });
+        }
+    };
+
     // LÓGICA DE SELECCIÓN POR ARRASTRE
     const onMouseDown = (r: number, c: string, e: React.MouseEvent) => {
         if (e.button !== 0) return;
@@ -286,17 +292,29 @@ const GradesView: React.FC = () => {
         }
     };
 
-    const renderHeaderButtons = (ev: Evaluation) => (
-        <div className="flex flex-col items-center justify-center p-2 relative group w-full">
-            <div className="absolute top-0 right-0 flex sm:opacity-0 sm:group-hover:opacity-100 transition-opacity bg-white/80 rounded-md shadow-sm z-10">
-                <button onClick={() => {setEditingEvaluation(ev); setEvalModalOpen(true);}} className="p-1 text-blue-600 hover:bg-blue-50 rounded" title="Editar"><Icon name="edit-3" className="w-3.5 h-3.5"/></button>
-                <button onClick={() => setConfirmDeleteEval(ev)} className="p-1 text-red-600 hover:bg-red-50 rounded" title="Borrar"><Icon name="trash-2" className="w-3.5 h-3.5"/></button>
+    const renderHeaderButtons = (ev: Evaluation) => {
+        const samePartialEvals = ev.partial === 1 ? p1Evaluations : p2Evaluations;
+        const isFirst = samePartialEvals[0]?.id === ev.id;
+        const isLast = samePartialEvals[samePartialEvals.length - 1]?.id === ev.id;
+
+        return (
+            <div className="flex flex-col items-center justify-center p-2 relative group w-full min-w-[80px]">
+                <div className="absolute top-0 right-0 flex sm:opacity-0 sm:group-hover:opacity-100 transition-opacity bg-white/90 rounded-md shadow-md z-10 p-0.5 border border-slate-200">
+                    {!isFirst && (
+                        <button onClick={() => handleReorder(ev.id, 'left')} className="p-1 text-slate-600 hover:bg-slate-100 rounded" title="Mover Izquierda"><Icon name="chevron-left" className="w-3.5 h-3.5"/></button>
+                    )}
+                    <button onClick={() => {setEditingEvaluation(ev); setEvalModalOpen(true);}} className="p-1 text-blue-600 hover:bg-blue-50 rounded" title="Editar"><Icon name="edit-3" className="w-3.5 h-3.5"/></button>
+                    <button onClick={() => setConfirmDeleteEval(ev)} className="p-1 text-red-600 hover:bg-red-50 rounded" title="Borrar"><Icon name="trash-2" className="w-3.5 h-3.5"/></button>
+                    {!isLast && (
+                        <button onClick={() => handleReorder(ev.id, 'right')} className="p-1 text-slate-600 hover:bg-slate-100 rounded" title="Mover Derecha"><Icon name="chevron-right" className="w-3.5 h-3.5"/></button>
+                    )}
+                </div>
+                {ev.isTeamBased && <div className="flex items-center gap-1 mb-0.5"><Icon name={ev.teamType === 'coyote' ? "dog" : "users"} className={`w-3 h-3 ${ev.teamType === 'coyote' ? 'text-orange-500' : 'text-indigo-500'}`} /></div>}
+                <span className={`text-[10px] font-bold leading-tight line-clamp-2 px-1 text-center ${ev.isTeamBased ? (ev.teamType === 'coyote' ? 'text-orange-800' : 'text-indigo-800') : ''}`}>{ev.name}</span>
+                <span className="text-[9px] opacity-60 font-normal">({ev.maxScore} pts)</span>
             </div>
-            {ev.isTeamBased && <div className="flex items-center gap-1 mb-0.5"><Icon name={ev.teamType === 'coyote' ? "dog" : "users"} className={`w-3 h-3 ${ev.teamType === 'coyote' ? 'text-orange-500' : 'text-indigo-500'}`} /></div>}
-            <span className={`text-[10px] font-bold leading-tight line-clamp-2 px-1 text-center ${ev.isTeamBased ? (ev.teamType === 'coyote' ? 'text-orange-800' : 'text-indigo-800') : ''}`}>{ev.name}</span>
-            <span className="text-[9px] opacity-60 font-normal">({ev.maxScore} pts)</span>
-        </div>
-    );
+        );
+    };
 
     const attThresholdNote = useMemo(() => (settings.lowAttendanceThreshold || 80) / 10, [settings.lowAttendanceThreshold]);
 
@@ -450,9 +468,7 @@ const GradesView: React.FC = () => {
                                         const canRemP2 = p2Avg !== null && p2Avg < 7;
                                         const effectiveP1 = r1 !== null ? r1 : (p1Avg ?? 0);
                                         const effectiveP2 = r2 !== null ? r2 : (p2Avg ?? 0);
-                                        // Se habilita extra si cualquiera de los dos sigue reprobado después del remedial (o si no hubo remedial y sigue reprobado)
                                         const canExtra = (effectiveP1 < 7 || effectiveP2 < 7);
-                                        // Especial solo si es recursamiento Y reprobó el remedial o el extra
                                         const canSpecial = student.isRepeating && ( (r1 !== null && r1 < 7) || (r2 !== null && r2 < 7) || (extra !== null && extra < 7) );
 
                                         return (
