@@ -386,16 +386,16 @@ const GradesView: React.FC = () => {
                                         const teamValue = displayTeamType === 'coyote' ? student.teamCoyote : student.team;
 
                                         return (
-                                            <tr key={student.id} className={`${idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/40'} border-b border-slate-100 hover:bg-indigo-50/20 ${(isCriticalFail && settings.failByAttendance) ? '!bg-rose-50/30' : (isRisk || isCriticalFail) ? '!bg-amber-50/20' : ''}`}>
+                                            <tr key={student.id} className={`${idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/40'} border-b border-slate-100 hover:bg-indigo-50/20 ${(isCriticalFail && settings.failByAttendance) ? '!bg-rose-50/30' : (isRisk || isCriticalFail) ? '!bg-indigo-50/20' : ''}`}>
                                                 <td className="sticky left-0 bg-inherit p-2.5 font-medium border-r border-slate-100 z-10 whitespace-nowrap">
                                                     <div className="flex items-center gap-1.5">
                                                         <span className="text-[10px] text-slate-400 w-4 inline-block text-right">{idx + 1}.</span>
                                                         <div className="flex flex-col">
                                                             <div className="flex items-center gap-1.5">
-                                                                <span className={`font-bold ${(isCriticalFail && settings.failByAttendance) ? 'text-rose-600' : (isRisk || isCriticalFail) ? 'text-amber-700' : ''}`}>{student.name}</span>
+                                                                <span className={`font-bold ${(isCriticalFail && settings.failByAttendance) ? 'text-rose-600' : (isRisk || isCriticalFail) ? 'text-indigo-600' : ''}`}>{student.name}</span>
                                                                 {isCriticalFail && settings.failByAttendance && <span className="text-[7px] font-black bg-rose-600 text-white px-1.5 py-0.5 rounded-sm uppercase tracking-tighter shadow-sm border border-rose-700">Reprobado por Faltas</span>}
-                                                                {isCriticalFail && !settings.failByAttendance && <span className="text-[7px] font-black bg-blue-600 text-white px-1.5 py-0.5 rounded-sm uppercase tracking-tighter shadow-sm border border-blue-700">Baja Asistencia</span>}
-                                                                {isRisk && <span className="text-[7px] font-black bg-amber-500 text-white px-1.5 py-0.5 rounded-sm uppercase tracking-tighter shadow-sm border border-amber-600">Riesgo por Asistencia</span>}
+                                                                {isCriticalFail && !settings.failByAttendance && <span className="text-[7px] font-black bg-indigo-500 text-white px-1.5 py-0.5 rounded-sm uppercase tracking-tighter shadow-sm border border-indigo-600">Baja Asistencia</span>}
+                                                                {isRisk && <span className="text-[7px] font-black bg-indigo-400 text-white px-1.5 py-0.5 rounded-sm uppercase tracking-tighter shadow-sm border border-indigo-500">Riesgo Asist.</span>}
                                                             </div>
                                                             {student.nickname && <span className="text-[10px] text-text-secondary italic leading-none mt-0.5">({student.nickname})</span>}
                                                         </div>
@@ -443,31 +443,32 @@ const GradesView: React.FC = () => {
                                         const p2Avg = calculatePartialAverage(group, 2, groupEvaluations, groupGrades[student.id] || {}, settings, att);
                                         const r1 = groupGrades[student.id]?.[GRADE_REMEDIAL_P1] ?? null, r2 = groupGrades[student.id]?.[GRADE_REMEDIAL_P2] ?? null;
                                         const extra = groupGrades[student.id]?.[GRADE_EXTRA] ?? null, special = groupGrades[student.id]?.[GRADE_SPECIAL] ?? null;
-                                        const { score: finalScore, isFailing, attendanceStatus } = calculateFinalGradeWithRecovery(p1Avg, p2Avg, r1, r2, extra, special, globalAtt, settings.lowAttendanceThreshold, settings.failByAttendance);
+                                        const { score: finalScore, attendanceStatus } = calculateFinalGradeWithRecovery(p1Avg, p2Avg, r1, r2, extra, special, globalAtt, settings.lowAttendanceThreshold, settings.failByAttendance);
                                         
                                         // LÓGICA DE HABILITACIÓN ("Waterflow Logic")
                                         const canRemP1 = p1Avg !== null && p1Avg < 7;
                                         const canRemP2 = p2Avg !== null && p2Avg < 7;
                                         const effectiveP1 = r1 !== null ? r1 : (p1Avg ?? 0);
                                         const effectiveP2 = r2 !== null ? r2 : (p2Avg ?? 0);
+                                        // Se habilita extra si cualquiera de los dos sigue reprobado después del remedial (o si no hubo remedial y sigue reprobado)
                                         const canExtra = (effectiveP1 < 7 || effectiveP2 < 7);
-                                        // El especial se habilita solo si es recursamiento Y reprobó el remedial o el extra
+                                        // Especial solo si es recursamiento Y reprobó el remedial o el extra
                                         const canSpecial = student.isRepeating && ( (r1 !== null && r1 < 7) || (r2 !== null && r2 < 7) || (extra !== null && extra < 7) );
 
                                         return (
-                                            <tr key={student.id} className={`border-b border-amber-100 ${idx % 2 === 0 ? 'bg-white' : 'bg-amber-50/30'} ${attendanceStatus === 'fail' && settings.failByAttendance ? 'bg-rose-50' : attendanceStatus === 'fail' ? 'bg-blue-50/40' : attendanceStatus === 'risk' ? 'bg-amber-50' : ''}`}>
+                                            <tr key={student.id} className={`border-b border-amber-100 ${idx % 2 === 0 ? 'bg-white' : 'bg-amber-50/30'} ${attendanceStatus === 'fail' && settings.failByAttendance ? 'bg-rose-50' : (attendanceStatus === 'fail' || attendanceStatus === 'risk') ? 'bg-indigo-50/30' : ''}`}>
                                                 <td className="p-2.5 font-bold whitespace-nowrap">
                                                     <div className="flex flex-col">
                                                         <div className="flex items-center gap-1.5">
-                                                            <span className={(attendanceStatus === 'fail' && settings.failByAttendance) ? 'text-rose-700' : (attendanceStatus === 'fail' || attendanceStatus === 'risk') ? 'text-amber-800' : ''}>{student.name}</span>
+                                                            <span className={(attendanceStatus === 'fail' && settings.failByAttendance) ? 'text-rose-700' : (attendanceStatus === 'fail' || attendanceStatus === 'risk') ? 'text-indigo-800' : ''}>{student.name}</span>
                                                             {attendanceStatus === 'fail' && settings.failByAttendance && <span className="text-[7px] font-black bg-rose-700 text-white px-1.5 py-0.5 rounded-sm uppercase tracking-tighter shadow-sm">Reprobado por Faltas</span>}
-                                                            {attendanceStatus === 'fail' && !settings.failByAttendance && <span className="text-[7px] font-black bg-blue-700 text-white px-1.5 py-0.5 rounded-sm uppercase tracking-tighter shadow-sm">Baja Asistencia</span>}
-                                                            {attendanceStatus === 'risk' && <span className="text-[7px] font-black bg-amber-600 text-white px-1.5 py-0.5 rounded-sm uppercase tracking-tighter shadow-sm">Riesgo por Asistencia</span>}
+                                                            {attendanceStatus === 'fail' && !settings.failByAttendance && <span className="text-[7px] font-black bg-indigo-600 text-white px-1.5 py-0.5 rounded-sm uppercase tracking-tighter shadow-sm">Baja Asistencia</span>}
+                                                            {attendanceStatus === 'risk' && <span className="text-[7px] font-black bg-indigo-500 text-white px-1.5 py-0.5 rounded-sm uppercase tracking-tighter shadow-sm">Riesgo por Asistencia</span>}
                                                         </div>
                                                         <span className="text-[9px] font-normal text-slate-400">Mat: {student.matricula} {student.isRepeating && <span className="font-black text-rose-600 ml-1">(RECURSAMIENTO)</span>}</span>
                                                     </div>
                                                 </td>
-                                                <td className={`p-1 text-center font-black ${attendanceStatus === 'fail' && settings.failByAttendance ? 'text-rose-600' : attendanceStatus === 'fail' ? 'text-blue-600' : attendanceStatus === 'risk' ? 'text-amber-600' : 'text-slate-500'}`}>{globalAtt.toFixed(0)}%</td>
+                                                <td className={`p-1 text-center font-black ${attendanceStatus === 'fail' && settings.failByAttendance ? 'text-rose-600' : (attendanceStatus === 'fail' || attendanceStatus === 'risk') ? 'text-indigo-600' : 'text-slate-500'}`}>{globalAtt.toFixed(0)}%</td>
                                                 <td className={`p-1 text-center transition-colors ${isSelected(idx, GRADE_REMEDIAL_P1) ? 'bg-amber-200' : ''}`} onMouseDown={(e) => canRemP1 && onMouseDown(idx, GRADE_REMEDIAL_P1, e)} onMouseEnter={() => canRemP1 && onMouseEnter(idx, GRADE_REMEDIAL_P1)}>
                                                     <input type="number" min="0" value={r1 ?? ''} onChange={(e) => handleGradeChange(student.id, GRADE_REMEDIAL_P1, e.target.value)} onPaste={(e) => handlePaste(e, idx, GRADE_REMEDIAL_P1)} disabled={!canRemP1} className={`w-12 text-center rounded py-1 bg-transparent ${!canRemP1 ? 'opacity-10 cursor-not-allowed' : 'border-amber-200 focus:ring-amber-500'}`}/>
                                                 </td>
@@ -480,7 +481,7 @@ const GradesView: React.FC = () => {
                                                 <td className={`p-1 text-center transition-colors ${isSelected(idx, GRADE_SPECIAL) ? 'bg-amber-200' : ''}`} onMouseDown={(e) => canSpecial && onMouseDown(idx, GRADE_SPECIAL, e)} onMouseEnter={() => canSpecial && onMouseEnter(idx, GRADE_SPECIAL)}>
                                                     <input type="number" min="0" value={special ?? ''} onChange={(e) => handleGradeChange(student.id, GRADE_SPECIAL, e.target.value)} onPaste={(e) => handlePaste(e, idx, GRADE_SPECIAL)} disabled={!canSpecial} className={`w-12 text-center rounded py-1 bg-transparent ${!canSpecial ? 'opacity-10 cursor-not-allowed' : 'border-amber-500 focus:ring-amber-500'}`}/>
                                                 </td>
-                                                <td className={`p-2 text-center font-black bg-amber-100/50 ${getGradeColor(finalScore)} ${attendanceStatus === 'fail' && settings.failByAttendance ? 'ring-2 ring-rose-500 ring-inset' : attendanceStatus === 'fail' ? 'ring-2 ring-blue-500 ring-inset' : attendanceStatus === 'risk' ? 'ring-2 ring-amber-500 ring-inset' : ''}`}>
+                                                <td className={`p-2 text-center font-black bg-amber-100/50 ${getGradeColor(finalScore)} ${attendanceStatus === 'fail' && settings.failByAttendance ? 'ring-2 ring-rose-500 ring-inset' : (attendanceStatus === 'fail' || attendanceStatus === 'risk') ? 'ring-2 ring-indigo-500 ring-inset' : ''}`}>
                                                     {finalScore?.toFixed(1) || '-'}
                                                 </td>
                                             </tr>
