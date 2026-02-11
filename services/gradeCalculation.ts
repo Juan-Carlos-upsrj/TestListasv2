@@ -112,11 +112,21 @@ export const calculateFinalGradeWithRecovery = (
     special: number | null,
     globalAttendancePct: number,
     threshold: number = 80
-): { score: number | null; type: string; isFailing: boolean; lowAttendance: boolean } => {
+): { score: number | null; type: string; isFailing: boolean; attendanceStatus: 'ok' | 'risk' | 'fail' } => {
     
-    const lowAttendance = globalAttendancePct < threshold;
+    // Nueva lógica de tolerancia (5%)
+    // Si el umbral es 80, entre 75 y 80 es RIESGO. Menos de 75 es FALLO.
+    const tolerance = 5;
+    const failThreshold = threshold - tolerance;
     
-    if (p1Avg === null && p2Avg === null) return { score: null, type: 'N/A', isFailing: false, lowAttendance };
+    let attendanceStatus: 'ok' | 'risk' | 'fail' = 'ok';
+    if (globalAttendancePct < failThreshold) {
+        attendanceStatus = 'fail';
+    } else if (globalAttendancePct < threshold) {
+        attendanceStatus = 'risk';
+    }
+    
+    if (p1Avg === null && p2Avg === null) return { score: null, type: 'N/A', isFailing: false, attendanceStatus };
     
     const effectiveP1 = remedialP1 !== null ? remedialP1 : (p1Avg ?? 0);
     const effectiveP2 = remedialP2 !== null ? remedialP2 : (p2Avg ?? 0);
@@ -134,14 +144,14 @@ export const calculateFinalGradeWithRecovery = (
         type = 'Extra';
     }
 
-    // Un alumno reprueba si la nota es < 7 O si tiene baja asistencia
+    // Un alumno reprueba si la nota es < 7 O si tiene asistencia crítica (fail)
     const isFailingByGrades = finalScore < 7;
-    const isFailing = isFailingByGrades || lowAttendance;
+    const isFailing = isFailingByGrades || attendanceStatus === 'fail';
 
     return { 
         score: finalScore, 
-        type: lowAttendance ? `${type} (Faltas)` : type, 
+        type: attendanceStatus !== 'ok' ? `${type} (Asist.)` : type, 
         isFailing, 
-        lowAttendance 
+        attendanceStatus 
     };
 };

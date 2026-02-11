@@ -202,7 +202,10 @@ const GradeImageModal: React.FC<GradeImageModalProps> = ({
                                     const p1AttNote = calculateAttendancePercentage(group, 1, settings, studentAtt) / 10;
                                     const p2AttNote = calculateAttendancePercentage(group, 2, settings, studentAtt) / 10;
                                     const globalAtt = calculateAttendancePercentage(group, 'global', settings, studentAtt);
-                                    const isLowAtt = globalAtt < settings.lowAttendanceThreshold;
+                                    
+                                    const tolerance = 5;
+                                    const isCriticalFail = globalAtt < (settings.lowAttendanceThreshold - tolerance);
+                                    const isRisk = globalAtt < settings.lowAttendanceThreshold && !isCriticalFail;
 
                                     let finalAvg: number | null = null;
                                     if (p1Avg !== null && p2Avg !== null) finalAvg = (p1Avg + p2Avg) / 2;
@@ -210,11 +213,12 @@ const GradeImageModal: React.FC<GradeImageModalProps> = ({
                                     else if (p2Avg !== null) finalAvg = p2Avg;
 
                                     return (
-                                        <tr key={student.id} className={`border-b border-slate-100 ${idx % 2 === 0 ? 'bg-slate-50/50' : ''} ${isLowAtt ? 'bg-rose-50' : ''}`}>
+                                        <tr key={student.id} className={`border-b border-slate-100 ${idx % 2 === 0 ? 'bg-slate-50/50' : ''} ${isCriticalFail ? 'bg-rose-50' : isRisk ? 'bg-amber-50' : ''}`}>
                                             <td className="p-2 font-medium text-slate-700">
                                                 <div className="flex items-center gap-1">
-                                                    <span className={isLowAtt ? 'text-rose-700 font-bold' : ''}>{student.name}</span>
-                                                    {isLowAtt && <span className="text-[7px] font-black bg-rose-600 text-white px-1 rounded-sm uppercase tracking-tighter shrink-0">Baja Asist.</span>}
+                                                    <span className={isCriticalFail ? 'text-rose-700 font-bold' : isRisk ? 'text-amber-700 font-bold' : ''}>{student.name}</span>
+                                                    {isCriticalFail && <span className="text-[7px] font-black bg-rose-600 text-white px-1 rounded-sm uppercase tracking-tighter shrink-0">Baja Asist.</span>}
+                                                    {isRisk && <span className="text-[7px] font-black bg-amber-500 text-white px-1 rounded-sm uppercase tracking-tighter shrink-0">Riesgo Asist.</span>}
                                                 </div>
                                             </td>
 
@@ -229,10 +233,10 @@ const GradeImageModal: React.FC<GradeImageModalProps> = ({
 
                                             {viewMode === 'final' ? (
                                                 <>
-                                                    <td className={`p-2 text-center font-black ${isLowAtt ? 'text-rose-600' : 'text-slate-400'}`}>{globalAtt.toFixed(0)}%</td>
+                                                    <td className={`p-2 text-center font-black ${isCriticalFail ? 'text-rose-600' : isRisk ? 'text-amber-600' : 'text-slate-400'}`}>{globalAtt.toFixed(0)}%</td>
                                                     <td className={`p-2 text-center font-bold ${getGradeColor(p1Avg)}`}>{p1Avg?.toFixed(1) || '-'}</td>
                                                     <td className={`p-2 text-center font-bold ${getGradeColor(p2Avg)}`}>{p2Avg?.toFixed(1) || '-'}</td>
-                                                    <td className={`p-2 text-center font-black text-lg ${isLowAtt ? 'text-rose-600' : getGradeColor(finalAvg)}`}>
+                                                    <td className={`p-2 text-center font-black text-lg ${isCriticalFail ? 'text-rose-600' : getGradeColor(finalAvg)}`}>
                                                         {finalAvg?.toFixed(1) || '-'}
                                                     </td>
                                                 </>

@@ -1,5 +1,5 @@
 {
-  "version": "3.3.16",
-  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v3.3.16/app-debug.apk",
-  "notes": "Actualización de Identificación Académica: Se añadió la etiqueta explícita 'REPROBADO POR FALTAS' junto al nombre en la vista ordinaria para mayor claridad. Incremento de versión técnica para facilitar la actualización en Android."
+  "version": "3.3.17",
+  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v3.3.17/app-debug.apk",
+  "notes": "Mejora de Tolerancia Académica: Se implementó un margen de gracia del 5% en la asistencia. Ahora los alumnos entre 75-79% se marcan como 'Riesgo por Asistencia' (Amarillo), permitiendo identificar problemas sin sentenciar la reprobación oficial de forma tan drástica hasta bajar del 75%."
 }
