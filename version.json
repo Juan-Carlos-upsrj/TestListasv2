@@ -1,5 +1,5 @@
 {
-  "version": "3.3.18",
-  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v3.3.18/app-debug.apk",
-  "notes": "Control de Reprobación: Se añadió un switch en Configuración > Preferencias para decidir si la baja asistencia implica reprobación automática o solo una advertencia informativa."
+  "version": "3.3.19",
+  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v3.3.19/app-debug.apk",
+  "notes": "Lógica de Recuperación Dinámica: Los campos de Remedial, Extra y Especial ahora se habilitan solo si el alumno lo requiere según sus notas previas. Mejora Visual: Se eliminó el color rojo de la Baja Asistencia informativa (cuando el switch está apagado) para reducir la carga punitiva visual."
 }
