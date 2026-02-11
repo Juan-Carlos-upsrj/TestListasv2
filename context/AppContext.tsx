@@ -1,4 +1,3 @@
-
 import React, { createContext, useReducer, useEffect, ReactNode, Dispatch, useState } from 'react';
 import { AppState, AppAction, AttendanceStatus, Group, Evaluation, Student, Settings } from '../types';
 import { GROUP_COLORS } from '../constants';
@@ -30,6 +29,7 @@ const defaultState: AppState = {
     p2EvalEnd: fourMonthsLater.toISOString().split('T')[0],
     showMatricula: true,
     showTeamsInGrades: true,
+    failByAttendance: true, // Por defecto está activado
     sidebarGroupDisplayMode: 'name-abbrev', 
     theme: 'classic', 
     lowAttendanceThreshold: 80,
@@ -101,13 +101,12 @@ const appReducer = (state: AppState, action: AppAction): AppState => {
         });
 
         const loadedSettingsRaw = loadedState.settings || {};
-        // FIX: Cast loadedSettings to Partial<Settings> to avoid property access errors on empty object type
         const loadedSettings = loadedSettingsRaw as Partial<Settings>;
         const migratedSettings = { 
             ...defaultState.settings, 
             ...loadedSettings,
-            // Migrar firstPartialEnd a p1EvalEnd si p1EvalEnd no existe
-            p1EvalEnd: loadedSettings.p1EvalEnd || loadedSettings.firstPartialEnd || defaultState.settings.p1EvalEnd
+            p1EvalEnd: loadedSettings.p1EvalEnd || loadedSettings.firstPartialEnd || defaultState.settings.p1EvalEnd,
+            failByAttendance: loadedSettings.failByAttendance !== undefined ? loadedSettings.failByAttendance : defaultState.settings.failByAttendance
         };
         migratedSettings.theme = 'classic';
 

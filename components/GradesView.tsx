@@ -189,7 +189,7 @@ const GradesView: React.FC = () => {
             const p2Avg = calculatePartialAverage(group!, 2, groupEvaluations, groupGrades[student.id] || {}, settings, att);
             const r1 = groupGrades[student.id]?.[GRADE_REMEDIAL_P1] ?? null, r2 = groupGrades[student.id]?.[GRADE_REMEDIAL_P2] ?? null;
             const extra = groupGrades[student.id]?.[GRADE_EXTRA] ?? null, special = groupGrades[student.id]?.[GRADE_SPECIAL] ?? null;
-            const { isFailing, attendanceStatus } = calculateFinalGradeWithRecovery(p1Avg, p2Avg, r1, r2, extra, special, globalAtt, settings.lowAttendanceThreshold);
+            const { isFailing, attendanceStatus } = calculateFinalGradeWithRecovery(p1Avg, p2Avg, r1, r2, extra, special, globalAtt, settings.lowAttendanceThreshold, settings.failByAttendance);
             // Mostrar en recuperación si es reprobado por nota, reprobado por faltas criticas o está en riesgo
             return isFailing || attendanceStatus !== 'ok' || (p1Avg !== null && p1Avg < 7) || (p2Avg !== null && p2Avg < 7);
         });
@@ -488,7 +488,11 @@ const GradesView: React.FC = () => {
                                                         <div className="flex flex-col">
                                                             <div className="flex items-center gap-1.5">
                                                                 <span className={`font-bold ${isCriticalFail ? 'text-rose-600' : isRisk ? 'text-amber-700' : ''}`}>{student.name}</span>
-                                                                {isCriticalFail && <span className="text-[7px] font-black bg-rose-600 text-white px-1.5 py-0.5 rounded-sm uppercase tracking-tighter shadow-sm border border-rose-700">Reprobado por Faltas</span>}
+                                                                {isCriticalFail && (
+                                                                    <span className="text-[7px] font-black bg-rose-600 text-white px-1.5 py-0.5 rounded-sm uppercase tracking-tighter shadow-sm border border-rose-700">
+                                                                        {settings.failByAttendance ? 'Reprobado por Faltas' : 'Baja Asistencia'}
+                                                                    </span>
+                                                                )}
                                                                 {isRisk && <span className="text-[7px] font-black bg-amber-500 text-white px-1.5 py-0.5 rounded-sm uppercase tracking-tighter shadow-sm border border-amber-600">Riesgo por Asistencia</span>}
                                                             </div>
                                                             {student.nickname && <span className="text-[10px] text-text-secondary italic leading-none mt-0.5">({student.nickname})</span>}
@@ -575,7 +579,7 @@ const GradesView: React.FC = () => {
                                         const r1 = groupGrades[student.id]?.[GRADE_REMEDIAL_P1] ?? null, r2 = groupGrades[student.id]?.[GRADE_REMEDIAL_P2] ?? null;
                                         const extra = groupGrades[student.id]?.[GRADE_EXTRA] ?? null, special = groupGrades[student.id]?.[GRADE_SPECIAL] ?? null;
                                         
-                                        const { score: finalScore, isFailing, attendanceStatus } = calculateFinalGradeWithRecovery(p1Avg, p2Avg, r1, r2, extra, special, globalAtt, settings.lowAttendanceThreshold);
+                                        const { score: finalScore, isFailing, attendanceStatus } = calculateFinalGradeWithRecovery(p1Avg, p2Avg, r1, r2, extra, special, globalAtt, settings.lowAttendanceThreshold, settings.failByAttendance);
                                         
                                         const canTakeExtra = ((r1 !== null ? r1 : p1Avg) || 0) < 7 || ((r2 !== null ? r2 : p2Avg) || 0) < 7 || isFailing;
                                         
@@ -585,7 +589,11 @@ const GradesView: React.FC = () => {
                                                     <div className="flex flex-col">
                                                         <div className="flex items-center gap-1.5">
                                                             <span className={attendanceStatus === 'fail' ? 'text-rose-700' : attendanceStatus === 'risk' ? 'text-amber-800' : ''}>{student.name}</span>
-                                                            {attendanceStatus === 'fail' && <span className="text-[7px] font-black bg-rose-700 text-white px-1.5 py-0.5 rounded-sm uppercase tracking-tighter shadow-sm">Reprobado por Faltas</span>}
+                                                            {attendanceStatus === 'fail' && (
+                                                                <span className="text-[7px] font-black bg-rose-700 text-white px-1.5 py-0.5 rounded-sm uppercase tracking-tighter shadow-sm">
+                                                                    {settings.failByAttendance ? 'Reprobado por Faltas' : 'Baja Asistencia'}
+                                                                </span>
+                                                            )}
                                                             {attendanceStatus === 'risk' && <span className="text-[7px] font-black bg-amber-600 text-white px-1.5 py-0.5 rounded-sm uppercase tracking-tighter shadow-sm">Riesgo por Asistencia</span>}
                                                         </div>
                                                         <span className="text-[9px] font-normal text-slate-400">Mat: {student.matricula}</span>
@@ -606,7 +614,7 @@ const GradesView: React.FC = () => {
                                                 <td className={`p-1 text-center transition-colors ${isSelected(idx, GRADE_SPECIAL) ? 'bg-amber-200' : ''}`} onMouseDown={(e) => student.isRepeating && onMouseDown(idx, GRADE_SPECIAL, e)} onMouseEnter={() => student.isRepeating && onMouseEnter(idx, GRADE_SPECIAL)}>
                                                     <input type="number" min="0" value={special ?? ''} onChange={(e) => handleGradeChange(student.id, GRADE_SPECIAL, e.target.value)} onPaste={(e) => handlePaste(e, idx, GRADE_SPECIAL)} disabled={!student.isRepeating} className={`w-12 text-center rounded py-1 bg-transparent ${!student.isRepeating ? 'opacity-30' : 'border-amber-500 focus:ring-amber-500'}`}/>
                                                 </td>
-                                                <td className={`p-2 text-center font-black bg-amber-100/50 ${getGradeColor(finalScore)} ${attendanceStatus === 'fail' ? 'ring-2 ring-rose-500 ring-inset' : attendanceStatus === 'risk' ? 'ring-2 ring-amber-500 ring-inset' : ''}`}>
+                                                <td className={`p-2 text-center font-black bg-amber-100/50 ${getGradeColor(finalScore)} ${attendanceStatus === 'fail' ? (settings.failByAttendance ? 'ring-2 ring-rose-500 ring-inset' : 'ring-2 ring-slate-400 ring-inset') : attendanceStatus === 'risk' ? 'ring-2 ring-amber-500 ring-inset' : ''}`}>
                                                     {finalScore?.toFixed(1) || '-'}
                                                 </td>
                                             </tr>

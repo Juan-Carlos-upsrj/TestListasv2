@@ -111,7 +111,8 @@ export const calculateFinalGradeWithRecovery = (
     extra: number | null,
     special: number | null,
     globalAttendancePct: number,
-    threshold: number = 80
+    threshold: number = 80,
+    failByAttendance: boolean = true // Nuevo parámetro opcional
 ): { score: number | null; type: string; isFailing: boolean; attendanceStatus: 'ok' | 'risk' | 'fail' } => {
     
     // Nueva lógica de tolerancia (5%)
@@ -144,9 +145,13 @@ export const calculateFinalGradeWithRecovery = (
         type = 'Extra';
     }
 
-    // Un alumno reprueba si la nota es < 7 O si tiene asistencia crítica (fail)
+    // Un alumno reprueba si la nota es < 7
     const isFailingByGrades = finalScore < 7;
-    const isFailing = isFailingByGrades || attendanceStatus === 'fail';
+    
+    // Solo reprueba por faltas si el ajuste global está activado
+    const isFailingByAttendance = failByAttendance && attendanceStatus === 'fail';
+    
+    const isFailing = isFailingByGrades || isFailingByAttendance;
 
     return { 
         score: finalScore, 

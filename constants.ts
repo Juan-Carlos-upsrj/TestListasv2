@@ -2,7 +2,7 @@ import { AttendanceStatus, DayOfWeek, MotivationalQuote, Professor } from './typ
 
 // Manual version control for the web/mobile app
 // New format: 3.3.X (Standard SemVer to avoid Electron errors)
-export const APP_VERSION = '3.3.17'; 
+export const APP_VERSION = '3.3.18'; 
 
 export const DAYS_OF_WEEK: DayOfWeek[] = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
 
@@ -93,9 +93,9 @@ export const GROUP_COLORS = [
     { name: 'zinc', hex: '#52525b', bg: 'bg-zinc-600', text: 'text-white', ring: 'ring-zinc-600', calendar: 'bg-zinc-100 dark:bg-slate-900/50 text-zinc-800 dark:text-zinc-200' },
     { name: 'stone', hex: '#57534e', bg: 'bg-stone-600', text: 'text-white', ring: 'ring-stone-600', calendar: 'bg-stone-100 dark:bg-stone-900/50 text-stone-800 dark:text-stone-200' },
     { name: 'midnight', hex: '#1e3a8a', bg: 'bg-indigo-950', text: 'text-white', ring: 'ring-indigo-950', calendar: 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-900 dark:text-indigo-100' },
-    { name: 'forest', hex: '#14532d', bg: 'bg-green-900', text: 'text-white', ring: 'ring-green-900', calendar: 'bg-green-100 dark:bg-green-900/50 text-green-900 dark:text-green-100' },
-    { name: 'wine', hex: '#881337', bg: 'bg-rose-900', text: 'text-white', ring: 'ring-rose-900', calendar: 'bg-rose-100 dark:bg-rose-900/50 text-rose-900 dark:text-rose-100' },
-    { name: 'brown', hex: '#7c2d12', bg: 'bg-orange-900', text: 'text-white', ring: 'ring-orange-900', calendar: 'bg-orange-100 dark:bg-orange-900/50 text-orange-900 dark:text-orange-100' },
+    { name: 'forest', hex: '#14532d', bg: 'bg-green-900', text: 'text-white', ring: 'ring-green-900', calendar: 'bg-green-100 dark:bg-indigo-900/50 text-green-900 dark:text-green-100' },
+    { name: 'wine', hex: '#881337', bg: 'bg-rose-900', text: 'text-white', ring: 'ring-rose-900', calendar: 'bg-rose-100 dark:bg-indigo-900/50 text-rose-900 dark:text-rose-100' },
+    { name: 'brown', hex: '#7c2d12', bg: 'bg-orange-900', text: 'text-white', ring: 'ring-orange-900', calendar: 'bg-orange-100 dark:bg-indigo-900/50 text-orange-900 dark:text-orange-100' },
 ];
 
 export const CUSTOM_EVENT_COLOR = 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900/50 dark:text-cyan-200';

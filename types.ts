@@ -1,4 +1,3 @@
-
 // FIX: Define DayOfWeek here to break circular dependency with constants.ts
 export type DayOfWeek = 'Lunes' | 'Martes' | 'Miércoles' | 'Jueves' | 'Viernes' | 'Sábado';
 
@@ -78,6 +77,7 @@ export interface Settings {
   
   showMatricula: boolean;
   showTeamsInGrades: boolean;
+  failByAttendance: boolean; // NUEVO: Determina si las faltas reprueban automáticamente
   sidebarGroupDisplayMode: SidebarGroupDisplayMode; // Replaces boolean
   theme: 'classic' | 'dark';
   lowAttendanceThreshold: number;

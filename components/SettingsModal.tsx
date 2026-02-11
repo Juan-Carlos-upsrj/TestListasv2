@@ -1,4 +1,3 @@
-
 import React, { useContext, useState, useEffect, useRef } from 'react';
 import { AppContext } from '../context/AppContext';
 import { Settings, Archive } from '../types';
@@ -386,6 +385,13 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
                                     <h4 className="text-sm font-black uppercase text-slate-400 tracking-widest">Preferencias</h4>
                                 </div>
                                 <div className="space-y-4 bg-slate-50 p-6 rounded-3xl border border-slate-200 shadow-sm">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex flex-col">
+                                            <span className="text-xs font-bold text-slate-700">Reprobación por Faltas</span>
+                                            <span className="text-[9px] text-slate-400">¿Las bajas de asistencia reprueban al alumno?</span>
+                                        </div>
+                                        <input type="checkbox" name="failByAttendance" checked={settings.failByAttendance} onChange={handleChange} className="h-5 w-10 rounded-full text-indigo-600 border-2" />
+                                    </div>
                                     <div className="flex items-center justify-between">
                                         <span className="text-xs font-bold text-slate-700">Matrícula en Tablas</span>
                                         <input type="checkbox" name="showMatricula" checked={settings.showMatricula} onChange={handleChange} className="h-5 w-10 rounded-full text-indigo-600 border-2" />
