@@ -6,11 +6,21 @@ import { fetchGoogleCalendarEvents } from '../services/calendarService';
 import { getClassDates } from '../services/dateUtils';
 import { v4 as uuidv4 } from 'uuid';
 
+const getLocalDateStr = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
+
+const todayStr = getLocalDateStr();
 const today = new Date();
+
 const nextMonth = new Date();
 nextMonth.setMonth(today.getMonth() + 1);
+const nextMonthStr = `${nextMonth.getFullYear()}-${String(nextMonth.getMonth() + 1).padStart(2, '0')}-${String(nextMonth.getDate()).padStart(2, '0')}`;
+
 const fourMonthsLater = new Date();
 fourMonthsLater.setMonth(today.getMonth() + 4);
+const fourMonthsStr = `${fourMonthsLater.getFullYear()}-${String(fourMonthsLater.getMonth() + 1).padStart(2, '0')}-${String(fourMonthsLater.getDate()).padStart(2, '0')}`;
 
 const defaultState: AppState = {
   groups: [],
@@ -20,16 +30,16 @@ const defaultState: AppState = {
   calendarEvents: [],
   gcalEvents: [],
   settings: {
-    semesterStart: today.toISOString().split('T')[0],
-    firstPartialEnd: nextMonth.toISOString().split('T')[0],
-    semesterEnd: fourMonthsLater.toISOString().split('T')[0],
-    p1EvalStart: today.toISOString().split('T')[0],
-    p1EvalEnd: nextMonth.toISOString().split('T')[0],
-    p2EvalStart: nextMonth.toISOString().split('T')[0],
-    p2EvalEnd: fourMonthsLater.toISOString().split('T')[0],
+    semesterStart: todayStr,
+    firstPartialEnd: nextMonthStr,
+    semesterEnd: fourMonthsStr,
+    p1EvalStart: todayStr,
+    p1EvalEnd: nextMonthStr,
+    p2EvalStart: nextMonthStr,
+    p2EvalEnd: fourMonthsStr,
     showMatricula: true,
     showTeamsInGrades: true,
-    failByAttendance: true, // Por defecto está activado
+    failByAttendance: true,
     sidebarGroupDisplayMode: 'name-abbrev', 
     theme: 'classic', 
     lowAttendanceThreshold: 80,
@@ -59,7 +69,6 @@ const appReducer = (state: AppState, action: AppAction): AppState => {
         const loadedState = action.payload || {};
         const loadedGroups: Group[] = (Array.isArray(loadedState.groups) ? loadedState.groups : []).filter(g => g && g.id);
         
-        // MIGRACIÓN DE GRUPOS Y ALUMNOS
         const migratedGroups = loadedGroups.map((group, index) => {
             const hasEvalTypes = group.evaluationTypes && group.evaluationTypes.partial1 && group.evaluationTypes.partial2;
             return {
@@ -110,7 +119,6 @@ const appReducer = (state: AppState, action: AppAction): AppState => {
         };
         migratedSettings.theme = 'classic';
 
-        // --- SISTEMA DE RESCATE PROFUNDO DE NOTAS 1.7.0 ---
         let recoveredTeamNotes: Record<string, string> = {};
         let recoveredCoyoteNotes: Record<string, string> = {};
 

@@ -15,7 +15,11 @@ interface BulkAttendanceModalProps {
 const BulkAttendanceModal: React.FC<BulkAttendanceModalProps> = ({ isOpen, onClose, group }) => {
     const { dispatch } = useContext(AppContext);
     
-    const todayStr = new Date().toISOString().split('T')[0];
+    const todayStr = (() => {
+        const d = new Date();
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    })();
+
     const [startDate, setStartDate] = useState(todayStr);
     const [endDate, setEndDate] = useState(todayStr);
     const [status, setStatus] = useState<AttendanceStatus>(AttendanceStatus.Present);
@@ -24,7 +28,7 @@ const BulkAttendanceModal: React.FC<BulkAttendanceModalProps> = ({ isOpen, onClo
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         
-        if (new Date(endDate) < new Date(startDate)) {
+        if (new Date(endDate + 'T00:00:00') < new Date(startDate + 'T00:00:00')) {
             dispatch({ type: 'ADD_TOAST', payload: { message: 'La fecha de fin no puede ser anterior a la de inicio.', type: 'error' } });
             return;
         }

@@ -1,5 +1,5 @@
 {
-  "version": "3.3.21",
-  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v3.3.21/app-debug.apk",
-  "notes": "Reordenamiento de Tareas: Ahora puedes mover tus evaluaciones a la izquierda o derecha dentro de su respectivo parcial usando las flechas en el encabezado. Mejora de Tabla: Los encabezados de las tareas ahora son más interactivos."
+  "version": "3.3.22",
+  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v3.3.22/app-debug.apk",
+  "notes": "Corrección de Horario: Las fechas ahora usan tiempo local, solucionando el problema donde el sistema marcaba el día siguiente después de cierta hora. Reordenamiento de Tareas: Funcionalidad completa para mover evaluaciones a la izquierda/derecha."
 }

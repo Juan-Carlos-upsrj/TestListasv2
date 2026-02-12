@@ -76,7 +76,7 @@ const calculateStats = (studentAttendance: any, dates: string[]) => {
 const StickyHeader = () => {
     const context = useContext(AttendanceInternalContext);
     if (!context) return null;
-    const { headerStructure, classDates, totalWidth, precalcStats, nameColWidth, displayMode } = context;
+    const { headerStructure, classDates, totalWidth, precalcStats, nameColWidth, displayMode, todayStr } = context;
 
     const globalP1Avg = Math.round(precalcStats.reduce((acc, s) => acc + s.p1.percent, 0) / (precalcStats.length || 1));
     const globalP2Avg = Math.round(precalcStats.reduce((acc, s) => acc + s.p2.percent, 0) / (precalcStats.length || 1));
@@ -124,7 +124,6 @@ const StickyHeader = () => {
                     <span className="font-bold text-[11px] sm:text-sm text-slate-700">Alumno</span>
                 </div>
                 {classDates.map(date => {
-                    const todayStr = new Date().toISOString().split('T')[0];
                     const isToday = date === todayStr;
                     const d = new Date(date + 'T00:00:00');
                     return (
@@ -280,7 +279,11 @@ const AttendanceView: React.FC = () => {
     }, []);
 
     const listRef = useRef<any>(null);
-    const todayStr = useMemo(() => new Date().toISOString().split('T')[0], []);
+    
+    const todayStr = useMemo(() => {
+        const d = new Date();
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    }, []);
 
     const [focusedCell, setFocusedCell] = useState<Coords | null>(null);
     const stateRef = useRef({ focusedCell, selection, filteredStudents: [] as Student[], classDates: [] as string[] });
