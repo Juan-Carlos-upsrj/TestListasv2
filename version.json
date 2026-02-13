@@ -1,5 +1,5 @@
 {
   "version": "3.3.22",
   "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v3.3.22/app-debug.apk",
-  "notes": "Corrección de Horario: Las fechas ahora usan tiempo local, solucionando el problema donde el sistema marcaba el día siguiente después de cierta hora. Reordenamiento de Tareas: Funcionalidad completa para mover evaluaciones a la izquierda/derecha."
+  "notes": "Reversión de cambios. Nueva funcionalidad: Integración con Google Classroom para importar tareas y calificaciones directamente."
 }

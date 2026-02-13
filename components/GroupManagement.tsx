@@ -1,4 +1,3 @@
-
 import React, { useContext, useState, useMemo } from 'react';
 import { AppContext } from '../context/AppContext';
 import { Group, Student, DayOfWeek, EvaluationType } from '../types';
@@ -67,8 +66,8 @@ const StudentForm: React.FC<{
                                 type="text" 
                                 value={nickname} 
                                 onChange={e => setNickname(e.target.value)} 
-                                placeholder="Como le gusta que le digan"
-                                className="w-full pl-10 pr-3 py-2.5 border-2 border-slate-200 rounded-xl bg-slate-50 focus:bg-white focus:ring-2 focus:ring-primary transition-all text-sm"
+                                placeholder="Ej: 'Capi', 'Charly'..."
+                                className="w-full pl-10 pr-3 py-2.5 border-2 border-slate-200 rounded-xl bg-slate-50 focus:bg-white focus:ring-2 focus:ring-primary transition-all text-sm font-bold text-primary"
                             />
                         </div>
                     </div>
@@ -323,13 +322,25 @@ const GroupManagement: React.FC = () => {
 
     const handleSaveStudentAction = (data: Partial<Student>) => {
         if (!group) return;
-        const studentToSave: Student = editingStudent 
-            ? { ...editingStudent, ...data }
-            : { id: uuidv4(), name: '', matricula: '', ...data } as Student;
+        
+        let studentToSave: Student;
+        if (editingStudent) {
+            // MERGE: Asegurar que mantenemos ID y todas las propiedades previas, sobrescribiendo solo lo editado
+            studentToSave = { ...editingStudent, ...data } as Student;
+        } else {
+            // NUEVO: Crear objeto base con ID único
+            studentToSave = { 
+                id: uuidv4(), 
+                name: '', 
+                matricula: '', 
+                ...data 
+            } as Student;
+        }
+        
         dispatch({ type: 'SAVE_STUDENT', payload: { groupId: group.id, student: studentToSave } });
         setStudentModalOpen(false);
         setEditingStudent(null);
-        dispatch({ type: 'ADD_TOAST', payload: { message: editingStudent ? 'Ficha actualizada.' : 'Alumno registrado.', type: 'success' } });
+        dispatch({ type: 'ADD_TOAST', payload: { message: editingStudent ? 'Ficha actualizada con éxito.' : 'Alumno registrado correctamente.', type: 'success' } });
     };
 
     const handleDeleteStudentAction = () => {
@@ -394,7 +405,7 @@ const GroupManagement: React.FC = () => {
                         </div>
                         <div className="flex items-center gap-2 w-full sm:w-auto">
                             <div className="relative flex-1 sm:w-64">
-                                <Icon name="search" className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                                <Icon name="search" className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                                 <input type="text" placeholder="Filtro rápido..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full pl-10 pr-4 py-2 border-2 border-slate-200 rounded-xl text-xs bg-white focus:ring-2 focus:ring-primary focus:border-primary transition-all"/>
                             </div>
                             <Button variant="secondary" onClick={() => setBulkModalOpen(true)} title="Importar Lista" className="!p-2"><Icon name="list-plus" className="w-4 h-4" /></Button>
@@ -419,15 +430,17 @@ const GroupManagement: React.FC = () => {
                                             <td className="p-3 text-slate-300 font-black text-center">{idx + 1}</td>
                                             <td className="p-3">
                                                 <div className="flex flex-col">
-                                                    <span className="font-black text-slate-700 uppercase tracking-tight">{s.name}</span>
-                                                    {s.nickname && <span className="text-[10px] text-primary italic font-bold tracking-tight">"{s.nickname}"</span>}
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="font-black text-slate-700 uppercase tracking-tight">{s.name}</span>
+                                                        {s.nickname && <span className="text-[9px] bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded font-black uppercase shrink-0 shadow-sm border border-indigo-200">"{s.nickname}"</span>}
+                                                    </div>
                                                 </div>
                                             </td>
                                             <td className="p-3 font-mono text-xs text-slate-500 font-bold">{s.matricula || 'SIN ID'}</td>
                                             <td className="p-3">
                                                 <div className="flex flex-wrap gap-1.5 justify-center">
                                                     {s.isRepeating && <span className="text-[9px] font-black bg-rose-600 text-white px-2 py-0.5 rounded-full uppercase shadow-sm">Recu</span>}
-                                                    {s.team && <span className="text-[9px] font-black bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full uppercase border border-indigo-200">B: {s.team}</span>}
+                                                    {s.team && <span className="text-[9px] font-black bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-full uppercase border border-indigo-200">B: {s.team}</span>}
                                                     {s.teamCoyote && <span className="text-[9px] font-black bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full uppercase border border-orange-200">C: {s.teamCoyote}</span>}
                                                 </div>
                                             </td>

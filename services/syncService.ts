@@ -1,4 +1,4 @@
-import { AppState, AppAction, DayOfWeek, AttendanceStatus, TutorshipEntry, Group } from '../types';
+import { AppState, AppAction, DayOfWeek, AttendanceStatus, TutorshipEntry, Group, Student } from '../types';
 import { Dispatch } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { fetchHorarioCompleto } from './horarioService';
@@ -108,7 +108,6 @@ export const syncAttendanceData = async (state: AppState, dispatch: Dispatch<App
         }
 
         // 3. Ejecutar sincronización (Envío como ARRAY DIRECTO según espera api.php Caso 5)
-        // NOTA: Tu api.php procesa la asistencia en el bloque `if (is_array($input))` al final.
         const syncResponse = await fetch(fetchUrl.toString(), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'X-API-KEY': apiKey },
@@ -200,18 +199,17 @@ export const syncTutorshipData = async (state: AppState, dispatch: Dispatch<AppA
         const downloadedData: { [sid: string]: TutorshipEntry } = {};
         const downloadedTutors: { [gid: string]: string } = {};
         
-        // Mapeo: ID Local -> Student e Identificadores por Nombre (para rescatar datos sin ID coincidente)
-        const localStudentsById = new Map<string, string>();
+        const localStudentsById = new Map<string, Student>();
         const localStudentsByName = new Map<string, string>(); // Nombre normalizado -> ID local
 
         groups.forEach(g => {
             g.students.forEach(s => {
-                localStudentsById.set(s.id, s.name);
+                localStudentsById.set(s.id, s);
                 localStudentsByName.set(normalizeForMatch(s.name), s.id);
             });
         });
 
-        // Procesar registros recibidos con lógica de rescate por nombre
+        // Procesar registros recibidos con lógica de rescate por nombre y actualización de apodos
         serverRows.forEach((row: any) => {
             let sid = row.alumno_id;
             
@@ -220,11 +218,26 @@ export const syncTutorshipData = async (state: AppState, dispatch: Dispatch<AppA
                 const matchedId = localStudentsByName.get(normalizeForMatch(row.alumno_nombre));
                 if (matchedId) {
                     sid = matchedId;
-                    console.log(`[SYNC] Rescatando nota de "${row.alumno_nombre}" vinculándola al ID local ${sid}`);
                 }
             }
 
-            if (sid && (localStudentsById.has(sid) || localStudentsByName.has(normalizeForMatch(row.alumno_nombre)))) {
+            if (sid && localStudentsById.has(sid)) {
+                const student = localStudentsById.get(sid)!;
+                
+                // Actualizar apodo local si el servidor tiene uno nuevo y el local está vacío o desactualizado
+                if (row.alumno_apodo && row.alumno_apodo.trim() !== "" && row.alumno_apodo !== student.nickname) {
+                    const groupWithStudent = groups.find(g => g.students.some(st => st.id === sid));
+                    if (groupWithStudent) {
+                        dispatch({ 
+                            type: 'SAVE_STUDENT', 
+                            payload: { 
+                                groupId: groupWithStudent.id, 
+                                student: { ...student, nickname: row.alumno_apodo } 
+                            } 
+                        });
+                    }
+                }
+
                 downloadedData[sid] = {
                     strengths: row.fortalezas || '',
                     opportunities: row.oportunidades || '',
@@ -266,6 +279,7 @@ export const syncTutorshipData = async (state: AppState, dispatch: Dispatch<AppA
                             grupo_nombre: g.name,
                             alumno_id: s.id,
                             alumno_nombre: s.name,
+                            alumno_apodo: s.nickname || '', // INCLUIMOS EL APODO EN EL PUSH
                             fortalezas: entry.strengths || '',
                             oportunidades: entry.opportunities || '',
                             resumen: entry.summary || ''
@@ -310,19 +324,17 @@ export const syncScheduleData = async (state: AppState, dispatch: Dispatch<AppAc
         
         dispatch({ type: 'SET_TEACHER_SCHEDULE', payload: horario });
         
-        // Modificamos la estructura para guardar también los alumnos y nombre limpio
         const clasesPorGrupoUnico: { [key: string]: { sub: string; name: string; days: string[]; students: any[] } } = {};
         
         horario.forEach(c => {
-            // Usamos ID único combinando nombre y materia para diferenciar listas
             const uniqueKey = `${c.groupName} - ${c.subjectName}`;
             
             if (!clasesPorGrupoUnico[uniqueKey]) {
                 clasesPorGrupoUnico[uniqueKey] = { 
                     sub: c.subjectName, 
-                    name: c.groupName, // NOMBRE LIMPIO (Solo identificador de grupo)
+                    name: c.groupName, 
                     days: [],
-                    students: c.students || [] // ASIGNAMOS ALUMNOS DESDE FIREBASE
+                    students: c.students || [] 
                 };
             }
             if (!clasesPorGrupoUnico[uniqueKey].days.includes(c.day)) {
@@ -331,7 +343,6 @@ export const syncScheduleData = async (state: AppState, dispatch: Dispatch<AppAc
         });
 
         for (const [, info] of Object.entries(clasesPorGrupoUnico)) {
-            // Buscamos coincidencia exacta de Materia y Grupo para actualizar el correcto
             const exist = groups.find(g => 
                 normalizeForMatch(g.name) === normalizeForMatch(info.name) && 
                 normalizeForMatch(g.subject) === normalizeForMatch(info.sub)
@@ -341,7 +352,6 @@ export const syncScheduleData = async (state: AppState, dispatch: Dispatch<AppAc
                 dispatch({ type: 'SAVE_GROUP', payload: { 
                     ...exist, 
                     classDays: info.days as DayOfWeek[],
-                    // Solo inyectar alumnos si el grupo local está vacío o se desea actualizar
                     students: (exist.students.length === 0 && info.students.length > 0) ? info.students : exist.students 
                 }});
             } else {
@@ -350,7 +360,7 @@ export const syncScheduleData = async (state: AppState, dispatch: Dispatch<AppAc
                     name: info.name, 
                     subject: info.sub, 
                     classDays: info.days as DayOfWeek[], 
-                    students: info.students, // ALUMNOS INICIALES DESDE FIREBASE
+                    students: info.students, 
                     color: GROUP_COLORS[groups.length % GROUP_COLORS.length].name, 
                     evaluationTypes: { 
                         partial1: [{ id: uuidv4(), name: 'General', weight: 100 }], 

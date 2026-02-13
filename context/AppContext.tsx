@@ -82,8 +82,9 @@ const appReducer = (state: AppState, action: AppAction): AppState => {
                         id: s.id || uuidv4(),
                         name: s.name || 'Alumno sin nombre',
                         matricula: s.matricula || '',
-                        team: legacyTeam || undefined,
-                        teamCoyote: legacyCoyote || undefined
+                        team: s.team || legacyTeam || undefined,
+                        teamCoyote: s.teamCoyote || legacyCoyote || undefined,
+                        nickname: s.nickname || undefined
                     } as Student;
                 }),
                 classDays: group.classDays || [],

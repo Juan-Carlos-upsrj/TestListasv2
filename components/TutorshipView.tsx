@@ -1,4 +1,3 @@
-
 import React, { useContext, useMemo, useState, useEffect } from 'react';
 import { AppContext } from '../context/AppContext';
 import { Student, TutorshipEntry } from '../types';
@@ -12,7 +11,7 @@ import { syncTutorshipData, normalizeForMatch } from '../services/syncService';
 interface TutorshipFormProps {
     student: Student;
     initialEntry?: TutorshipEntry;
-    onSave: (entry: TutorshipEntry) => void;
+    onSave: (entry: TutorshipEntry, newNickname: string) => void;
     onCancel: () => void;
 }
 
@@ -20,30 +19,53 @@ const TutorshipForm: React.FC<TutorshipFormProps> = ({ student, initialEntry, on
     const [strengths, setStrengths] = useState(initialEntry?.strengths || '');
     const [opportunities, setOpportunities] = useState(initialEntry?.opportunities || '');
     const [summary, setSummary] = useState(initialEntry?.summary || '');
+    const [nickname, setNickname] = useState(student.nickname || '');
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        onSave({ ...initialEntry, strengths, opportunities, summary });
+        onSave({ ...initialEntry, strengths, opportunities, summary }, nickname.trim());
     };
 
     return (
         <form onSubmit={handleSubmit} className="space-y-4">
             <p className="text-sm font-medium text-slate-500">Editando ficha de: <span className="text-primary font-bold">{student.name}</span></p>
-            <div>
-                <label className="block text-xs font-black uppercase text-text-secondary mb-1">Fortalezas</label>
-                <textarea value={strengths} onChange={e => setStrengths(e.target.value)} placeholder="Habilidades, aptitudes..." className="w-full p-2 border-2 border-border-color rounded-xl bg-surface focus:ring-2 focus:ring-primary min-h-[80px]"/>
+            
+            <div className="bg-indigo-50/50 p-4 rounded-2xl border border-indigo-100">
+                <label className="block text-xs font-black uppercase text-indigo-600 mb-1 ml-1">Apodo / Nickname (Se verá en todas las tablas)</label>
+                <div className="relative">
+                    <Icon name="edit-3" className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-indigo-400" />
+                    <input 
+                        type="text" 
+                        value={nickname} 
+                        onChange={e => setNickname(e.target.value)} 
+                        placeholder="Ej. 'Guty', 'Charly'..." 
+                        className="w-full pl-10 pr-3 py-2.5 border-2 border-indigo-100 rounded-xl bg-white focus:ring-2 focus:ring-primary transition-all text-sm font-bold text-indigo-800"
+                    />
+                </div>
             </div>
-            <div>
-                <label className="block text-xs font-black uppercase text-text-secondary mb-1">Áreas de Oportunidad</label>
-                <textarea value={opportunities} onChange={e => setOpportunities(e.target.value)} placeholder="Debilidades, retos..." className="w-full p-2 border-2 border-border-color rounded-xl bg-surface focus:ring-2 focus:ring-primary min-h-[80px]"/>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label className="block text-xs font-black uppercase text-text-secondary mb-1 ml-1">Fortalezas</label>
+                    <textarea value={strengths} onChange={e => setStrengths(e.target.value)} placeholder="Habilidades, aptitudes..." className="w-full p-2 border-2 border-border-color rounded-xl bg-surface focus:ring-2 focus:ring-primary min-h-[120px] text-sm"/>
+                </div>
+                <div>
+                    <label className="block text-xs font-black uppercase text-text-secondary mb-1 ml-1">Áreas de Oportunidad</label>
+                    <textarea value={opportunities} onChange={e => setOpportunities(e.target.value)} placeholder="Debilidades, retos..." className="w-full p-2 border-2 border-border-color rounded-xl bg-surface focus:ring-2 focus:ring-primary min-h-[120px] text-sm"/>
+                </div>
             </div>
+            
             <div>
-                <label className="block text-xs font-black uppercase text-text-secondary mb-1">Resumen Académico (Público)</label>
-                <textarea value={summary} onChange={e => setSummary(e.target.value)} placeholder="Notas para otros profesores..." className="w-full p-2 border-2 border-border-color rounded-xl bg-surface focus:ring-2 focus:ring-primary min-h-[100px]"/>
+                <label className="block text-xs font-black uppercase text-text-secondary mb-1 ml-1">Resumen Académico (Público para otros docentes)</label>
+                <textarea value={summary} onChange={e => setSummary(e.target.value)} placeholder="Notas para otros profesores..." className="w-full p-2 border-2 border-border-color rounded-xl bg-surface focus:ring-2 focus:ring-primary min-h-[100px] text-sm"/>
             </div>
+            
             <div className="flex justify-end gap-3 pt-2">
                 <Button variant="secondary" onClick={onCancel}>Cancelar</Button>
-                <Button type="submit">Guardar Ficha</Button>
+                <Button type="submit">
+                    <Icon name="check-circle-2" className="w-4 h-4" />
+                    Guardar Cambios
+                </Button>
             </div>
         </form>
     );
@@ -93,14 +115,25 @@ const TutorshipView: React.FC = () => {
         return normalizeForMatch(settings.professorName) === normalizeForMatch(currentTutor);
     }, [settings.professorName, currentTutor]);
 
-    const handleSaveEntry = (entry: TutorshipEntry) => {
-        if (editingStudent) {
+    const handleSaveEntry = (entry: TutorshipEntry, newNickname: string) => {
+        if (editingStudent && group) {
+            // 1. Actualizar apodo en el objeto del alumno dentro del grupo
+            const updatedStudent = { ...editingStudent, nickname: newNickname };
+            dispatch({ 
+                type: 'SAVE_STUDENT', 
+                payload: { groupId: group.id, student: updatedStudent } 
+            });
+
+            // 2. Actualizar datos de tutoreo
             dispatch({ 
                 type: 'UPDATE_TUTORSHIP', 
                 payload: { studentId: editingStudent.id, entry: { ...entry, author: settings.professorName } } 
             });
+
             setIsEditorOpen(false);
             setEditingStudent(null);
+            
+            // 3. Sincronizar cambios inmediatamente (silencioso)
             setTimeout(() => handleSync(true), 500);
         }
     };
@@ -167,7 +200,7 @@ const TutorshipView: React.FC = () => {
                         <Icon name={canEdit ? "check-circle-2" : "info"} className="w-4 h-4" />
                         <p className="text-xs font-medium">
                             {canEdit ? 
-                                <span><b>Modo Edición Activado.</b> Como tutor asignado, puedes guardar cambios en las fichas.</span> : 
+                                <span><b>Modo Edición Activado.</b> Como tutor asignado, puedes guardar cambios en las fichas y apodos.</span> : 
                                 <span><b>Modo Colaborativo.</b> Viendo notas de <b>{currentTutor}</b>. Contacta al tutor para modificaciones.</span>
                             }
                         </p>
@@ -192,7 +225,10 @@ const TutorshipView: React.FC = () => {
                                     <motion.div layout key={student.id} initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="bg-surface rounded-2xl border-2 border-border-color shadow-sm hover:shadow-md transition-all flex flex-col overflow-hidden relative h-full min-h-[360px]">
                                         <div className="p-4 bg-slate-50 border-b border-border-color flex justify-between items-start">
                                             <div className="min-w-0">
-                                                <h4 className="font-black text-sm text-slate-800 truncate uppercase tracking-tight">{student.name}</h4>
+                                                <div className="flex items-center gap-2">
+                                                    <h4 className="font-black text-sm text-slate-800 truncate uppercase tracking-tight">{student.name}</h4>
+                                                    {student.nickname && <span className="text-[10px] bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded font-black uppercase shrink-0">"{student.nickname}"</span>}
+                                                </div>
                                                 <p className="text-[10px] font-bold text-slate-400 uppercase">{student.matricula || 'Sin Matrícula'}</p>
                                             </div>
                                             {canEdit && (
@@ -247,7 +283,7 @@ const TutorshipView: React.FC = () => {
             )}
 
             {editingStudent && (
-                <Modal isOpen={isEditorOpen} onClose={() => {setIsEditorOpen(false); setEditingStudent(null);}} title="Editar Ficha" size="lg">
+                <Modal isOpen={isEditorOpen} onClose={() => {setIsEditorOpen(false); setEditingStudent(null);}} title="Editar Ficha de Alumno" size="lg">
                     <TutorshipForm student={editingStudent} initialEntry={tutorshipData[editingStudent.id]} onSave={handleSaveEntry} onCancel={() => {setIsEditorOpen(false); setEditingStudent(null);}} />
                 </Modal>
             )}
