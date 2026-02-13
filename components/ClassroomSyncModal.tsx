@@ -1,6 +1,6 @@
-import React, { useState, useContext, useEffect } from 'react';
+import React, { useState, useContext } from 'react';
 import { AppContext } from '../context/AppContext';
-import { Group, Evaluation, Student } from '../types';
+import { Group, Evaluation } from '../types';
 import Modal from './common/Modal';
 import Button from './common/Button';
 import Icon from './icons/Icon';
