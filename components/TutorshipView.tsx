@@ -11,7 +11,7 @@ import { syncTutorshipData, normalizeForMatch } from '../services/syncService';
 interface TutorshipFormProps {
     student: Student;
     initialEntry?: TutorshipEntry;
-    onSave: (entry: TutorshipEntry, newNickname: string) => void;
+    onSave: (entry: TutorshipEntry) => void;
     onCancel: () => void;
 }
 
@@ -19,31 +19,16 @@ const TutorshipForm: React.FC<TutorshipFormProps> = ({ student, initialEntry, on
     const [strengths, setStrengths] = useState(initialEntry?.strengths || '');
     const [opportunities, setOpportunities] = useState(initialEntry?.opportunities || '');
     const [summary, setSummary] = useState(initialEntry?.summary || '');
-    const [nickname, setNickname] = useState(student.nickname || '');
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        onSave({ ...initialEntry, strengths, opportunities, summary }, nickname.trim());
+        onSave({ ...initialEntry, strengths, opportunities, summary });
     };
 
     return (
         <form onSubmit={handleSubmit} className="space-y-4">
             <p className="text-sm font-medium text-slate-500">Editando ficha de: <span className="text-primary font-bold">{student.name}</span></p>
             
-            <div className="bg-indigo-50/50 p-4 rounded-2xl border border-indigo-100">
-                <label className="block text-xs font-black uppercase text-indigo-600 mb-1 ml-1">Apodo / Nickname (Se verá en todas las tablas)</label>
-                <div className="relative">
-                    <Icon name="edit-3" className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-indigo-400" />
-                    <input 
-                        type="text" 
-                        value={nickname} 
-                        onChange={e => setNickname(e.target.value)} 
-                        placeholder="Ej. 'Guty', 'Charly'..." 
-                        className="w-full pl-10 pr-3 py-2.5 border-2 border-indigo-100 rounded-xl bg-white focus:ring-2 focus:ring-primary transition-all text-sm font-bold text-indigo-800"
-                    />
-                </div>
-            </div>
-
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                     <label className="block text-xs font-black uppercase text-text-secondary mb-1 ml-1">Fortalezas</label>
@@ -115,16 +100,9 @@ const TutorshipView: React.FC = () => {
         return normalizeForMatch(settings.professorName) === normalizeForMatch(currentTutor);
     }, [settings.professorName, currentTutor]);
 
-    const handleSaveEntry = (entry: TutorshipEntry, newNickname: string) => {
+    const handleSaveEntry = (entry: TutorshipEntry) => {
         if (editingStudent && group) {
-            // 1. Actualizar apodo en el objeto del alumno dentro del grupo
-            const updatedStudent = { ...editingStudent, nickname: newNickname };
-            dispatch({ 
-                type: 'SAVE_STUDENT', 
-                payload: { groupId: group.id, student: updatedStudent } 
-            });
-
-            // 2. Actualizar datos de tutoreo
+            // Actualizar datos de tutoreo
             dispatch({ 
                 type: 'UPDATE_TUTORSHIP', 
                 payload: { studentId: editingStudent.id, entry: { ...entry, author: settings.professorName } } 
@@ -133,7 +111,7 @@ const TutorshipView: React.FC = () => {
             setIsEditorOpen(false);
             setEditingStudent(null);
             
-            // 3. Sincronizar cambios inmediatamente (silencioso)
+            // Sincronizar cambios inmediatamente (silencioso)
             setTimeout(() => handleSync(true), 500);
         }
     };
@@ -200,7 +178,7 @@ const TutorshipView: React.FC = () => {
                         <Icon name={canEdit ? "check-circle-2" : "info"} className="w-4 h-4" />
                         <p className="text-xs font-medium">
                             {canEdit ? 
-                                <span><b>Modo Edición Activado.</b> Como tutor asignado, puedes guardar cambios en las fichas y apodos.</span> : 
+                                <span><b>Modo Edición Activado.</b> Como tutor asignado, puedes guardar cambios en las fichas.</span> : 
                                 <span><b>Modo Colaborativo.</b> Viendo notas de <b>{currentTutor}</b>. Contacta al tutor para modificaciones.</span>
                             }
                         </p>

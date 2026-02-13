@@ -209,7 +209,7 @@ export const syncTutorshipData = async (state: AppState, dispatch: Dispatch<AppA
             });
         });
 
-        // Procesar registros recibidos con lógica de rescate por nombre y actualización de apodos
+        // Procesar registros recibidos con lógica de rescate por nombre
         serverRows.forEach((row: any) => {
             let sid = row.alumno_id;
             
@@ -222,22 +222,6 @@ export const syncTutorshipData = async (state: AppState, dispatch: Dispatch<AppA
             }
 
             if (sid && localStudentsById.has(sid)) {
-                const student = localStudentsById.get(sid)!;
-                
-                // Actualizar apodo local si el servidor tiene uno nuevo y el local está vacío o desactualizado
-                if (row.alumno_apodo && row.alumno_apodo.trim() !== "" && row.alumno_apodo !== student.nickname) {
-                    const groupWithStudent = groups.find(g => g.students.some(st => st.id === sid));
-                    if (groupWithStudent) {
-                        dispatch({ 
-                            type: 'SAVE_STUDENT', 
-                            payload: { 
-                                groupId: groupWithStudent.id, 
-                                student: { ...student, nickname: row.alumno_apodo } 
-                            } 
-                        });
-                    }
-                }
-
                 downloadedData[sid] = {
                     strengths: row.fortalezas || '',
                     opportunities: row.oportunidades || '',
@@ -279,7 +263,6 @@ export const syncTutorshipData = async (state: AppState, dispatch: Dispatch<AppA
                             grupo_nombre: g.name,
                             alumno_id: s.id,
                             alumno_nombre: s.name,
-                            alumno_apodo: s.nickname || '', // INCLUIMOS EL APODO EN EL PUSH
                             fortalezas: entry.strengths || '',
                             oportunidades: entry.opportunities || '',
                             resumen: entry.summary || ''
