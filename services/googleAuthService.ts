@@ -1,30 +1,40 @@
-// CLIENT_ID debe configurarse en Google Cloud Console para que funcione en producción.
-const CLIENT_ID = 'TU_CLIENT_ID_DE_GOOGLE.apps.googleusercontent.com';
-const SCOPES = 'https://www.googleapis.com/auth/classroom.courses.readonly https://www.googleapis.com/auth/classroom.coursework.me.readonly https://www.googleapis.com/auth/classroom.coursework.students.readonly';
+// CONFIGURACIÓN PROPORCIONADA:
+export const GOOGLE_CLIENT_ID = '749366523850-t2rq9o5oasa369q3gvdcnakfbmdh19p2.apps.googleusercontent.com';
+
+const SCOPES = 'https://www.googleapis.com/auth/classroom.courses.readonly https://www.googleapis.com/auth/classroom.coursework.me.readonly https://www.googleapis.com/auth/classroom.coursework.students.readonly https://www.googleapis.com/auth/classroom.rosters.readonly';
+
+export const isGoogleConfigured = () => {
+    return GOOGLE_CLIENT_ID && !GOOGLE_CLIENT_ID.includes('TU_CLIENT_ID_AQUÍ');
+};
 
 export const getGoogleAccessToken = (): Promise<string> => {
     return new Promise((resolve, reject) => {
-        // En un entorno Electron/Web, usamos el flujo de Identity Services
+        if (!isGoogleConfigured()) {
+            return reject(new Error('Falta configuración: Pega tu Client ID en el archivo services/googleAuthService.ts'));
+        }
+
         // @ts-ignore
-        const client = window.google?.accounts.oauth2.initTokenClient({
-            client_id: CLIENT_ID,
-            scope: SCOPES,
-            callback: (response: any) => {
-                if (response.error) {
-                    reject(response.error);
-                } else {
-                    resolve(response.access_token);
-                }
-            },
-        });
-        
-        if (client) {
+        if (!window.google || !window.google.accounts) {
+            return reject(new Error('La librería de Google no ha cargado. Revisa tu conexión.'));
+        }
+
+        try {
+            // @ts-ignore
+            const client = window.google.accounts.oauth2.initTokenClient({
+                client_id: GOOGLE_CLIENT_ID,
+                scope: SCOPES,
+                callback: (response: any) => {
+                    if (response.error) {
+                        reject(new Error(`Error de Google: ${response.error_description || response.error}`));
+                    } else {
+                        resolve(response.access_token);
+                    }
+                },
+            });
+            
             client.requestAccessToken();
-        } else {
-            // Fallback para pruebas o si la librería no carga
-            const token = localStorage.getItem('google_access_token');
-            if (token) resolve(token);
-            else reject(new Error('Google Client no inicializado. Asegúrate de incluir la librería de Google en el index.html.'));
+        } catch (err) {
+            reject(err);
         }
     });
 };
@@ -59,4 +69,4 @@ export const fetchStudentProfiles = async (token: string, courseId: string) => {
     });
     const data = await response.json();
     return data.students || [];
-};
+}

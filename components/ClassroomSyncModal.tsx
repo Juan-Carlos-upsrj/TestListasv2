@@ -4,7 +4,7 @@ import { Group, Evaluation } from '../types';
 import Modal from './common/Modal';
 import Button from './common/Button';
 import Icon from './icons/Icon';
-import { getGoogleAccessToken, fetchClassroomCourses, fetchCourseWork, fetchSubmissions, fetchStudentProfiles } from '../services/googleAuthService';
+import { getGoogleAccessToken, fetchClassroomCourses, fetchCourseWork, fetchSubmissions, fetchStudentProfiles, isGoogleConfigured } from '../services/googleAuthService';
 import { v4 as uuidv4 } from 'uuid';
 import { normalizeForMatch } from '../services/syncService';
 
@@ -15,8 +15,8 @@ interface ClassroomSyncModalProps {
 }
 
 const ClassroomSyncModal: React.FC<ClassroomSyncModalProps> = ({ isOpen, onClose, group }) => {
-    const { dispatch } = useContext(AppContext);
-    const [step, setStep] = useState(1); // 1: Auth, 2: Course, 3: Assignments, 4: Syncing
+    const { state, dispatch } = useContext(AppContext);
+    const [step, setStep] = useState(isGoogleConfigured() ? 1 : 0);
     const [token, setToken] = useState('');
     const [courses, setCourses] = useState<any[]>([]);
     const [selectedCourseId, setSelectedCourseId] = useState('');
@@ -33,7 +33,6 @@ const ClassroomSyncModal: React.FC<ClassroomSyncModalProps> = ({ isOpen, onClose
             const classroomCourses = await fetchClassroomCourses(accessToken);
             setCourses(classroomCourses);
             
-            // Intento de auto-selección por nombre
             const matchedCourse = classroomCourses.find((c: any) => 
                 normalizeForMatch(c.name).includes(normalizeForMatch(group.name)) || 
                 normalizeForMatch(group.name).includes(normalizeForMatch(c.name))
@@ -41,8 +40,14 @@ const ClassroomSyncModal: React.FC<ClassroomSyncModalProps> = ({ isOpen, onClose
             if (matchedCourse) setSelectedCourseId(matchedCourse.id);
             
             setStep(2);
-        } catch (err) {
-            dispatch({ type: 'ADD_TOAST', payload: { message: 'Error al conectar con Google.', type: 'error' } });
+        } catch (err: any) {
+            dispatch({ 
+                type: 'ADD_TOAST', 
+                payload: { 
+                    message: err.message || 'Error al conectar con Google.', 
+                    type: 'error' 
+                } 
+            });
         } finally {
             setIsLoading(false);
         }
@@ -71,23 +76,30 @@ const ClassroomSyncModal: React.FC<ClassroomSyncModalProps> = ({ isOpen, onClose
     const executeSync = async () => {
         setStep(4);
         setIsLoading(true);
-        const log: string[] = ["Iniciando sincronización..."];
+        const log: string[] = ["📡 Iniciando conexión segura..."];
         setSyncLog(log);
 
         try {
-            // 1. Obtener perfiles de estudiantes para mapear por nombre
-            log.push("Obteniendo perfiles de alumnos de Classroom...");
+            log.push("📥 Obteniendo perfiles de alumnos...");
             setSyncLog([...log]);
             const classroomStudents = await fetchStudentProfiles(token, selectedCourseId);
             
-            for (const assignmentId of Array.from(selectedAssignmentIds)) {
-                const assignment = assignments.find(a => a.id === assignmentId);
-                log.push(`Sincronizando tarea: ${assignment.title}`);
+            // FIX: Explicitly typed assignmentId to string and added check for found assignment to avoid unknown types or undefined errors.
+            for (const assignmentId of Array.from(selectedAssignmentIds) as string[]) {
+                const currentAssignmentId: string = assignmentId;
+                const assignment = assignments.find(a => a.id === currentAssignmentId);
+                
+                if (!assignment) {
+                    log.push(`⚠️ Tarea con ID ${currentAssignmentId} no encontrada localmente.`);
+                    setSyncLog([...log]);
+                    continue;
+                }
+
+                log.push(`📝 Procesando: ${assignment.title}`);
                 setSyncLog([...log]);
 
-                // 2. Crear o encontrar evaluación local
-                const existingEvals = (dispatch as any).state?.evaluations[group.id] || [];
-                let evaluationId = existingEvals.find((e: any) => e.name === assignment.title)?.id;
+                const existingEvals = state.evaluations[group.id] || [];
+                let evaluationId = existingEvals.find((e: Evaluation) => e.name === assignment.title)?.id;
 
                 if (!evaluationId) {
                     evaluationId = uuidv4();
@@ -95,14 +107,13 @@ const ClassroomSyncModal: React.FC<ClassroomSyncModalProps> = ({ isOpen, onClose
                         id: evaluationId,
                         name: assignment.title,
                         maxScore: assignment.maxPoints || 10,
-                        partial: 1, // Por defecto al primero
+                        partial: 1, 
                         typeId: group.evaluationTypes.partial1[0].id
                     };
                     dispatch({ type: 'SAVE_EVALUATION', payload: { groupId: group.id, evaluation: newEval } });
                 }
 
-                // 3. Obtener envíos/calificaciones
-                const submissions = await fetchSubmissions(token, selectedCourseId, assignmentId);
+                const submissions = await fetchSubmissions(token, selectedCourseId, currentAssignmentId);
                 
                 let count = 0;
                 submissions.forEach((sub: any) => {
@@ -120,7 +131,7 @@ const ClassroomSyncModal: React.FC<ClassroomSyncModalProps> = ({ isOpen, onClose
                                     payload: { 
                                         groupId: group.id, 
                                         studentId: matchedStudent.id, 
-                                        evaluationId: evaluationId, 
+                                        evaluationId: evaluationId!, 
                                         score: sub.assignedGrade 
                                     } 
                                 });
@@ -129,14 +140,14 @@ const ClassroomSyncModal: React.FC<ClassroomSyncModalProps> = ({ isOpen, onClose
                         }
                     }
                 });
-                log.push(`✓ ${count} calificaciones actualizadas para "${assignment.title}"`);
+                log.push(`   ✅ ${count} notas importadas.`);
                 setSyncLog([...log]);
             }
-            log.push("Sincronización completada con éxito.");
+            log.push("✨ ¡Sincronización completada!");
             setSyncLog([...log]);
             dispatch({ type: 'ADD_TOAST', payload: { message: 'Classroom sincronizado.', type: 'success' } });
-        } catch (err) {
-            log.push("❌ Error fatal durante la sincronización.");
+        } catch (err: any) {
+            log.push(`❌ Error: ${err?.message || 'Error desconocido'}`);
             setSyncLog([...log]);
         } finally {
             setIsLoading(false);
@@ -146,6 +157,27 @@ const ClassroomSyncModal: React.FC<ClassroomSyncModalProps> = ({ isOpen, onClose
     return (
         <Modal isOpen={isOpen} onClose={onClose} title="Sincronización con Google Classroom" size="lg">
             <div className="space-y-6">
+                {step === 0 && (
+                    <div className="text-center py-6 space-y-4">
+                        <div className="w-16 h-16 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mx-auto mb-2">
+                            <Icon name="settings" className="w-8 h-8" />
+                        </div>
+                        <h3 className="text-lg font-black text-slate-800">Configuración Pendiente</h3>
+                        <p className="text-sm text-slate-500 max-w-sm mx-auto">
+                            Para conectar con Classroom, pega el <b>Client ID</b> en el archivo <code>services/googleAuthService.ts</code>.
+                        </p>
+                        <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 text-left">
+                            <p className="text-[10px] font-black uppercase text-slate-400 mb-2">Guía rápida:</p>
+                            <ul className="text-xs space-y-2 text-slate-600">
+                                <li className="flex gap-2"><span>1.</span> Obtén el ID en la consola de Google.</li>
+                                <li className="flex gap-2"><span>2.</span> Autoriza la URL actual de tu app.</li>
+                                <li className="flex gap-2"><span>3.</span> Agrega tu correo como "Usuario de prueba".</li>
+                            </ul>
+                        </div>
+                        <Button onClick={onClose} className="w-full">Entendido</Button>
+                    </div>
+                )}
+
                 {step === 1 && (
                     <div className="text-center py-8">
                         <div className="w-20 h-20 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-4 border-2 border-emerald-100 shadow-sm">
