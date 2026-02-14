@@ -1,5 +1,5 @@
 {
   "version": "3.3.22",
   "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v3.3.22/app-debug.apk",
-  "notes": "Reversión de cambios. Nueva funcionalidad: Integración con Google Classroom para importar tareas y calificaciones directamente."
+  "notes": "Versión 3.3.22 estable restaurada. Se eliminaron las funcionalidades de Google Classroom para asegurar compatibilidad total en el entorno local de escritorio sin errores de protocolo."
 }

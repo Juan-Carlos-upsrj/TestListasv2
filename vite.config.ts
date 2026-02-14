@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite';
 import electron from 'vite-plugin-electron';
 import renderer from 'vite-plugin-electron-renderer';
+import path from 'node:path';
 
 // https://vitejs.dev/config/
 export default defineConfig(async () => {
@@ -33,12 +34,25 @@ export default defineConfig(async () => {
       ]),
       renderer(),
     ],
+    server: {
+      // Forzamos que el servidor no intente buscar fuera de la raíz del proyecto web
+      fs: {
+        allow: ['.']
+      }
+    },
+    resolve: {
+      // Aseguramos que no escanee carpetas innecesarias
+      extensions: ['.mjs', '.js', '.ts', '.jsx', '.tsx', '.json']
+    },
     build: {
       rollupOptions: {
-        // Marcamos los módulos de Capacitor como externos para que Vite no intente
-        // resolverlos durante la compilación de la aplicación de escritorio.
+        // Marcamos los módulos de Capacitor como externos
         external: ['@capacitor/filesystem', '@capacitor/share'],
       },
     },
+    // CRÍTICO: Ignorar carpetas de compilación de Android/iOS que confunden a Vite
+    optimizeDeps: {
+      exclude: ['android', 'ios']
+    }
   };
 });

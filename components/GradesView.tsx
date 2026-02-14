@@ -10,7 +10,6 @@ import { GroupForm } from './GroupManagement';
 import { calculatePartialAverage, getGradeColor, calculateFinalGradeWithRecovery, calculateAttendancePercentage } from '../services/gradeCalculation';
 import GradeImageModal from './GradeImageModal';
 import CopyEvaluationsModal from './CopyEvaluationsModal';
-import ClassroomSyncModal from './ClassroomSyncModal';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const GRADE_REMEDIAL_P1 = 'GRADE_REMEDIAL_P1';
@@ -137,7 +136,6 @@ const GradesView: React.FC = () => {
     const [isGroupConfigOpen, setGroupConfigOpen] = useState(false);
     const [isImageModalOpen, setImageModalOpen] = useState(false);
     const [isCopyModalOpen, setCopyModalOpen] = useState(false);
-    const [isClassroomOpen, setClassroomOpen] = useState(false);
     const [editingEvaluation, setEditingEvaluation] = useState<Evaluation | undefined>(undefined);
     const [viewMode, setViewMode] = useState<'ordinary' | 'recovery'>('ordinary');
     const [searchTerm, setSearchTerm] = useState('');
@@ -343,10 +341,6 @@ const GradesView: React.FC = () => {
                     </div>
                     {viewMode === 'ordinary' && (
                         <div className="flex gap-2">
-                            <Button variant="secondary" size="sm" onClick={() => setClassroomOpen(true)} className="!bg-emerald-50 !text-emerald-700 hover:!bg-emerald-100 !border-emerald-200 border">
-                                <Icon name="google" className="w-4 h-4" />
-                                <span className="hidden lg:inline ml-1">Google Classroom</span>
-                            </Button>
                             <Button variant="secondary" size="sm" onClick={() => setCopyModalOpen(true)}><Icon name="copy" className="w-4 h-4"/><span className="hidden lg:inline ml-1">Copiar Tareas</span></Button>
                             <Button variant="secondary" size="sm" onClick={() => setImageModalOpen(true)}><Icon name="camera" className="w-4 h-4"/></Button>
                             <Button variant="secondary" size="sm" onClick={() => setGroupConfigOpen(true)}><Icon name="settings" className="w-4 h-4"/></Button>
@@ -519,10 +513,9 @@ const GradesView: React.FC = () => {
             {group && (
                 <>
                     <Modal isOpen={isEvalModalOpen} onClose={() => setEvalModalOpen(false)} title={editingEvaluation ? 'Editar Evaluación' : 'Nueva Evaluación'}><EvaluationForm evaluation={editingEvaluation} group={group} onSave={(ev) => { dispatch({ type: 'SAVE_EVALUATION', payload: { groupId: group.id, evaluation: ev } }); setEvalModalOpen(false); }} onCancel={() => setEvalModalOpen(false)} /></Modal>
-                    <Modal isOpen={isGroupConfigOpen} onClose={() => setGroupConfigOpen(false)} title="Configuración del Grupo" size="xl"><GroupForm group={group} existingGroups={groups} onSave={(ug) => { dispatch({ type: 'SAVE_GROUP', payload: ug }); setGroupConfigOpen(false); }} onCancel={() => setGroupConfigOpen(false)} /></Modal>
+                    <Modal isOpen={isGroupConfigOpen} onClose={() => setGroupConfigOpen(false)} title="Configuración del Grupo" size="xl"><GroupForm group={group} onSave={(ug) => { dispatch({ type: 'SAVE_GROUP', payload: ug }); setGroupConfigOpen(false); }} onCancel={() => setGroupConfigOpen(false)} /></Modal>
                     <GradeImageModal isOpen={isImageModalOpen} onClose={() => setImageModalOpen(false)} group={group} evaluations={groupEvaluations} grades={groupGrades} attendance={attendance[group.id] || {}} settings={settings}/>
                     <CopyEvaluationsModal isOpen={isCopyModalOpen} onClose={() => setCopyModalOpen(false)} targetGroup={group} />
-                    <ClassroomSyncModal isOpen={isClassroomOpen} onClose={() => setClassroomOpen(false)} group={group} />
                     <ConfirmationModal isOpen={!!confirmDeleteEval} onClose={() => setConfirmDeleteEval(null)} onConfirm={deleteEvaluationAction} title="Eliminar Evaluación" variant="danger" confirmText="Eliminar">¿Seguro que deseas eliminar la evaluación <strong>"{confirmDeleteEval?.name}"</strong>?</ConfirmationModal>
                 </>
             )}

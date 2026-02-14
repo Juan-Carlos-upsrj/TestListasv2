@@ -1,4 +1,3 @@
-
 import { app, BrowserWindow, ipcMain } from 'electron';
 import path from 'node:path';
 import fs from 'node:fs';
@@ -20,12 +19,10 @@ const dataFilePath = path.join(userDataPath, 'appData.json');
 log.transports.file.level = 'info';
 autoUpdater.logger = log;
 
-// Establecer el ID de la aplicación para que las notificaciones muestren el nombre correcto
 if (process.platform === 'win32') {
   app.setAppUserModelId('Gestión Académica IAEV');
 }
 
-// Function to read application data from a JSON file.
 function readData(): Partial<AppState> {
   try {
     if (fs.existsSync(dataFilePath)) {
@@ -38,7 +35,6 @@ function readData(): Partial<AppState> {
   return {};
 }
 
-// Function to write application data to a JSON file.
 function writeData(data: AppState): void {
   try {
     fs.writeFileSync(dataFilePath, JSON.stringify(data, null, 2), 'utf-8');
@@ -46,7 +42,6 @@ function writeData(data: AppState): void {
     log.error('Failed to write data file:', error);
   }
 }
-
 
 const createWindow = () => {
   const mainWindow = new BrowserWindow({
@@ -64,9 +59,12 @@ const createWindow = () => {
   });
 
   if (isDev) {
-    mainWindow.loadURL(process.env.VITE_DEV_SERVER_URL);
+    const devUrl = process.env.VITE_DEV_SERVER_URL;
+    console.log(`[ELECTRON] Cargando servidor de desarrollo: ${devUrl}`);
+    mainWindow.loadURL(devUrl);
     mainWindow.webContents.openDevTools();
   } else {
+    console.log(`[ELECTRON] Cargando archivo de producción (dist/index.html)`);
     mainWindow.loadFile(path.join(__dirname, '../dist/index.html'));
   }
   
@@ -74,37 +72,28 @@ const createWindow = () => {
     mainWindow.show();
     mainWindow.maximize();
     
-    // Check for updates only in production
     if (!isDev) {
         autoUpdater.checkForUpdatesAndNotify();
     }
   });
   
   // Auto Updater Events
-  autoUpdater.on('checking-for-update', () => {
-    log.info('Checking for update...');
-  });
-  
+  autoUpdater.on('checking-for-update', () => { log.info('Checking for update...'); });
   autoUpdater.on('update-available', (info) => {
     log.info('Update available.', info);
     mainWindow.webContents.send('update_available');
   });
-  
   autoUpdater.on('update-not-available', (info) => {
     log.info('Update not available.', info);
     mainWindow.webContents.send('update_not_available');
   });
-
-  // NUEVO: Evento de progreso de descarga
   autoUpdater.on('download-progress', (progressObj) => {
     mainWindow.webContents.send('download_progress', progressObj.percent);
   });
-
   autoUpdater.on('update-downloaded', (info) => {
     log.info('Update downloaded', info);
     mainWindow.webContents.send('update_downloaded');
   });
-  
   autoUpdater.on('error', (err) => {
     log.error('Error in auto-updater. ' + err);
     mainWindow.webContents.send('update_error', err.message);
@@ -112,39 +101,19 @@ const createWindow = () => {
 };
 
 app.whenReady().then(() => {
-  ipcMain.handle('get-data', () => {
-    return readData();
-  });
-
-  ipcMain.handle('save-data', (_, data: AppState) => {
-    writeData(data);
-  });
-  
-  ipcMain.handle('get-version', () => {
-    return app.getVersion();
-  });
-  
-  ipcMain.on('restart_app', () => {
-    autoUpdater.quitAndInstall();
-  });
-  
-  ipcMain.on('check_for_updates', () => {
-     if(!isDev) {
-         autoUpdater.checkForUpdates();
-     }
-  });
+  ipcMain.handle('get-data', () => readData());
+  ipcMain.handle('save-data', (_, data: AppState) => writeData(data));
+  ipcMain.handle('get-version', () => app.getVersion());
+  ipcMain.on('restart_app', () => autoUpdater.quitAndInstall());
+  ipcMain.on('check_for_updates', () => { if(!isDev) autoUpdater.checkForUpdates(); });
 
   createWindow();
 
   app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) {
-      createWindow();
-    }
+    if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });
 });
 
 app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
-    app.quit();
-  }
+  if (process.platform !== 'darwin') app.quit();
 });
