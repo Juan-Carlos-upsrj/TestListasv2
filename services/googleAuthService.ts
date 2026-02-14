@@ -1,21 +1,23 @@
-// CONFIGURACIÓN PROPORCIONADA:
-export const GOOGLE_CLIENT_ID = '749366523850-t2rq9o5oasa369q3gvdcnakfbmdh19p2.apps.googleusercontent.com';
+// CONFIGURACIÓN ACTUALIZADA:
+// Este ID ahora corresponde a una "Aplicación Web", lo cual es necesario para evitar el error 400.
+export const GOOGLE_CLIENT_ID = '749366523850-nlrq43947vkk7bg0mvhop5p3pcmcriup.apps.googleusercontent.com';
 
 const SCOPES = 'https://www.googleapis.com/auth/classroom.courses.readonly https://www.googleapis.com/auth/classroom.coursework.me.readonly https://www.googleapis.com/auth/classroom.coursework.students.readonly https://www.googleapis.com/auth/classroom.rosters.readonly';
 
 export const isGoogleConfigured = () => {
-    return GOOGLE_CLIENT_ID && !GOOGLE_CLIENT_ID.includes('TU_CLIENT_ID_AQUÍ');
+    // Retorna true si el ID ha sido configurado correctamente
+    return GOOGLE_CLIENT_ID && GOOGLE_CLIENT_ID.endsWith('.apps.googleusercontent.com') && !GOOGLE_CLIENT_ID.includes('TU_CLIENT_ID');
 };
 
 export const getGoogleAccessToken = (): Promise<string> => {
     return new Promise((resolve, reject) => {
         if (!isGoogleConfigured()) {
-            return reject(new Error('Falta configuración: Pega tu Client ID en el archivo services/googleAuthService.ts'));
+            return reject(new Error('Configuración incompleta: Asegúrate de usar un ID de "Aplicación Web" en services/googleAuthService.ts'));
         }
 
         // @ts-ignore
-        if (!window.google || !window.google.accounts) {
-            return reject(new Error('La librería de Google no ha cargado. Revisa tu conexión.'));
+        if (typeof window.google === 'undefined' || !window.google.accounts) {
+            return reject(new Error('La librería de Google no ha cargado. Verifica tu conexión a internet.'));
         }
 
         try {
@@ -25,6 +27,7 @@ export const getGoogleAccessToken = (): Promise<string> => {
                 scope: SCOPES,
                 callback: (response: any) => {
                     if (response.error) {
+                        console.error('Error de Google Auth:', response);
                         reject(new Error(`Error de Google: ${response.error_description || response.error}`));
                     } else {
                         resolve(response.access_token);
@@ -34,6 +37,7 @@ export const getGoogleAccessToken = (): Promise<string> => {
             
             client.requestAccessToken();
         } catch (err) {
+            console.error('Excepción al iniciar login:', err);
             reject(err);
         }
     });
