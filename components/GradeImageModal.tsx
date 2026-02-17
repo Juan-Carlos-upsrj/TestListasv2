@@ -123,8 +123,9 @@ const GradeImageModal: React.FC<GradeImageModalProps> = ({
                         <button onClick={() => setViewMode('final')} className={`px-4 py-1.5 rounded-md text-xs font-black transition-all ${viewMode === 'final' ? 'bg-primary text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'}`}>FINAL</button>
                     </div>
                     <div className="flex gap-2">
-                        <Button size="sm" variant="secondary" onClick={handleCopy} className="!text-[10px]"><Icon name="copy" className="w-3.5 h-3.5"/> Copiar</Button>
-                        <Button size="sm" onClick={handleDownload} className="!text-[10px]"><Icon name="download-cloud" className="w-3.5 h-3.5"/> PNG</Button>
+                        <Button size="sm" variant="secondary" onClick={handleCopy} title="Copiar al portapapeles" className="!text-[10px]"><Icon name="copy" className="w-3.5 h-3.5"/> Copiar</Button>
+                        <Button size="sm" variant="secondary" onClick={handleDownloadPDF} title="Descargar como PDF" className="!text-[10px]"><Icon name="file-spreadsheet" className="w-3.5 h-3.5"/> PDF</Button>
+                        <Button size="sm" onClick={handleDownload} title="Descargar como PNG" className="!text-[10px]"><Icon name="download-cloud" className="w-3.5 h-3.5"/> PNG</Button>
                     </div>
                 </div>
 
