@@ -1,5 +1,5 @@
 {
-  "version": "3.3.22",
-  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v3.3.22/app-debug.apk",
-  "notes": "Versión 3.3.22 estable restaurada. Se eliminaron las funcionalidades de Google Classroom para asegurar compatibilidad total en el entorno local de escritorio sin errores de protocolo."
+  "version": "3.3.23",
+  "url": "https://github.com/Juan-Carlos-upsrj/TestListas/releases/download/v3.3.23/app-debug.apk",
+  "notes": "Ajuste en la captura de pantalla de calificaciones para asegurar la visibilidad de los promedios en tablas horizontales extensas. Se removió definitivamente la integración experimental de Classroom para mayor estabilidad."
 }
