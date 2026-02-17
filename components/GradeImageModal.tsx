@@ -29,12 +29,16 @@ const GradeImageModal: React.FC<GradeImageModalProps> = ({
     const handleCopy = async () => {
         if (!tableRef.current) return;
         try {
-            // scrollX: 0 asegura que capture desde el inicio aunque haya scroll
             const canvas = await html2canvas(tableRef.current, { 
-                scale: 2, 
+                scale: 3, // Mayor resolución
                 backgroundColor: '#ffffff',
                 logging: false,
-                useCORS: true
+                useCORS: true,
+                allowTaint: true,
+                scrollX: 0,
+                scrollY: 0,
+                width: tableRef.current.scrollWidth,
+                height: tableRef.current.scrollHeight
             });
             canvas.toBlob(blob => {
                 if (blob) {
@@ -54,9 +58,11 @@ const GradeImageModal: React.FC<GradeImageModalProps> = ({
         if (!tableRef.current) return;
         try {
             const canvas = await html2canvas(tableRef.current, { 
-                scale: 2, 
+                scale: 3,
                 backgroundColor: '#ffffff',
-                useCORS: true 
+                useCORS: true,
+                width: tableRef.current.scrollWidth,
+                height: tableRef.current.scrollHeight
             });
             const filename = `calificaciones_${group.name}_${viewMode}.png`;
             canvas.toBlob(async (blob) => {
@@ -72,36 +78,25 @@ const GradeImageModal: React.FC<GradeImageModalProps> = ({
 
     const handleDownloadPDF = async () => {
         if (!tableRef.current) return;
-        dispatch({ type: 'ADD_TOAST', payload: { message: 'Generando PDF, por favor espera...', type: 'info' } });
+        dispatch({ type: 'ADD_TOAST', payload: { message: 'Generando PDF...', type: 'info' } });
         try {
             const canvas = await html2canvas(tableRef.current, { 
                 scale: 2, 
                 backgroundColor: '#ffffff',
-                useCORS: true
+                useCORS: true,
+                width: tableRef.current.scrollWidth,
+                height: tableRef.current.scrollHeight
             });
             const orientation = canvas.width > canvas.height ? 'l' : 'p';
             const pdf = new jsPDF({ orientation, unit: 'pt', format: 'a4' });
             const pdfWidth = pdf.internal.pageSize.getWidth();
-            const pdfHeight = pdf.internal.pageSize.getHeight();
             const ratio = pdfWidth / canvas.width;
-            const totalPdfHeight = canvas.height * ratio;
-            let position = 0; let pageCount = 0;
-            while (position < totalPdfHeight) {
-                if (pageCount > 0) pdf.addPage();
-                const sliceHeightOnCanvas = pdfHeight / ratio;
-                const pageCanvas = document.createElement('canvas');
-                pageCanvas.width = canvas.width; pageCanvas.height = sliceHeightOnCanvas;
-                const pageCtx = pageCanvas.getContext('2d');
-                if (!pageCtx) continue;
-                pageCtx.drawImage(canvas, 0, position / ratio, canvas.width, sliceHeightOnCanvas, 0, 0, canvas.width, sliceHeightOnCanvas);
-                const pageDataUrl = pageCanvas.toDataURL('image/png');
-                pdf.addImage(pageDataUrl, 'PNG', 0, 0, pdfWidth, pdfHeight, undefined, 'FAST');
-                position += pdfHeight; pageCount++;
-            }
+            pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, pdfWidth, canvas.height * ratio, undefined, 'FAST');
+            
             const blob = pdf.output('blob');
             const filename = `calificaciones_${group.name}_${viewMode}.pdf`;
             await saveOrShareFile(blob, filename);
-            dispatch({ type: 'ADD_TOAST', payload: { message: 'PDF generado con éxito.', type: 'success' } });
+            dispatch({ type: 'ADD_TOAST', payload: { message: 'PDF generado.', type: 'success' } });
         } catch (err) {
             console.error(err);
             dispatch({ type: 'ADD_TOAST', payload: { message: 'Error al generar el PDF.', type: 'error' } });
@@ -129,42 +124,43 @@ const GradeImageModal: React.FC<GradeImageModalProps> = ({
                     </div>
                 </div>
 
-                <div className="overflow-auto bg-slate-200 p-4 rounded-xl border border-slate-300 shadow-inner max-h-[60vh] custom-scrollbar">
-                    {/* El contenedor tableRef tiene w-max para que html2canvas capture todo el ancho sin recortes */}
-                    <div ref={tableRef} className="bg-white p-8 rounded-none shadow-none w-max min-w-full text-slate-800">
+                <div className="overflow-auto bg-slate-200 p-2 rounded-xl border border-slate-300 shadow-inner max-h-[60vh] custom-scrollbar">
+                    {/* Se eliminó sticky de todas las celdas para evitar errores de html2canvas */}
+                    <div ref={tableRef} className="bg-white p-8 w-max text-slate-800">
                         <div className="mb-6 border-b-4 border-indigo-600 pb-3 flex justify-between items-end">
                             <div>
-                                <h2 className="text-3xl font-black text-indigo-700 tracking-tight leading-none mb-1">{group.name}</h2>
-                                <p className="text-sm text-slate-500 font-bold uppercase tracking-widest">{group.subject}</p>
+                                <h2 className="text-4xl font-black text-indigo-700 tracking-tight leading-none mb-1">{group.name}</h2>
+                                <p className="text-base text-slate-500 font-bold uppercase tracking-widest">{group.subject}</p>
                             </div>
                             <div className="text-right">
-                                <p className="text-[10px] font-black text-white bg-indigo-600 px-3 py-1 rounded-full uppercase tracking-[0.2em]">
+                                <p className="text-xs font-black text-white bg-indigo-600 px-4 py-1.5 rounded-full uppercase tracking-[0.2em]">
                                     {viewMode === 'final' ? 'Promedios Finales' : viewMode === 'p1' ? 'Parcial 1' : 'Parcial 2'}
                                 </p>
                             </div>
                         </div>
 
-                        <table className="w-full text-sm border-collapse">
+                        <table className="border-collapse table-auto">
                             <thead>
-                                <tr className="border-b-2 border-slate-300 bg-slate-50/50">
-                                    <th className="p-3 text-left font-black text-slate-500 uppercase tracking-tighter text-[11px] sticky left-0 bg-white z-10">Alumno</th>
+                                <tr className="border-b-2 border-slate-300 bg-slate-50">
+                                    <th className="p-4 text-left font-black text-slate-600 uppercase text-[12px] min-w-[220px]">Alumno</th>
                                     {viewMode !== 'final' && partialEvaluations.map(ev => (
-                                        <th key={ev.id} className="p-2 text-center font-bold text-slate-600 text-[10px] uppercase max-w-[80px] break-words leading-tight border-l border-slate-100">
-                                            {ev.name} <br/><span className="font-black text-[9px] opacity-40">({ev.maxScore})</span>
+                                        <th key={ev.id} className="p-2 text-center font-bold text-slate-500 text-[10px] uppercase border-l border-slate-100 min-w-[70px] max-w-[100px]">
+                                            <div className="line-clamp-2 leading-tight">{ev.name}</div>
+                                            <div className="font-black text-[9px] opacity-40 mt-1">({ev.maxScore})</div>
                                         </th>
                                     ))}
-                                    {viewMode === 'p1' && p1Attendance && <th className="p-2 text-center font-bold text-emerald-600 text-[10px] uppercase border-l border-slate-100 bg-emerald-50/30">Asist.</th>}
-                                    {viewMode === 'p2' && p2Attendance && <th className="p-2 text-center font-bold text-emerald-600 text-[10px] uppercase border-l border-slate-100 bg-emerald-50/30">Asist.</th>}
+                                    {viewMode === 'p1' && p1Attendance && <th className="p-3 text-center font-bold text-emerald-600 text-[10px] uppercase border-l border-slate-100">Asist.</th>}
+                                    {viewMode === 'p2' && p2Attendance && <th className="p-3 text-center font-bold text-emerald-600 text-[10px] uppercase border-l border-slate-100">Asist.</th>}
                                     
                                     {viewMode === 'final' ? (
                                         <>
-                                            <th className="p-3 text-center font-bold text-slate-500 uppercase text-[10px] border-l border-slate-200 bg-slate-50/50">Asist %</th>
-                                            <th className="p-3 text-center font-bold text-slate-500 uppercase text-[10px] border-l border-slate-100">Parcial 1</th>
-                                            <th className="p-3 text-center font-bold text-slate-500 uppercase text-[10px] border-l border-slate-100">Parcial 2</th>
-                                            <th className="p-3 text-center font-black text-indigo-700 uppercase text-[11px] border-l-2 border-indigo-200 bg-indigo-50/50 min-w-[90px]">Promedio</th>
+                                            <th className="p-3 text-center font-bold text-slate-500 uppercase text-[10px] border-l border-slate-200">Asist %</th>
+                                            <th className="p-3 text-center font-bold text-slate-500 uppercase text-[10px] border-l border-slate-100">P1</th>
+                                            <th className="p-3 text-center font-bold text-slate-500 uppercase text-[10px] border-l border-slate-100">P2</th>
+                                            <th className="p-4 text-center font-black text-white bg-indigo-700 uppercase text-[12px] border-l-2 border-indigo-800 min-w-[110px]">Promedio</th>
                                         </>
                                     ) : (
-                                        <th className="p-3 text-center font-black text-indigo-700 uppercase text-[11px] border-l-2 border-indigo-200 bg-indigo-50 min-w-[90px]">Promedio</th>
+                                        <th className="p-4 text-center font-black text-white bg-indigo-700 uppercase text-[12px] border-l-2 border-indigo-800 min-w-[110px]">Promedio</th>
                                     )}
                                 </tr>
                             </thead>
@@ -188,13 +184,13 @@ const GradeImageModal: React.FC<GradeImageModalProps> = ({
                                     const showInfoAlert = (isCriticalFail && !settings.failByAttendance) || isRisk;
 
                                     return (
-                                        <tr key={student.id} className={`border-b border-slate-100 ${idx % 2 === 0 ? 'bg-slate-50/20' : ''} ${showFailAlert ? 'bg-rose-50/50' : showInfoAlert ? 'bg-amber-50/50' : ''}`}>
-                                            <td className="p-3 font-bold text-slate-700 border-r border-slate-50 sticky left-0 bg-inherit z-10">
-                                                <div className="flex items-center gap-2">
-                                                    <span className="text-[10px] text-slate-300 w-4 inline-block text-right">{idx + 1}.</span>
-                                                    <div className="flex flex-col min-w-0">
-                                                        <span className={`truncate ${showFailAlert ? 'text-rose-700' : showInfoAlert ? 'text-amber-700' : ''}`}>{student.name}</span>
-                                                        {student.nickname && <span className="text-[9px] text-indigo-400 italic leading-none mt-0.5">"{student.nickname}"</span>}
+                                        <tr key={student.id} className={`border-b border-slate-100 ${idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/30'} ${showFailAlert ? 'bg-rose-50' : showInfoAlert ? 'bg-amber-50' : ''}`}>
+                                            <td className="p-3 font-bold text-slate-700 border-r border-slate-100">
+                                                <div className="flex items-center gap-3">
+                                                    <span className="text-[10px] text-slate-300 w-5 inline-block text-right">{idx + 1}.</span>
+                                                    <div className="flex flex-col">
+                                                        <span className={showFailAlert ? 'text-rose-700' : showInfoAlert ? 'text-amber-700' : ''}>{student.name}</span>
+                                                        {student.nickname && <span className="text-[9px] text-indigo-400 italic font-bold">"{student.nickname}"</span>}
                                                     </div>
                                                 </div>
                                             </td>
@@ -206,12 +202,12 @@ const GradeImageModal: React.FC<GradeImageModalProps> = ({
                                             ))}
                                             
                                             {(viewMode === 'p1' && p1Attendance) && (
-                                                <td className={`p-2 text-center font-black border-l border-slate-100 bg-emerald-50/20 ${p1AttNote < attThresholdNote ? 'text-rose-600' : 'text-emerald-600'}`}>
+                                                <td className={`p-2 text-center font-black border-l border-slate-100 ${p1AttNote < attThresholdNote ? 'text-rose-600' : 'text-emerald-600'}`}>
                                                     {p1AttNote.toFixed(1)}
                                                 </td>
                                             )}
                                             {(viewMode === 'p2' && p2Attendance) && (
-                                                <td className={`p-2 text-center font-black border-l border-slate-100 bg-emerald-50/20 ${p2AttNote < attThresholdNote ? 'text-rose-600' : 'text-emerald-600'}`}>
+                                                <td className={`p-2 text-center font-black border-l border-slate-100 ${p2AttNote < attThresholdNote ? 'text-rose-600' : 'text-emerald-600'}`}>
                                                     {p2AttNote.toFixed(1)}
                                                 </td>
                                             )}
@@ -227,12 +223,12 @@ const GradeImageModal: React.FC<GradeImageModalProps> = ({
                                                     <td className={`p-3 text-center font-bold border-l border-slate-100 ${getGradeColor(p2Avg)}`}>
                                                         {p2Avg?.toFixed(1) || '-'}
                                                     </td>
-                                                    <td className={`p-3 text-center font-black text-base border-l-2 border-indigo-100 bg-indigo-50/30 ${showFailAlert ? 'text-rose-600 ring-1 ring-inset ring-rose-200' : getGradeColor(finalAvg)}`}>
+                                                    <td className={`p-4 text-center font-black text-lg border-l-2 border-indigo-200 bg-indigo-50/50 ${showFailAlert ? 'text-rose-600' : getGradeColor(finalAvg)}`}>
                                                         {finalAvg?.toFixed(1) || '-'}
                                                     </td>
                                                 </>
                                             ) : (
-                                                <td className={`p-3 text-center font-black text-base border-l-2 border-indigo-100 bg-indigo-50/50 ${getGradeColor(viewMode === 'p1' ? p1Avg : p2Avg)}`}>
+                                                <td className={`p-4 text-center font-black text-lg border-l-2 border-indigo-200 bg-indigo-50/50 ${getGradeColor(viewMode === 'p1' ? p1Avg : p2Avg)}`}>
                                                     {(viewMode === 'p1' ? p1Avg : p2Avg)?.toFixed(1) || '-'}
                                                 </td>
                                             )}
@@ -244,11 +240,11 @@ const GradeImageModal: React.FC<GradeImageModalProps> = ({
                         
                         <div className="mt-8 pt-4 border-t-2 border-slate-100 flex justify-between items-center">
                             <div className="flex flex-col">
-                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">IAEV Académico</span>
-                                <span className="text-[9px] text-slate-300 italic">Generado el {new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' })}</span>
+                                <span className="text-xs font-black text-slate-400 uppercase tracking-widest">IAEV Académico</span>
+                                <span className="text-[10px] text-slate-300 italic font-bold">Generado: {new Date().toLocaleDateString('es-MX', { day: '2-digit', month: 'long', year: 'numeric' })}</span>
                             </div>
                             <div className="text-right">
-                                <span className="text-[10px] font-bold text-indigo-400 uppercase">Sistema de Gestión de Calificaciones v{settings.semesterEnd.substring(0,4)}</span>
+                                <span className="text-xs font-bold text-indigo-400 uppercase">Sistema de Gestión de Calificaciones</span>
                             </div>
                         </div>
                     </div>
@@ -257,9 +253,9 @@ const GradeImageModal: React.FC<GradeImageModalProps> = ({
                 <div className="flex justify-between items-center mt-2 px-2">
                     <p className="text-[10px] text-slate-400 font-bold italic">
                         <Icon name="info" className="w-3 h-3 inline mr-1" />
-                        Tip: Si la imagen se ve cortada en el celular, prueba usar el botón "Guardar PNG" para obtener el archivo completo.
+                        Tip: Si tienes muchas columnas, usa el botón "PDF" para asegurar que nada se corte.
                     </p>
-                    <Button variant="secondary" size="sm" onClick={onClose} className="!text-[10px]">Cerrar Ventana</Button>
+                    <Button variant="secondary" size="sm" onClick={onClose} className="!text-[10px]">Cerrar Captura</Button>
                 </div>
             </div>
         </Modal>
